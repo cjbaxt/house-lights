@@ -228,14 +228,18 @@ export default function WatchlistFeed() {
   const [whoView, setWhoView] = useState<WhoView>("claire");
 
   const load = useCallback(async () => {
-    const [w, cw, v, c] = await Promise.all([
-      api.getWatchlist(), api.getClairesWatchlist(), api.getVenues(), api.getCompanies(),
+    const [cw, v, c] = await Promise.all([
+      api.getClairesWatchlist(), api.getVenues(), api.getCompanies(),
     ]);
-    setMyWatchlist(w);
+    setMyWatchlist(api.getLocalWatchlist());
     setClairesWatchlist(cw);
     setVenues(v);
     setCompanies(c);
     setLoading(false);
+  }, []);
+
+  const reloadMine = useCallback(() => {
+    setMyWatchlist(api.getLocalWatchlist());
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -351,7 +355,7 @@ export default function WatchlistFeed() {
               group={group}
               venueMap={venueMap}
               companyMap={companyMap}
-              onWatchChange={load}
+              onWatchChange={reloadMine}
               readOnly={isClaires}
               claireToo={!isClaires && clairesKeys.has(group.key)}
             />

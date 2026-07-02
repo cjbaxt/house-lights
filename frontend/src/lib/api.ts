@@ -101,6 +101,9 @@ export const api = {
       return [];
     }
   },
+  getLocalWatchlist(): WatchlistEntry[] {
+    return staticGetWatchlist();
+  },
   async getWatchlist(): Promise<WatchlistEntry[]> {
     if (STATIC) return staticGetWatchlist();
     const r = await fetch(`${BASE}/watchlist/`);
