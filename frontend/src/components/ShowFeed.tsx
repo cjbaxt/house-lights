@@ -3,6 +3,7 @@ import type React from "react";
 import { IconList, IconCalendar, IconLayoutGrid, IconAdjustmentsHorizontal, IconBookmark, IconBookmarkFilled, IconTicket, IconSearch, IconX } from "@tabler/icons-react";
 import { api } from "../lib/api";
 import type { Show, Venue, Company, WatchlistEntry, WatchStatus } from "../lib/api";
+import { useTheme } from "../lib/theme";
 import ShowCard from "./ShowCard";
 import CalendarBody from "./CalendarBody";
 import EventTypeIcon from "./EventTypeIcon";
@@ -45,19 +46,17 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
   onWatchChange: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const theme = useTheme();
+  const isDutch = theme === "dutch";
   const visible = expanded ? allDates : allDates.slice(0, CHIP_LIMIT);
   const hidden = allDates.length - CHIP_LIMIT;
-
-  // Card is "watched" if any date entry is in the watchlist (and not passed)
   const anyWatched = allDates.some(d => watchMap[d.id] && watchMap[d.id] !== "passed");
 
   async function handleBookmark(e: React.MouseEvent) {
     e.preventDefault();
     if (anyWatched) {
-      // Remove all
       await Promise.all(allDates.map(d => api.removeWatch(d.id)));
     } else {
-      // Add all as interested
       await Promise.all(allDates.map(d => api.upsertWatch(d.id, "interested")));
     }
     onWatchChange();
@@ -68,7 +67,6 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
     e.stopPropagation();
     const current = watchMap[showId];
     if (current === "tickets_bought") {
-      // Toggle back to interested
       await api.upsertWatch(showId, "interested");
     } else {
       await api.upsertWatch(showId, "tickets_bought");
@@ -76,38 +74,119 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
     onWatchChange();
   }
 
+  if (isDutch) {
+    return (
+      <div className={`group border-b border-[#ece7de] hover:bg-white transition-colors ${anyWatched ? "border-l-2 border-l-[#e85d2f]" : ""}`}>
+        <div className="flex items-start gap-0 px-4 pt-3 pb-2">
+          <a href={show.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 flex-1 min-w-0">
+            {show.image_url && (
+              <div className="w-16 flex-shrink-0 overflow-hidden" style={{ aspectRatio: "4/3" }}>
+                <img src={show.image_url} alt="" className="w-full h-full object-cover" loading="lazy"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-1">
+                {show.type ?? "other"}{location ? ` · ${location}` : ""}
+              </div>
+              <div className="font-sans font-black text-sm uppercase tracking-tight text-[#1a1a1a] leading-tight truncate">
+                {show.title}
+              </div>
+              {show.subtitle && <div className="text-xs text-[#888] mt-0.5 truncate">{show.subtitle}</div>}
+              {show.summary && <div className="text-[11px] text-[#888] mt-1 leading-relaxed line-clamp-2">{show.summary}</div>}
+            </div>
+          </a>
+          <button onClick={handleBookmark}
+            className="flex-shrink-0 p-1 hover:bg-[#ece7de] transition-colors mt-0.5 ml-2"
+            title={anyWatched ? "Remove from watchlist" : "Add to watchlist"}
+          >
+            {anyWatched
+              ? <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
+              : <IconBookmark size={15} className="text-[#d4c9b8] group-hover:text-[#888] transition-colors" />
+            }
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-1 px-4 pb-3">
+          {visible.map(({ id, date, status, time }) => {
+            const d = new Date(date + "T00:00:00");
+            const isToday = date === new Date().toISOString().slice(0, 10);
+            const isCurrentYear = d.getFullYear() === new Date().getFullYear();
+            const label = isToday ? "TODAY" : d.toLocaleDateString("en-GB", {
+              day: "numeric", month: "short", ...(!isCurrentYear && { year: "numeric" })
+            }).toUpperCase();
+            const chipStatus = watchMap[id];
+            const isBought = chipStatus === "tickets_bought";
+            const chipClass = isBought
+              ? "bg-[#1a1a1a] border-[#1a1a1a] text-white"
+              : status === "sold_out"
+              ? "border-[#ece7de] text-[#ccc] line-through"
+              : status === "few_left"
+              ? "border-amber-300 text-amber-700"
+              : "border-[#ece7de] text-[#888] hover:border-[#e85d2f] hover:text-[#e85d2f]";
+            return (
+              <div key={id} className="flex items-center gap-0.5">
+                <a href={show.url} target="_blank" rel="noopener noreferrer"
+                  className={`text-[10px] font-bold px-2 py-0.5 border transition-colors tracking-wide ${chipClass}`}
+                >
+                  {label}{time ? ` ${time.slice(0, 5)}` : ""}
+                </a>
+                {anyWatched && (
+                  <button onClick={(e) => handleMarkBought(e, id)}
+                    title={isBought ? "Unmark as bought" : "Mark tickets bought"}
+                    className={`p-0.5 transition-colors ${isBought ? "text-[#e85d2f]" : "text-[#d4c9b8] hover:text-[#888]"}`}
+                  >
+                    <IconTicket size={11} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {!expanded && hidden > 0 && (
+            <button onClick={() => setExpanded(true)}
+              className="text-[10px] font-bold px-2 py-0.5 border border-[#ece7de] text-[#aaa] hover:border-[#e85d2f] hover:text-[#e85d2f] transition-colors tracking-wide"
+            >+{hidden} MORE</button>
+          )}
+          {expanded && hidden > 0 && (
+            <button onClick={() => setExpanded(false)}
+              className="text-[10px] font-bold px-2 py-0.5 border border-[#ece7de] text-[#aaa] hover:border-[#e85d2f] hover:text-[#e85d2f] transition-colors tracking-wide"
+            >SHOW LESS</button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Default theme
   return (
-    <div className={`bg-white border border-neutral-100 rounded-xl hover:border-neutral-300 transition-colors group dutch:border-[#ece7de] dutch:hover:border-[#d4c9b8] ${anyWatched ? "dutch-card-saved" : "dutch:bg-white"}`}>
+    <div className={`bg-white border border-neutral-100 rounded-xl hover:border-neutral-300 transition-colors group ${anyWatched ? "border-l-2 border-neutral-200" : ""}`}>
       <div className="flex items-start gap-3 px-4 pt-3 pb-2">
         <a href={show.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 flex-1 min-w-0">
           {show.image_url ? (
-            <div className="w-12 md:w-20 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-100 dutch:bg-[#ece7de]" style={{ aspectRatio: "4/3" }}>
+            <div className="w-12 md:w-20 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-100" style={{ aspectRatio: "4/3" }}>
               <img src={show.image_url} alt="" className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             </div>
           ) : (
-            <div className="w-12 md:w-20 border border-neutral-200 rounded-lg flex items-center justify-center flex-shrink-0 text-neutral-400 dutch:border-[#ece7de] dutch:text-[#888]" style={{ aspectRatio: "4/3" }}>
+            <div className="w-12 md:w-20 border border-neutral-200 rounded-lg flex items-center justify-center flex-shrink-0 text-neutral-400" style={{ aspectRatio: "4/3" }}>
               <EventTypeIcon type={show.type} size={14} />
             </div>
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-neutral-400 flex-shrink-0 dutch:text-[#888]"><EventTypeIcon type={show.type} size={13} /></span>
-              <span className="font-serif text-sm md:text-base font-medium text-neutral-900 truncate dutch:text-[#1a1a1a]">{show.title}</span>
+              <span className="text-neutral-400 flex-shrink-0"><EventTypeIcon type={show.type} size={13} /></span>
+              <span className="font-serif text-sm md:text-base font-medium text-neutral-900 truncate">{show.title}</span>
             </div>
-            {show.subtitle && <div className="text-xs text-neutral-400 mt-0.5 truncate dutch:text-[#888]">{show.subtitle}</div>}
-            <div className="text-xs text-neutral-400 mt-0.5 dutch:text-[#888]">{location}</div>
-            {show.summary && <div className="text-[11px] text-neutral-400 mt-1 leading-relaxed line-clamp-2 dutch:text-[#888]">{show.summary}</div>}
+            {show.subtitle && <div className="text-xs text-neutral-400 mt-0.5 truncate">{show.subtitle}</div>}
+            <div className="text-xs text-neutral-400 mt-0.5">{location}</div>
+            {show.summary && <div className="text-[11px] text-neutral-400 mt-1 leading-relaxed line-clamp-2">{show.summary}</div>}
           </div>
         </a>
-        {/* Bookmark: marks/unmarks all dates as interested */}
-        <button
-          onClick={handleBookmark}
-          className="flex-shrink-0 p-1 rounded-lg hover:bg-neutral-100 transition-colors mt-0.5 dutch:hover:bg-[#ece7de]"
+        <button onClick={handleBookmark}
+          className="flex-shrink-0 p-1 rounded-lg hover:bg-neutral-100 transition-colors mt-0.5"
           title={anyWatched ? "Remove from watchlist" : "Add all dates to watchlist"}
         >
           {anyWatched
-            ? <IconBookmarkFilled size={15} className="text-neutral-700 dutch:text-[#e85d2f]" />
-            : <IconBookmark size={15} className="text-neutral-200 group-hover:text-neutral-400 transition-colors dutch:text-[#d4c9b8] dutch:group-hover:text-[#888]" />
+            ? <IconBookmarkFilled size={15} className="text-neutral-700" />
+            : <IconBookmark size={15} className="text-neutral-200 group-hover:text-neutral-400 transition-colors" />
           }
         </button>
       </div>
@@ -122,32 +201,19 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
           const chipStatus = watchMap[id];
           const isBought = chipStatus === "tickets_bought";
           const chipClass = isBought
-            ? "border-neutral-700 bg-neutral-900 text-white dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white"
-            : status === "sold_out"
-            ? "border-neutral-100 text-neutral-300 line-through dutch:border-[#ece7de] dutch:text-[#aaa]"
-            : status === "few_left"
-            ? "border-amber-100 text-amber-600"
-            : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]";
-          const chipTitle = isBought
-            ? "Ticket bought"
-            : status === "sold_out"
-            ? "Sold out"
-            : status === "few_left"
-            ? "Few tickets left"
-            : undefined;
+            ? "border-neutral-700 bg-neutral-900 text-white"
+            : status === "sold_out" ? "border-neutral-100 text-neutral-300 line-through"
+            : status === "few_left" ? "border-amber-100 text-amber-600"
+            : "border-neutral-200 text-neutral-500 hover:border-neutral-400";
           return (
             <div key={id} className="flex items-center gap-0.5">
               <a href={show.url} target="_blank" rel="noopener noreferrer"
-                title={chipTitle}
                 className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${chipClass}`}
               >
                 {label}{time ? ` ${time.slice(0, 5)}` : ""}
               </a>
-              {/* Ticket icon: marks this specific date as tickets_bought */}
               {anyWatched && (
-                <button
-                  onClick={(e) => handleMarkBought(e, id)}
-                  title={isBought ? "Unmark as bought" : "Mark as tickets bought"}
+                <button onClick={(e) => handleMarkBought(e, id)}
                   className={`p-0.5 rounded transition-colors ${isBought ? "text-neutral-700" : "text-neutral-300 hover:text-neutral-500"}`}
                 >
                   <IconTicket size={11} />
@@ -159,16 +225,12 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
         {!expanded && hidden > 0 && (
           <button onClick={() => setExpanded(true)}
             className="text-[11px] px-2 py-0.5 rounded-full border border-neutral-200 text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
-          >
-            +{hidden} more
-          </button>
+          >+{hidden} more</button>
         )}
         {expanded && hidden > 0 && (
           <button onClick={() => setExpanded(false)}
             className="text-[11px] px-2 py-0.5 rounded-full border border-neutral-200 text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors"
-          >
-            Show less
-          </button>
+          >Show less</button>
         )}
       </div>
     </div>
@@ -191,7 +253,7 @@ function VenueFilterSection({ groups, activeVenues, toggleVenue, selectAllInGrou
       <div className="flex flex-wrap gap-1.5">
         <button
           onClick={onSelectAll}
-          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${noneActive ? "bg-neutral-900 text-white border-neutral-900" : "border-neutral-200 text-neutral-500 hover:border-neutral-400"}`}
+          className={`text-xs px-2.5 py-1 rounded-full dutch:rounded-none border transition-colors ${noneActive ? "bg-neutral-900 text-white border-neutral-900 dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white" : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]"}`}
         >
           All
         </button>
@@ -213,7 +275,7 @@ function VenueFilterSection({ groups, activeVenues, toggleVenue, selectAllInGrou
             <div className="flex flex-wrap gap-1.5">
               {items.map(({ id, name }) => (
                 <button key={id} onClick={() => toggleVenue(id)}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${activeVenues.has(id) ? "bg-neutral-900 text-white border-neutral-900 dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white" : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]"}`}
+                  className={`text-xs px-2.5 py-1 rounded-full dutch:rounded-none border transition-colors ${activeVenues.has(id) ? "bg-neutral-900 text-white border-neutral-900 dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white" : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]"}`}
                 >
                   {name}
                 </button>
@@ -429,18 +491,18 @@ export default function ShowFeed() {
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setIsFilterOpen((o) => !o)}
-          className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border transition-colors ${isFilterOpen ? "bg-neutral-900 text-white border-neutral-900 dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white" : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]"}`}
+          className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg dutch:rounded-none border transition-colors ${isFilterOpen ? "bg-neutral-900 text-white border-neutral-900 dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white" : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]"}`}
         >
           <IconAdjustmentsHorizontal size={13} />
           Filter
           {filterCount > 0 && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isFilterOpen ? "bg-white text-neutral-900" : "bg-neutral-900 text-white"}`}>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full dutch:rounded-none font-medium ${isFilterOpen ? "bg-white text-neutral-900" : "bg-neutral-900 text-white"}`}>
               {filterCount}
             </span>
           )}
         </button>
 
-        <div className="flex items-center border border-neutral-200 rounded-lg overflow-hidden dutch:border-[#ece7de]">
+        <div className="flex items-center border border-neutral-200 rounded-lg dutch:rounded-none overflow-hidden dutch:border-[#ece7de]">
           {([
             { key: "programme", label: "Programme", icon: <IconLayoutGrid size={13} /> },
             { key: "agenda",    label: "Agenda",    icon: <IconList size={13} /> },
@@ -458,14 +520,14 @@ export default function ShowFeed() {
 
       {/* Search bar */}
       <div className="relative mb-4">
-        <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+        <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dutch:text-[#e85d2f] pointer-events-none" />
         <input
           ref={searchRef}
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search events, artists, venues…"
-          className="w-full pl-8 pr-8 py-2 text-sm border border-neutral-200 rounded-lg bg-white placeholder-neutral-400 text-neutral-800 focus:outline-none focus:border-neutral-400 transition-colors dutch:bg-white dutch:border-[#ece7de] dutch:text-[#1a1a1a] dutch:placeholder-[#aaa] dutch:focus:border-[#1a1a1a]"
+          className="w-full pl-8 pr-8 py-2 text-sm border border-neutral-200 rounded-lg dutch:rounded-none bg-white dutch:bg-[#eceae4] placeholder-neutral-400 text-neutral-800 focus:outline-none focus:border-neutral-400 transition-colors dutch:border-[#d4c9b8] dutch:text-[#1a1a1a] dutch:placeholder-[#aaa] dutch:focus:border-[#1a1a1a]"
         />
         {searchQuery && (
           <button
@@ -479,12 +541,12 @@ export default function ShowFeed() {
 
       {/* Filter panel */}
       {isFilterOpen && (
-        <div className="border border-neutral-200 rounded-xl p-4 mb-5 flex flex-col gap-5 dutch:border-[#ece7de] dutch:bg-[#eceae4]">
+        <div className="border border-neutral-200 rounded-xl dutch:rounded-none p-4 mb-5 flex flex-col gap-5 dutch:border-[#ece7de] dutch:bg-[#eceae4]">
 
           {/* When */}
           <div>
             <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-2">When</div>
-            <div className="flex items-center border border-neutral-200 rounded-lg overflow-hidden w-fit dutch:border-[#ece7de]">
+            <div className="flex items-center border border-neutral-200 rounded-lg dutch:rounded-none overflow-hidden w-fit dutch:border-[#ece7de]">
               {(["today", "week", "month", "all"] as Timeframe[]).map((t) => (
                 <button key={t} onClick={() => setTimeframe(t)}
                   className={`text-xs px-3 py-1.5 transition-colors ${timeframe === t ? "bg-neutral-900 text-white dutch:bg-[#1a1a1a] dutch:text-white" : "text-neutral-500 hover:bg-neutral-50 dutch:text-[#888] dutch:hover:bg-[#ece7de]"}`}
@@ -501,13 +563,13 @@ export default function ShowFeed() {
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => setActiveTypes(new Set())}
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${activeTypes.size === 0 ? "bg-neutral-900 text-white border-neutral-900 dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white" : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]"}`}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full dutch:rounded-none border transition-colors ${activeTypes.size === 0 ? "bg-neutral-900 text-white border-neutral-900 dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white" : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]"}`}
               >
                 All
               </button>
               {presentTypes.map((type) => (
                 <button key={type} onClick={() => toggleType(type)}
-                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${activeTypes.has(type) ? "bg-neutral-900 text-white border-neutral-900 dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white" : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]"}`}
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full dutch:rounded-none border transition-colors ${activeTypes.has(type) ? "bg-neutral-900 text-white border-neutral-900 dutch:bg-[#1a1a1a] dutch:border-[#e85d2f] dutch:text-white" : "border-neutral-200 text-neutral-500 hover:border-neutral-400 dutch:border-[#ece7de] dutch:text-[#888] dutch:hover:border-[#d4c9b8]"}`}
                 >
                   <EventTypeIcon type={type} size={11} />
                   <span className="capitalize">{type}</span>

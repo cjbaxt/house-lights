@@ -169,56 +169,54 @@ function VenueRow({
   description?: string;
   image_url?: string;
 }) {
+  const meta = [
+    venue_type ? (VENUE_TYPE_LABEL[venue_type] ?? venue_type) : null,
+    neighbourhood ?? null,
+    capacity ? `${capacityLabel(capacity)} · ${capacity.toLocaleString()}` : null,
+  ].filter(Boolean).join(" · ");
+
+  const editControls = editing && (
+    <div className="flex items-center gap-2 flex-shrink-0">
+      <PrioritySelect value={priority} onChange={(p) => onPriorityChange(id, p)} />
+      {onEdit && (
+        <button onClick={onEdit} className="text-neutral-300 hover:text-neutral-600 transition-colors" title="Edit venue">
+          <IconPencil size={13} />
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="bg-white border border-neutral-100 rounded-xl overflow-hidden hover:border-neutral-300 transition-colors flex">
+    <div className="bg-white dutch:bg-[#f5f3ef] border border-neutral-100 dutch:border-0 dutch:border-b dutch:border-[#ece7de] rounded-xl dutch:rounded-none overflow-hidden hover:border-neutral-300 dutch:hover:bg-white transition-colors flex">
       {image_url && (
-        <div className="w-40 flex-shrink-0 bg-neutral-100 self-stretch">
-          <img
-            src={image_url}
-            alt={name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
-          />
+        <div className="venue-img">
+          <img src={image_url} alt={name} className="w-full h-full object-cover" loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
         </div>
       )}
       <div className="px-4 py-3 flex-1 min-w-0">
         <div className="flex items-center gap-3">
-          <span className="font-serif text-sm font-medium text-neutral-900 flex-1">{name}</span>
-          {editing && (
-            <PrioritySelect value={priority} onChange={(p) => onPriorityChange(id, p)} />
-          )}
-          {editing && onEdit && (
-            <button onClick={onEdit} className="text-neutral-300 hover:text-neutral-600 transition-colors" title="Edit venue">
-              <IconPencil size={13} />
-            </button>
-          )}
+          <div className="flex-1 min-w-0">
+            {meta && <div className="hidden dutch:block text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-0.5">{meta}</div>}
+            <span className="font-serif dutch:font-sans text-sm font-medium dutch:font-black dutch:uppercase dutch:tracking-tight text-neutral-900 dutch:text-[#1a1a1a]">{name}</span>
+          </div>
+          {editControls}
           {website_url && (
-            <a
-              href={website_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-neutral-300 hover:text-neutral-600 transition-colors"
-            >
+            <a href={website_url} target="_blank" rel="noopener noreferrer"
+              className="text-neutral-300 dutch:text-[#d4c9b8] hover:text-neutral-600 dutch:hover:text-[#e85d2f] transition-colors flex-shrink-0">
               <svg className="w-3 h-3" viewBox="0 0 6 10" fill="none">
                 <path d="M1 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </a>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
-          {venue_type && (
-            <span className="text-[11px] text-neutral-400">{VENUE_TYPE_LABEL[venue_type] ?? venue_type}</span>
-          )}
-          {neighbourhood && (
-            <span className="text-[11px] text-neutral-400">{neighbourhood}</span>
-          )}
-          {capacity && (
-            <span className="text-[11px] text-neutral-400">{capacityLabel(capacity)} · {capacity.toLocaleString()}</span>
-          )}
+        <div className="dutch:hidden flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+          {venue_type && <span className="text-[11px] text-neutral-400">{VENUE_TYPE_LABEL[venue_type] ?? venue_type}</span>}
+          {neighbourhood && <span className="text-[11px] text-neutral-400">{neighbourhood}</span>}
+          {capacity && <span className="text-[11px] text-neutral-400">{capacityLabel(capacity)} · {capacity.toLocaleString()}</span>}
         </div>
         {description && (
-          <p className="text-[11px] text-neutral-500 mt-1.5 leading-relaxed line-clamp-3">{description}</p>
+          <p className="text-[11px] text-neutral-500 dutch:text-[#888] mt-1.5 leading-relaxed line-clamp-3 dutch:line-clamp-2">{description}</p>
         )}
       </div>
     </div>
@@ -276,12 +274,12 @@ export default function VenueList() {
 
       {/* Tab toggle */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="flex items-center border border-neutral-200 rounded-lg overflow-hidden">
+        <div className="flex items-center border border-neutral-200 rounded-lg dutch:rounded-none overflow-hidden dutch:border-[#ece7de]">
           {(["venues", "companies"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`text-xs px-4 py-1.5 capitalize transition-colors ${tab === t ? "bg-neutral-900 text-white" : "text-neutral-500 hover:bg-neutral-50"}`}
+              className={`text-xs px-4 py-1.5 capitalize transition-colors ${tab === t ? "bg-neutral-900 text-white dutch:bg-[#1a1a1a] dutch:text-white" : "text-neutral-500 hover:bg-neutral-50 dutch:text-[#888] dutch:hover:bg-[#ece7de]"}`}
             >
               {t}
             </button>
@@ -299,11 +297,11 @@ export default function VenueList() {
         return (
           <div key={p} className="mb-6">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-[11px] font-medium uppercase tracking-widest text-neutral-400">{PRIORITY_LABEL[p]}</span>
-              <span className="text-[10px] text-neutral-300">{group.length}</span>
-              <div className="flex-1 h-px bg-neutral-100" />
+              <span className="text-[11px] font-medium uppercase tracking-widest text-neutral-400 dutch:text-[#e85d2f] dutch:font-bold">{PRIORITY_LABEL[p]}</span>
+              <span className="text-[10px] text-neutral-300 dutch:text-[#bbb]">{group.length}</span>
+              <div className="flex-1 h-px bg-neutral-100 dutch:bg-[#ece7de]" />
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col">
               {group.map((item) => (
                 <VenueRow
                   key={item.id}

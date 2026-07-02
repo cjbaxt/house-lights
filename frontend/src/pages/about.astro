@@ -14,7 +14,7 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
   <head>
     <meta charset="utf-8" />
     <script is:inline>
-      (function(){var t=localStorage.getItem('hl_theme');if(t)document.documentElement.dataset.theme=t;})();
+      (function(){var t=localStorage.getItem('hl_theme');if(t!=='default')document.documentElement.dataset.theme='dutch';})();
     </script>
     <ClientRouter />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -31,8 +31,8 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
     <Nav current="/about" client:load transition:persist />
     <EditorUnlock client:load transition:persist />
     <main class="max-w-2xl mx-auto px-4 md:px-8 pt-4 md:pt-20 pb-24 md:pb-8">
-      <p class="font-serif text-2xl text-neutral-900 mt-4 mb-8">About</p>
-      <div class="space-y-5 text-sm text-neutral-700 leading-relaxed">
+      <p class="font-serif text-2xl text-neutral-900 mt-4 mb-8 dutch:font-sans dutch:font-black dutch:uppercase dutch:text-xl dutch:tracking-tight dutch:text-[#1a1a1a]">About</p>
+      <div class="space-y-5 text-sm text-neutral-700 leading-relaxed dutch:text-[#444]">
         {paragraphs.map((p) => {
           const lines = p.split("\n");
           const isList = lines.every((l) => l.trimStart().startsWith("- "));
@@ -47,8 +47,8 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
           return <p set:html={render(p)} />;
         })}
       </div>
-      <div class="mt-12 pt-8 border-t border-neutral-100 flex items-center justify-center">
-        <span class="font-serif text-2xl text-neutral-200 select-none">⁂</span>
+      <div class="mt-12 pt-8 border-t border-neutral-100 dutch:border-[#ece7de] flex items-center justify-center">
+        <span class="font-serif text-2xl text-neutral-200 dutch:text-[#ece7de] select-none">⁂</span>
       </div>
     </main>
   </body>

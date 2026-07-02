@@ -98,6 +98,7 @@ def _extract_shows(data: dict, slug: str, today: date) -> list[ScrapedShow]:
             shows.append(ScrapedShow(
                 title=title,
                 date=d,
+                time=dt.time() if dt.time().hour != 0 or dt.time().minute != 0 else None,
                 url=url,
                 source_id=f"carre:{slug}:{d.isoformat()}",
                 type="theatre",

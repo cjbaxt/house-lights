@@ -7,7 +7,7 @@
   --color-spotlight: #e8c547;
 }
 
-@custom-variant dutch (:where([data-theme="dutch"]) &);
+@custom-variant dutch ([data-theme="dutch"] &);
 
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -30,6 +30,20 @@
 }
 
 @layer components {
+  /* Venue image container — explicit sizing bypasses Tailwind scan gaps in client-nav CSS */
+  .venue-img {
+    width: 8rem;
+    height: 5rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--color-neutral-100, #f5f5f5);
+  }
+
+  [data-theme="dutch"] .venue-img {
+    width: 4rem;
+    background: transparent;
+  }
+
   [data-theme="dutch"] .dutch-logo {
     font-family: var(--font-sans);
     font-weight: 800;
