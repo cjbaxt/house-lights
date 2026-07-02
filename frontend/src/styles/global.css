@@ -7,7 +7,7 @@
   --color-spotlight: #e8c547;
 }
 
-@custom-variant glow (:where([data-theme="glow"]) &);
+@custom-variant dutch (:where([data-theme="dutch"]) &);
 
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -24,22 +24,24 @@
     @apply bg-white text-neutral-900;
   }
 
-  [data-theme="glow"] body {
-    background: #12111a;
-    color: #ede8f5;
+  [data-theme="dutch"] body {
+    background: #f5f3ef;
   }
 }
 
 @layer components {
-  [data-theme="glow"] .glow-card-saved {
-    background: linear-gradient(135deg, #2a1a3e, #2a1428);
-    border-color: #5a3060;
+  [data-theme="dutch"] .dutch-logo {
+    font-family: var(--font-sans);
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #f5f3ef;
+    font-style: normal;
   }
 
-  [data-theme="glow"] .glow-gradient-text {
-    background: linear-gradient(90deg, #c084fc, #e879a0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  [data-theme="dutch"] .dutch-card-saved {
+    border-left: 3px solid #e85d2f;
+    background: #fff;
   }
 }
