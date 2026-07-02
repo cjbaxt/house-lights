@@ -228,14 +228,17 @@ export default function WatchlistFeed() {
   const [whoView, setWhoView] = useState<WhoView>(STATIC ? "yours" : "claire");
 
   const load = useCallback(async () => {
-    const [cw, v, c] = await Promise.all([
-      api.getClairesWatchlist(), api.getVenues(), api.getCompanies(),
-    ]);
-    setMyWatchlist(api.getLocalWatchlist());
-    setClairesWatchlist(cw);
-    setVenues(v);
-    setCompanies(c);
-    setLoading(false);
+    try {
+      const [cw, v, c] = await Promise.all([
+        api.getClairesWatchlist(), api.getVenues(), api.getCompanies(),
+      ]);
+      setMyWatchlist(api.getLocalWatchlist());
+      setClairesWatchlist(cw);
+      setVenues(v);
+      setCompanies(c);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const reloadMine = useCallback(() => {
