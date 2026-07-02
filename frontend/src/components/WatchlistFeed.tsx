@@ -225,7 +225,7 @@ export default function WatchlistFeed() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayView, setDisplayView] = useState<DisplayView>("list");
-  const [whoView, setWhoView] = useState<WhoView>("claire");
+  const [whoView, setWhoView] = useState<WhoView>("yours");
 
   const load = useCallback(async () => {
     const [cw, v, c] = await Promise.all([
