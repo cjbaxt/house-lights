@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import type React from "react";
-import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar } from "@tabler/icons-react";
+import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconUsers } from "@tabler/icons-react";
 import { api, STATIC } from "../lib/api";
-import type { WatchlistEntry, Venue, Company, Show } from "../lib/api";
+import type { WatchlistEntry, Venue, Company, Show, WatchStatus } from "../lib/api";
 import EventTypeIcon from "./EventTypeIcon";
 import WatchMenu from "./WatchMenu";
 import CalendarBody from "./CalendarBody";
 
 type DisplayView = "list" | "calendar";
-
+type WhoView = "claire" | "yours";
 
 // Group key: title + venue/company — groups all dates of the same production together
 function groupKey(show: Show): string {
@@ -28,11 +28,15 @@ function GroupedCard({
   venueMap,
   companyMap,
   onWatchChange,
+  readOnly = false,
+  claireToo = false,
 }: {
   group: ShowGroup;
   venueMap: Record<string, string>;
   companyMap: Record<string, string>;
   onWatchChange: () => void;
+  readOnly?: boolean;
+  claireToo?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
@@ -100,6 +104,11 @@ function GroupedCard({
               <span className="font-serif text-sm md:text-base font-medium text-neutral-900 truncate">
                 {show.title}
               </span>
+              {claireToo && (
+                <span title="Claire wants to see this too" className="flex-shrink-0 text-rose-400 cursor-default">
+                  <IconUsers size={13} />
+                </span>
+              )}
             </div>
             {show.subtitle && (
               <div className="text-xs text-neutral-400 mt-0.5 truncate">{show.subtitle}</div>
@@ -109,7 +118,7 @@ function GroupedCard({
         </a>
 
         {/* Bookmark / watch menu */}
-        <div className="relative flex-shrink-0">
+        <div className={`relative flex-shrink-0 ${readOnly ? "hidden" : ""}`}>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -182,15 +191,17 @@ function GroupedCard({
                 {label}
                 {entry.show.time ? ` ${entry.show.time.slice(0, 5)}` : ""}
               </a>
-              <button
-                onClick={(e) => handleMarkBought(e, entry)}
-                title={isBought ? "Unmark as bought" : "Mark as tickets bought"}
-                className={`p-0.5 rounded transition-colors ${
-                  isBought ? "text-neutral-700" : "text-neutral-300 hover:text-neutral-500"
-                }`}
-              >
-                <IconTicket size={11} />
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={(e) => handleMarkBought(e, entry)}
+                  title={isBought ? "Unmark as bought" : "Mark as tickets bought"}
+                  className={`p-0.5 rounded transition-colors ${
+                    isBought ? "text-neutral-700" : "text-neutral-300 hover:text-neutral-500"
+                  }`}
+                >
+                  <IconTicket size={11} />
+                </button>
+              )}
             </div>
           );
         })}
@@ -208,23 +219,26 @@ function GroupedCard({
 }
 
 export default function WatchlistFeed() {
-  const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
+  const [myWatchlist, setMyWatchlist] = useState<WatchlistEntry[]>([]);
+  const [clairesWatchlist, setClairesWatchlist] = useState<WatchlistEntry[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayView, setDisplayView] = useState<DisplayView>("list");
+  const [whoView, setWhoView] = useState<WhoView>("claire");
 
   const load = useCallback(async () => {
-    const [w, v, c] = await Promise.all([api.getWatchlist(), api.getVenues(), api.getCompanies()]);
-    setWatchlist(w);
+    const [w, cw, v, c] = await Promise.all([
+      api.getWatchlist(), api.getClairesWatchlist(), api.getVenues(), api.getCompanies(),
+    ]);
+    setMyWatchlist(w);
+    setClairesWatchlist(cw);
     setVenues(v);
     setCompanies(c);
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const venueMap = Object.fromEntries(venues.map((v) => [v.id, v.name]));
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
@@ -236,6 +250,10 @@ export default function WatchlistFeed() {
       </div>
     );
   }
+
+  const isClaires = whoView === "claire";
+  const watchlist = isClaires ? clairesWatchlist : myWatchlist;
+  const clairesKeys = new Set(clairesWatchlist.map((e) => groupKey(e.show)));
 
   // Build show groups: key → ShowGroup
   const groupMap = new Map<string, ShowGroup>();
@@ -267,18 +285,31 @@ export default function WatchlistFeed() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <span className="text-[11px] uppercase tracking-widest text-neutral-400">
-          {watchlist.length} performance{watchlist.length !== 1 ? "s" : ""} watched
-        </span>
+      <div className="flex items-center justify-between mb-4">
+        {/* Who toggle */}
+        <div className="flex items-center border border-neutral-200 rounded-lg overflow-hidden">
+          {([
+            { key: "claire" as WhoView, label: "Claire's" },
+            { key: "yours" as WhoView, label: "Yours" },
+          ]).map(({ key, label }) => (
+            <button key={key} onClick={() => setWhoView(key)}
+              className={`text-xs px-3 py-1.5 transition-colors ${whoView === key ? "bg-neutral-900 text-white" : "text-neutral-500 hover:bg-neutral-50"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center gap-3">
-          <a
-            href={api.calendarUrl()}
-            className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
-          >
-            <IconCalendarDown size={13} />
-            Export .ics
-          </a>
+          {!isClaires && (
+            <a
+              href={api.calendarUrl()}
+              className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
+            >
+              <IconCalendarDown size={13} />
+              Export .ics
+            </a>
+          )}
           <div className="flex items-center border border-neutral-200 rounded-lg overflow-hidden">
             {([
               { key: "calendar", icon: <IconCalendar size={13} /> },
@@ -294,7 +325,11 @@ export default function WatchlistFeed() {
         </div>
       </div>
 
-      {STATIC && (
+      <div className="text-[11px] uppercase tracking-widest text-neutral-400 mb-4">
+        {watchlist.length} performance{watchlist.length !== 1 ? "s" : ""}
+      </div>
+
+      {!isClaires && STATIC && (
         <p className="text-xs text-neutral-400 mb-4">
           Your watchlist is saved in this browser. Clearing your cache will remove it.
         </p>
@@ -302,7 +337,7 @@ export default function WatchlistFeed() {
 
       {watchlist.length === 0 && (
         <div className="flex items-center justify-center h-64 text-neutral-400 text-sm">
-          Nothing on your watchlist yet.
+          {isClaires ? "Claire hasn't watched anything yet." : "Nothing on your watchlist yet."}
         </div>
       )}
 
@@ -317,6 +352,8 @@ export default function WatchlistFeed() {
               venueMap={venueMap}
               companyMap={companyMap}
               onWatchChange={load}
+              readOnly={isClaires}
+              claireToo={!isClaires && clairesKeys.has(group.key)}
             />
           ))}
         </div>
