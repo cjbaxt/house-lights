@@ -35,7 +35,7 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
   const isWatched = watchStatus && watchStatus !== "passed";
 
   return (
-    <div className="relative w-full text-left bg-white border border-neutral-100 rounded-xl flex items-stretch hover:border-neutral-300 transition-colors group">
+    <div className="relative w-full text-left bg-white border border-neutral-100 rounded-xl flex items-stretch hover:border-neutral-300 transition-colors group glow:bg-[#1a1826] glow:border-[#252336] glow:hover:border-[#3d3558]">
       {/* Clickable main area → venue site */}
       <a
         href={show.url}
@@ -55,7 +55,7 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
             />
           </div>
         ) : (
-          <div className="w-12 md:w-20 border border-neutral-200 rounded-lg flex items-center justify-center flex-shrink-0 text-neutral-400 group-hover:text-neutral-600 transition-colors" style={{ aspectRatio: "4/3" }}>
+          <div className="w-12 md:w-20 border border-neutral-200 rounded-lg flex items-center justify-center flex-shrink-0 text-neutral-400 group-hover:text-neutral-600 transition-colors glow:border-[#252336] glow:text-[#4a4560]" style={{ aspectRatio: "4/3" }}>
             <EventTypeIcon type={show.type} size={14} />
           </div>
         )}
@@ -64,7 +64,7 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-neutral-400 flex-shrink-0" title={show.type ?? "other"}><EventTypeIcon type={show.type} size={13} /></span>
-            <span className="font-serif text-sm md:text-base font-medium text-neutral-900 md:truncate line-clamp-2 md:line-clamp-none">{show.title}</span>
+            <span className="font-serif text-sm md:text-base font-medium text-neutral-900 md:truncate line-clamp-2 md:line-clamp-none glow:text-[#ede8f5]">{show.title}</span>
           </div>
           {show.subtitle && (
             <div className="text-xs text-neutral-400 mt-0.5 line-clamp-1">{show.subtitle}</div>
@@ -77,7 +77,7 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
 
         {/* right side meta */}
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          <div className="text-xs text-neutral-400">{day} {monthShort}</div>
+          <div className="text-xs text-neutral-400 glow:text-[#4a4560]">{day} {monthShort}</div>
           {show.time && (
             <div className="text-[11px] text-neutral-300">{show.time.slice(0, 5)}</div>
           )}
@@ -100,12 +100,12 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
       <div className="relative flex-shrink-0 flex items-center pr-3">
         <button
           onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
-          className="p-1 rounded-lg hover:bg-neutral-100 transition-colors"
+          className="p-1 rounded-lg hover:bg-neutral-100 transition-colors glow:hover:bg-[#252336]"
         >
           {isWatched ? (
-            <IconBookmarkFilled size={15} className="text-neutral-700" />
+            <IconBookmarkFilled size={15} className="text-neutral-700 glow:text-[#c084fc]" />
           ) : (
-            <IconBookmark size={15} className="text-neutral-200 group-hover:text-neutral-400 transition-colors" />
+            <IconBookmark size={15} className="text-neutral-200 group-hover:text-neutral-400 transition-colors glow:text-[#252336] glow:group-hover:text-[#4a4560]" />
           )}
         </button>
         {menuOpen && (

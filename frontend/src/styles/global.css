@@ -7,6 +7,8 @@
   --color-spotlight: #e8c547;
 }
 
+@custom-variant glow (:where([data-theme="glow"]) &);
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -20,5 +22,24 @@
 
   body {
     @apply bg-white text-neutral-900;
+  }
+
+  [data-theme="glow"] body {
+    background: #12111a;
+    color: #ede8f5;
+  }
+}
+
+@layer components {
+  [data-theme="glow"] .glow-card-saved {
+    background: linear-gradient(135deg, #2a1a3e, #2a1428);
+    border-color: #5a3060;
+  }
+
+  [data-theme="glow"] .glow-gradient-text {
+    background: linear-gradient(90deg, #c084fc, #e879a0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
