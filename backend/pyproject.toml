@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "house-lights"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlmodel>=0.0.21",
+    "psycopg2-binary>=2.9",
+    "alembic>=1.13",
+    "python-dotenv>=1.0",
+    "httpx>=0.27",
+    "beautifulsoup4>=4.12",
+    "playwright>=1.44",
+    "icalendar>=5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]

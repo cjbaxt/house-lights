@@ -1,0 +1,36 @@
+---
+import "../styles/global.css";
+import Nav from "../components/Nav";
+import fs from "fs";
+import path from "path";
+
+const raw = fs.readFileSync(path.resolve("src/content/about.md"), "utf-8");
+const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About — house lights</title>
+    <link rel="icon" type="image/svg+xml" href={import.meta.env.PROD ? "/favicon.svg" : "/favicon-local.svg"} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-white min-h-screen">
+    <Nav current="/about" client:load />
+    <main class="max-w-2xl mx-auto px-4 md:px-8 pt-4 md:pt-20 pb-24 md:pb-8">
+      <p class="font-serif text-2xl text-neutral-900 mt-4 mb-8">About</p>
+      <div class="space-y-5 text-sm text-neutral-700 leading-relaxed">
+        {paragraphs.map((p) => {
+          const bold = p.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+          return <p set:html={bold} />;
+        })}
+      </div>
+      <div class="mt-12 pt-8 border-t border-neutral-100 flex items-center justify-center">
+        <span class="font-serif text-2xl text-neutral-200 select-none">⁂</span>
+      </div>
+    </main>
+  </body>
+</html>
