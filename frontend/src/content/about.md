@@ -6,6 +6,6 @@ House Lights is an events tracker for Amsterdam stages: theatre, comedy, dance, 
 
 This is a side project I'm actively building. The scrapers run on my machine, so if listings go stale for a few days, my laptop was probably closed. And it's curated by me in the sense that I've hand-picked which venues to include.
 
-If you'd like me to turn this into something more — live data, user accounts, the AI stuff in the cloud — let me know. And if you know of a venue I'm missing, I'd love to hear about that too.
+If you'd like me to turn this into something more - live data, user accounts, the AI stuff in the cloud — let me know. And if you know of a venue I'm missing, notice an issue with a scraper (I didn't go through them all with a fine-toothed comb), or have any other ideas, I'd love to hear about that too.
 
 You probably know how to find me.
