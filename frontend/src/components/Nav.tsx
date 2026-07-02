@@ -20,7 +20,7 @@ export default function Nav({ current }: { current: string }) {
     <>
       {/* Desktop top bar */}
       <header className="hidden md:flex fixed top-0 inset-x-0 z-40 h-14 border-b border-neutral-100 bg-white/90 backdrop-blur-sm items-center px-8 dutch:bg-[#1a1a1a] dutch:border-transparent dutch:backdrop-blur-none">
-        <a href={href("/")} className="font-serif italic text-lg tracking-tight mr-10 hover:opacity-70 transition-opacity dutch:dutch-logo">
+        <a href={href("/")} className="font-serif italic text-lg tracking-tight mr-10 hover:opacity-70 transition-opacity dutch:font-sans dutch:not-italic dutch:font-black dutch:text-[13px] dutch:tracking-[0.1em] dutch:uppercase dutch:text-[#f5f3ef]">
           house lights
         </a>
         <nav className="flex gap-8 flex-1">
