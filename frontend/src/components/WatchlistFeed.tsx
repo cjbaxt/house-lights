@@ -65,7 +65,7 @@ function GroupedCard({
   }
 
   return (
-    <div className={`bg-white border rounded-xl hover:border-neutral-300 transition-colors group ${anyBought ? "border-l-2 border-neutral-300 border-l-amber-400" : "border-neutral-100"}`}>
+    <div className={`bg-white border rounded-xl hover:border-neutral-300 transition-colors group glow:hover:border-[#3d3558] ${anyBought ? "border-l-2 border-neutral-300 border-l-amber-400 glow:bg-[#1e1828] glow:border-[#5a3060]" : "border-neutral-100 glow:bg-[#1a1826] glow:border-[#252336]"}`}>
       <div className="flex items-start gap-3 px-4 pt-3 pb-2">
         <a
           href={show.url}
@@ -101,7 +101,7 @@ function GroupedCard({
               <span className="text-neutral-400 flex-shrink-0">
                 <EventTypeIcon type={show.type} size={13} />
               </span>
-              <span className="font-serif text-sm md:text-base font-medium text-neutral-900 truncate">
+              <span className="font-serif text-sm md:text-base font-medium text-neutral-900 truncate glow:text-[#ede8f5]">
                 {show.title}
               </span>
               {claireToo && (
@@ -294,13 +294,13 @@ export default function WatchlistFeed() {
     <div>
       <div className="flex items-center justify-between mb-4">
         {/* Who toggle */}
-        <div className="flex items-center border border-neutral-200 rounded-lg overflow-hidden">
+        <div className="flex items-center border border-neutral-200 rounded-lg overflow-hidden glow:border-[#252336]">
           {([
             { key: "claire" as WhoView, label: "Claire's" },
             { key: "yours" as WhoView, label: "Yours" },
           ]).map(({ key, label }) => (
             <button key={key} onClick={() => setWhoView(key)}
-              className={`text-xs px-3 py-1.5 transition-colors ${whoView === key ? "bg-neutral-900 text-white" : "text-neutral-500 hover:bg-neutral-50"}`}
+              className={`text-xs px-3 py-1.5 transition-colors ${whoView === key ? "bg-neutral-900 text-white glow:bg-[#c084fc] glow:text-[#12111a]" : "text-neutral-500 hover:bg-neutral-50 glow:text-[#4a4560] glow:hover:bg-[#1a1826]"}`}
             >
               {label}
             </button>
@@ -317,13 +317,13 @@ export default function WatchlistFeed() {
               Export .ics
             </a>
           )}
-          <div className="flex items-center border border-neutral-200 rounded-lg overflow-hidden">
+          <div className="flex items-center border border-neutral-200 rounded-lg overflow-hidden glow:border-[#252336]">
             {([
               { key: "calendar", icon: <IconCalendar size={13} /> },
               { key: "list",     icon: <IconList size={13} /> },
             ] as { key: DisplayView; icon: React.ReactNode }[]).map(({ key, icon }) => (
               <button key={key} onClick={() => setDisplayView(key)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${displayView === key ? "bg-neutral-900 text-white" : "text-neutral-400 hover:bg-neutral-50"}`}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${displayView === key ? "bg-neutral-900 text-white glow:bg-[#c084fc] glow:text-[#12111a]" : "text-neutral-400 hover:bg-neutral-50 glow:text-[#4a4560] glow:hover:bg-[#1a1826]"}`}
               >
                 {icon}
               </button>
