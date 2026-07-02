@@ -8,12 +8,13 @@ from app.api.venues import router as venues_router
 from app.api.watchlist import router as watchlist_router
 from app.api.calendar import router as calendar_router
 from app.api.recommendations import router as recommendations_router
+from app.api.publish import router as publish_router
 
 app = FastAPI(title="house-lights", version="0.1.0")
 
 _cors_origins = os.environ.get(
     "CORS_ORIGINS",
-    "http://localhost:4321,http://127.0.0.1:4321,http://localhost:4322",
+    "http://localhost:4321,http://127.0.0.1:4321,http://localhost:4322,http://localhost:4323",
 ).split(",")
 
 app.add_middleware(
@@ -28,6 +29,7 @@ app.include_router(venues_router, prefix="/api")
 app.include_router(watchlist_router, prefix="/api")
 app.include_router(calendar_router, prefix="/api")
 app.include_router(recommendations_router, prefix="/api")
+app.include_router(publish_router)
 
 
 @app.get("/health")

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type React from "react";
 import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar } from "@tabler/icons-react";
-import { api } from "../lib/api";
+import { api, STATIC } from "../lib/api";
 import type { WatchlistEntry, Venue, Company, Show } from "../lib/api";
 import EventTypeIcon from "./EventTypeIcon";
 import WatchMenu from "./WatchMenu";
@@ -293,6 +293,12 @@ export default function WatchlistFeed() {
           </div>
         </div>
       </div>
+
+      {STATIC && (
+        <p className="text-xs text-neutral-400 mb-4">
+          Your watchlist is saved in this browser. Clearing your cache will remove it.
+        </p>
+      )}
 
       {watchlist.length === 0 && (
         <div className="flex items-center justify-center h-64 text-neutral-400 text-sm">

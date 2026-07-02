@@ -1,5 +1,4 @@
 import { IconLayoutList, IconSparkles, IconBuildingStore, IconCalendarHeart, IconInfoCircle } from "@tabler/icons-react";
-import EditorUnlock from "./EditorUnlock";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
@@ -62,7 +61,6 @@ export default function Nav({ current }: { current: string }) {
         })}
       </nav>
 
-      <EditorUnlock />
     </>
   );
 }
