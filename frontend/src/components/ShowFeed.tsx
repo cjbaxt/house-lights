@@ -236,7 +236,7 @@ export default function ShowFeed() {
   const [displayView, setDisplayView] = useState<DisplayView>("programme");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const [timeframe, setTimeframe] = useState<Timeframe>("week");
+  const [timeframe, setTimeframe] = useState<Timeframe>("month");
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
   const [activeVenues, setActiveVenues] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");

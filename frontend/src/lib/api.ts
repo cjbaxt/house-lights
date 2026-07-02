@@ -92,6 +92,15 @@ export const api = {
     const r = await fetch(`${BASE}/companies`);
     return r.json();
   },
+  async getClairesWatchlist(): Promise<WatchlistEntry[]> {
+    const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+    try {
+      const res = await fetch(`${base}/data/watchlist.json`);
+      return res.ok ? res.json() : [];
+    } catch {
+      return [];
+    }
+  },
   async getWatchlist(): Promise<WatchlistEntry[]> {
     if (STATIC) return staticGetWatchlist();
     const r = await fetch(`${BASE}/watchlist/`);

@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
 
 from sqlmodel import Session, create_engine, select
-from app.models.core import Show, Venue, Company
+from app.models.core import Show, Venue, Company, Watchlist
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://clairebaxter@localhost:5432/house_lights"
@@ -68,7 +68,20 @@ def main():
         ).all()
         write(OUT / "companies.json", [model_dict(c) for c in companies])
 
-    print(f"\nDone. {len(shows)} shows, {len(venues)} venues, {len(companies)} companies.")
+        print("Watchlist...")
+        watchlist_entries = session.exec(select(Watchlist)).all()
+        show_map = {s.id: s for s in shows}
+        watchlist_out = []
+        for w in watchlist_entries:
+            show = show_map.get(w.show_id)
+            if show:
+                watchlist_out.append({
+                    "watchlist": model_dict(w),
+                    "show": model_dict(show),
+                })
+        write(OUT / "watchlist.json", watchlist_out)
+
+    print(f"\nDone. {len(shows)} shows, {len(venues)} venues, {len(companies)} companies, {len(watchlist_out)} watchlist entries.")
 
 
 if __name__ == "__main__":
