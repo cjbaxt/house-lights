@@ -31,6 +31,7 @@ function GroupedCard({
   onWatchChange,
   readOnly = false,
   claireToo = false,
+  isDutch = false,
 }: {
   group: ShowGroup;
   venueMap: Record<string, string>;
@@ -38,6 +39,7 @@ function GroupedCard({
   onWatchChange: () => void;
   readOnly?: boolean;
   claireToo?: boolean;
+  isDutch?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
@@ -64,9 +66,6 @@ function GroupedCard({
     }
     onWatchChange();
   }
-
-  const theme = useTheme();
-  const isDutch = theme === "dutch";
 
   const watchMenu = (
     <WatchMenu
@@ -238,6 +237,7 @@ function GroupedCard({
 }
 
 export default function WatchlistFeed() {
+  const isDutch = useTheme() === "dutch";
   const [myWatchlist, setMyWatchlist] = useState<WatchlistEntry[]>([]);
   const [clairesWatchlist, setClairesWatchlist] = useState<WatchlistEntry[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -380,6 +380,7 @@ export default function WatchlistFeed() {
               onWatchChange={reloadMine}
               readOnly={isClaires}
               claireToo={!isClaires && clairesKeys.has(group.key)}
+              isDutch={isDutch}
             />
           ))}
         </div>

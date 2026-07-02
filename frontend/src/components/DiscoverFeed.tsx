@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTheme } from "../lib/theme";
 import { IconSearch, IconX, IconSparkles, IconList, IconCalendar } from "@tabler/icons-react";
 import { api } from "../lib/api";
 import type { Show, Venue, Company, WatchlistEntry, WatchStatus } from "../lib/api";
@@ -17,6 +18,7 @@ const SUGGESTIONS = [
 ];
 
 export default function DiscoverFeed({ isStatic = false }: { isStatic?: boolean }) {
+  const isDutch = useTheme() === "dutch";
   const [venues, setVenues] = useState<Venue[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
@@ -158,6 +160,7 @@ export default function DiscoverFeed({ isStatic = false }: { isStatic?: boolean 
                       companyName={show.company_id ? companyMap[show.company_id] : undefined}
                       watchStatus={watchMap[show.id]}
                       onWatchChange={reload}
+                      isDutch={isDutch}
                     />
                   ))}
                 </div>

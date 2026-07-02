@@ -2,7 +2,6 @@ import { useState } from "react";
 import { IconBookmark, IconBookmarkFilled } from "@tabler/icons-react";
 import type { Show, WatchStatus } from "../lib/api";
 import { api } from "../lib/api";
-import { useTheme } from "../lib/theme";
 import WatchMenu from "./WatchMenu";
 import EventTypeIcon from "./EventTypeIcon";
 
@@ -33,10 +32,8 @@ const TICKET_LABEL: Record<string, string> = {
   sold_out: "sold out",
 };
 
-export default function ShowCard({ show, venueName, companyName, watchStatus, onWatchChange, extraDates }: Props) {
+export default function ShowCard({ show, venueName, companyName, watchStatus, onWatchChange, extraDates, isDutch = false }: Props & { isDutch?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const theme = useTheme();
-  const isDutch = theme === "dutch";
 
   const date = new Date(show.date + "T00:00:00");
   const day = date.getDate();

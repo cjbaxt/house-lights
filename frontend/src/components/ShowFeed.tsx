@@ -38,16 +38,15 @@ const CHIP_LIMIT = 5;
 
 type DateEntry = { id: string; date: string; status: string; time?: string };
 
-function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
+function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, isDutch = false }: {
   show: Show;
   allDates: DateEntry[];
   location: string;
   watchMap: Record<string, WatchStatus>;
   onWatchChange: () => void;
+  isDutch?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const theme = useTheme();
-  const isDutch = theme === "dutch";
   const visible = expanded ? allDates : allDates.slice(0, CHIP_LIMIT);
   const hidden = allDates.length - CHIP_LIMIT;
   const anyWatched = allDates.some(d => watchMap[d.id] && watchMap[d.id] !== "passed");
@@ -289,6 +288,7 @@ function VenueFilterSection({ groups, activeVenues, toggleVenue, selectAllInGrou
 }
 
 export default function ShowFeed() {
+  const isDutch = useTheme() === "dutch";
   const [shows, setShows] = useState<Show[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -627,6 +627,7 @@ export default function ShowFeed() {
                   location={location ?? ""}
                   watchMap={watchMap}
                   onWatchChange={load}
+                  isDutch={isDutch}
                 />
               );
             })}
@@ -671,6 +672,7 @@ export default function ShowFeed() {
                             companyName={show.company_id ? companyMap[show.company_id]?.name : undefined}
                             watchStatus={watchMap[show.id]}
                             onWatchChange={load}
+                            isDutch={isDutch}
                           />
                         ))}
                       </div>
