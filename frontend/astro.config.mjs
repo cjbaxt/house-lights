@@ -7,7 +7,7 @@ const isStatic = process.env.PUBLIC_STATIC_DATA === "true";
 
 export default defineConfig({
   integrations: [react()],
-  ...(isStatic ? { base: "/house-lights", outDir: "dist" } : {}),
+  ...(isStatic ? { base: "/house-lights/", outDir: "dist" } : {}),
   vite: {
     plugins: [tailwindcss()],
     server: {
