@@ -93,13 +93,17 @@ export const api = {
     return r.json();
   },
   async getClairesWatchlist(): Promise<WatchlistEntry[]> {
-    const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-    try {
-      const res = await fetch(`${base}/data/watchlist.json`);
-      return res.ok ? res.json() : [];
-    } catch {
-      return [];
+    if (STATIC) {
+      const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+      try {
+        const res = await fetch(`${base}/data/watchlist.json`);
+        return res.ok ? res.json() : [];
+      } catch {
+        return [];
+      }
     }
+    const r = await fetch(`${BASE}/watchlist/`);
+    return r.json();
   },
   getLocalWatchlist(): WatchlistEntry[] {
     return staticGetWatchlist();
