@@ -1,12 +1,15 @@
 ---
 import "../styles/global.css";
 import Nav from "../components/Nav";
+import EditorUnlock from "../components/EditorUnlock";
+import ClientRouter from "astro/components/ClientRouter.astro";
 import WatchlistFeed from "../components/WatchlistFeed";
 ---
 
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <ClientRouter />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Watchlist — house lights</title>
     <link rel="icon" type="image/svg+xml" href={import.meta.env.PROD ? "/favicon.svg" : "/favicon-local.svg"} />
@@ -15,7 +18,8 @@ import WatchlistFeed from "../components/WatchlistFeed";
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-white min-h-screen">
-    <Nav current="/watchlist" client:load />
+    <Nav current="/watchlist" client:load transition:persist />
+    <EditorUnlock client:load transition:persist />
     <main class="max-w-3xl mx-auto px-4 md:px-8 pt-4 md:pt-20 pb-24 md:pb-8">
       <WatchlistFeed client:load />
     </main>

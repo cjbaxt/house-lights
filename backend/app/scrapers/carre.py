@@ -10,12 +10,37 @@ No Playwright needed.
 import re
 import httpx
 import asyncio
+from html.parser import HTMLParser
 from datetime import date, datetime
 from .base import BaseScraper, ScrapedShow
 
 BASE_URL = "https://carre.nl"
 API_BASE = "https://carre.nl/api/render"
 HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://carre.nl/"}
+
+
+def _strip_html(html: str) -> str:
+    """Extract plain text from HTML, collapsing whitespace."""
+    class _P(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.parts = []
+        def handle_data(self, data):
+            self.parts.append(data)
+    p = _P()
+    p.feed(html)
+    return re.sub(r"\s+", " ", "".join(p.parts)).strip()
+
+
+def _extract_description(node_data: dict) -> str | None:
+    for key in ("seoDescription", "contentMain", "subheading"):
+        val = node_data.get(key)
+        if not val:
+            continue
+        text = _strip_html(val) if "<" in val else val.strip()
+        if text and len(text) > 20:
+            return text
+    return None
 
 
 def _ticket_status(event: dict) -> str:
@@ -51,7 +76,7 @@ def _extract_shows(data: dict, slug: str, today: date) -> list[ScrapedShow]:
     title = node_data.get("heading") or node_data.get("title") or slug.replace("-", " ").title()
     url = f"{BASE_URL}/voorstelling/{slug}"
     image_url = _extract_image(data)
-    description = node_data.get("seoDescription") or None
+    description = _extract_description(node_data)
 
     productions = data.get("productions", {})
     shows: list[ScrapedShow] = []

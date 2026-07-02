@@ -1,6 +1,8 @@
 ---
 import "../styles/global.css";
 import Nav from "../components/Nav";
+import EditorUnlock from "../components/EditorUnlock";
+import ClientRouter from "astro/components/ClientRouter.astro";
 import fs from "fs";
 import path from "path";
 
@@ -11,6 +13,7 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <ClientRouter />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>About — house lights</title>
     <link rel="icon" type="image/svg+xml" href={import.meta.env.PROD ? "/favicon.svg" : "/favicon-local.svg"} />
@@ -19,13 +22,23 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-white min-h-screen">
-    <Nav current="/about" client:load />
+    <Nav current="/about" client:load transition:persist />
+    <EditorUnlock client:load transition:persist />
     <main class="max-w-2xl mx-auto px-4 md:px-8 pt-4 md:pt-20 pb-24 md:pb-8">
       <p class="font-serif text-2xl text-neutral-900 mt-4 mb-8">About</p>
       <div class="space-y-5 text-sm text-neutral-700 leading-relaxed">
         {paragraphs.map((p) => {
-          const bold = p.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-          return <p set:html={bold} />;
+          const lines = p.split("\n");
+          const isList = lines.every((l) => l.trimStart().startsWith("- "));
+          const render = (s: string) => s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+          if (isList) {
+            return (
+              <ul class="list-disc list-outside pl-4 space-y-1.5">
+                {lines.map((l) => <li set:html={render(l.replace(/^-\s+/, ""))} />)}
+              </ul>
+            );
+          }
+          return <p set:html={render(p)} />;
         })}
       </div>
       <div class="mt-12 pt-8 border-t border-neutral-100 flex items-center justify-center">

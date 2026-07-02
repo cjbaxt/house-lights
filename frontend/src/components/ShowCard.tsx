@@ -64,14 +64,14 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-neutral-400 flex-shrink-0" title={show.type ?? "other"}><EventTypeIcon type={show.type} size={13} /></span>
-            <span className="font-serif text-sm md:text-base font-medium text-neutral-900 truncate">{show.title}</span>
+            <span className="font-serif text-sm md:text-base font-medium text-neutral-900 md:truncate line-clamp-2 md:line-clamp-none">{show.title}</span>
           </div>
           {show.subtitle && (
-            <div className="text-xs text-neutral-400 mt-0.5 truncate">{show.subtitle}</div>
+            <div className="text-xs text-neutral-400 mt-0.5 line-clamp-1">{show.subtitle}</div>
           )}
           <div className="text-xs text-neutral-400 mt-0.5 truncate">{location}</div>
           {show.summary && (
-            <div className="text-[11px] text-neutral-400 mt-1 leading-relaxed line-clamp-2">{show.summary}</div>
+            <div className="text-[11px] text-neutral-400 mt-1 leading-relaxed line-clamp-3 md:line-clamp-2">{show.summary}</div>
           )}
         </div>
 
