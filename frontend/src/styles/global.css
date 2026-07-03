@@ -7,8 +7,6 @@
   --color-spotlight: #e8c547;
 }
 
-@custom-variant dutch ([data-theme="dutch"] &);
-
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -21,10 +19,6 @@
   }
 
   body {
-    @apply bg-white text-neutral-900;
-  }
-
-  [data-theme="dutch"] body {
     background: #f5f3ef;
   }
 }
@@ -32,19 +26,13 @@
 @layer components {
   /* Venue image container — explicit sizing bypasses Tailwind scan gaps in client-nav CSS */
   .venue-img {
-    width: 8rem;
-    height: 5rem;
+    width: 4rem;
     flex-shrink: 0;
     overflow: hidden;
-    background: var(--color-neutral-100, #f5f5f5);
-  }
-
-  [data-theme="dutch"] .venue-img {
-    width: 4rem;
     background: transparent;
   }
 
-  [data-theme="dutch"] .dutch-logo {
+  .dutch-logo {
     font-family: var(--font-sans);
     font-weight: 800;
     font-size: 13px;
@@ -54,7 +42,7 @@
     font-style: normal;
   }
 
-  [data-theme="dutch"] .dutch-card-saved {
+  .dutch-card-saved {
     border-left: 3px solid #e85d2f;
     background: #fff;
   }
