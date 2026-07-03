@@ -30,7 +30,7 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
   <body class="bg-white min-h-screen dutch:bg-[#f5f3ef]">
     <Nav current="/about" client:load transition:persist />
     <EditorUnlock client:load transition:persist />
-    <main class="max-w-2xl mx-auto px-4 md:px-8 pt-4 md:pt-20 pb-24 md:pb-8">
+    <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
       <p class="font-serif text-2xl text-neutral-900 mt-4 mb-8 dutch:font-sans dutch:font-black dutch:uppercase dutch:text-xl dutch:tracking-tight dutch:text-[#1a1a1a]">About</p>
       <div class="space-y-5 text-sm text-neutral-700 leading-relaxed dutch:text-[#444]">
         {paragraphs.map((p) => {

@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { IconLayoutList, IconSparkles, IconBuildingStore, IconCalendarHeart, IconInfoCircle } from "@tabler/icons-react";
 import ThemeToggle from "./ThemeToggle";
 
@@ -16,6 +17,19 @@ function href(path: string) {
 }
 
 export default function Nav({ current }: { current: string }) {
+  const [showMobileTop, setShowMobileTop] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    function onScroll() {
+      const y = window.scrollY;
+      setShowMobileTop(y < 10 || y < lastScrollY.current);
+      lastScrollY.current = y;
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <>
       {/* Desktop top bar */}
@@ -44,27 +58,41 @@ export default function Nav({ current }: { current: string }) {
         <ThemeToggle />
       </header>
 
+      {/* Mobile top bar — hides on scroll down */}
+      <header
+        className={`md:hidden fixed top-0 inset-x-0 z-40 h-12 bg-[#1a1a1a] flex items-center justify-between px-4 transition-transform duration-200 ${
+          showMobileTop ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
+        <a href={href("/")} className="font-sans font-black text-[13px] tracking-[0.1em] uppercase text-[#f5f3ef] hover:opacity-70 transition-opacity">
+          house lights
+        </a>
+        <ThemeToggle />
+      </header>
+
       {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 border-t border-neutral-100 bg-white/95 backdrop-blur-sm flex items-center dutch:bg-[#1a1a1a] dutch:border-transparent">
-        {links.map(({ path, label, icon: Icon }) => {
-          const active = current === path;
-          return (
-            <a
-              key={path}
-              href={href(path)}
-              className={`flex-1 flex flex-col items-center gap-1 pt-2 transition-colors ${
-                active
-                  ? "text-neutral-900 dutch:text-[#e85d2f]"
-                  : "text-neutral-400 dutch:text-[#f5f3ef]/30"
-              }`}
-            >
-              <Icon size={22} strokeWidth={active ? 2 : 1.5} />
-              <span className="text-[10px] uppercase tracking-wider">{label}</span>
-            </a>
-          );
-        })}
-        <div className="flex-1 flex flex-col items-center gap-1 pt-2">
-          <ThemeToggle />
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dutch:bg-[#1a1a1a] border-t border-neutral-100 dutch:border-transparent"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="flex items-center h-16">
+          {links.map(({ path, label, icon: Icon }) => {
+            const active = current === path;
+            return (
+              <a
+                key={path}
+                href={href(path)}
+                className={`flex-1 flex flex-col items-center gap-1 pt-2 transition-colors ${
+                  active
+                    ? "text-neutral-900 dutch:text-[#e85d2f]"
+                    : "text-neutral-400 dutch:text-[#f5f3ef]/30"
+                }`}
+              >
+                <Icon size={22} strokeWidth={active ? 2 : 1.5} />
+                <span className="text-[10px] uppercase tracking-wider">{label}</span>
+              </a>
+            );
+          })}
         </div>
       </nav>
     </>
