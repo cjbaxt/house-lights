@@ -113,7 +113,7 @@ function GroupedCard({
               </span>
               {claireToo && <IconUsers size={12} className="flex-shrink-0 text-[#e85d2f]" />}
             </div>
-            {show.subtitle && <div className="text-xs text-[#888] mt-0.5 truncate">{show.subtitle}</div>}
+            {show.subtitle && <div className="text-xs text-[#888] mt-0.5 line-clamp-2">{show.subtitle}</div>}
           </div>
         </a>
         {readOnly ? (
