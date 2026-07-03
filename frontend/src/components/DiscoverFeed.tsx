@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useTheme } from "../lib/theme";
 import { IconSearch, IconX, IconSparkles, IconList, IconCalendar } from "@tabler/icons-react";
 import { api } from "../lib/api";
 import type { Show, Venue, Company, WatchlistEntry, WatchStatus } from "../lib/api";
@@ -18,7 +17,6 @@ const SUGGESTIONS = [
 ];
 
 export default function DiscoverFeed({ isStatic = false }: { isStatic?: boolean }) {
-  const isDutch = useTheme() === "dutch";
   const [venues, setVenues] = useState<Venue[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
@@ -73,23 +71,23 @@ export default function DiscoverFeed({ isStatic = false }: { isStatic?: boolean 
       {/* Search bar */}
       <div className="relative flex items-center gap-2 mb-3">
         <div className="relative flex-1">
-          <IconSparkles size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dutch:text-[#e85d2f] pointer-events-none" />
+          <IconSparkles size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#e85d2f] pointer-events-none" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && search(query)}
             placeholder="What are you in the mood for?"
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white dutch:bg-[#eceae4] border border-neutral-200 rounded-xl dutch:rounded-none focus:outline-none focus:border-neutral-400 dutch:focus:border-[#1a1a1a] transition-colors placeholder:text-neutral-400 dutch:border-[#d4c9b8] dutch:text-[#1a1a1a] dutch:placeholder-[#aaa]"
+            className="w-full pl-9 pr-4 py-2.5 text-sm bg-[#eceae4] border border-[#d4c9b8] focus:outline-none focus:border-[#1a1a1a] transition-colors placeholder:text-[#aaa] text-[#1a1a1a]"
           />
         </div>
         {searched ? (
-          <button onClick={clear} className="p-2.5 rounded-xl dutch:rounded-none border border-neutral-200 dutch:border-[#d4c9b8] dutch:bg-[#eceae4] hover:border-neutral-400 dutch:hover:border-[#e85d2f] dutch:hover:text-[#e85d2f] transition-colors text-neutral-500 dutch:text-[#888]">
+          <button onClick={clear} className="p-2.5 border border-[#d4c9b8] bg-[#eceae4] hover:border-[#e85d2f] hover:text-[#e85d2f] transition-colors text-[#888]">
             <IconX size={15} />
           </button>
         ) : (
           <button onClick={() => search(query)} disabled={!query.trim()}
-            className="p-2.5 rounded-xl dutch:rounded-none border border-neutral-200 dutch:border-[#d4c9b8] dutch:bg-[#eceae4] hover:border-neutral-400 dutch:hover:border-[#e85d2f] dutch:hover:text-[#e85d2f] transition-colors text-neutral-500 dutch:text-[#888] disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-2.5 border border-[#d4c9b8] bg-[#eceae4] hover:border-[#e85d2f] hover:text-[#e85d2f] transition-colors text-[#888] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <IconSearch size={15} />
           </button>
@@ -102,7 +100,7 @@ export default function DiscoverFeed({ isStatic = false }: { isStatic?: boolean 
           <div className="flex flex-wrap gap-1.5 mb-4">
             {SUGGESTIONS.map((s) => (
               <button key={s} onClick={() => search(s)}
-                className="text-[11px] px-3 py-1 rounded-full dutch:rounded-none border border-neutral-200 dutch:border-[#d4c9b8] dutch:bg-[#eceae4] text-neutral-500 dutch:text-[#555] dutch:font-bold dutch:uppercase dutch:tracking-wider dutch:text-[9px] hover:border-neutral-400 dutch:hover:border-[#e85d2f] dutch:hover:text-[#e85d2f] hover:text-neutral-700 transition-colors"
+                className="text-[9px] px-3 py-1 border border-[#d4c9b8] bg-[#eceae4] text-[#555] font-bold uppercase tracking-wider hover:border-[#e85d2f] hover:text-[#e85d2f] transition-colors"
               >
                 {s}
               </button>
@@ -132,15 +130,15 @@ export default function DiscoverFeed({ isStatic = false }: { isStatic?: boolean 
                   {results.length} shows matching "{query}"
                 </span>
                 {/* View toggle */}
-                <div className="flex items-center border border-neutral-200 rounded-lg dutch:rounded-none overflow-hidden dutch:border-[#ece7de]">
+                <div className="flex items-center border border-[#ece7de] overflow-hidden">
                   <button onClick={() => setDisplayView("list")}
-                    className={`p-1.5 transition-colors ${displayView === "list" ? "bg-neutral-900 text-white dutch:bg-[#1a1a1a] dutch:text-white" : "text-neutral-400 hover:bg-neutral-50 dutch:text-[#888] dutch:hover:bg-[#ece7de]"}`}
+                    className={`p-1.5 transition-colors ${displayView === "list" ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
                     title="List view"
                   >
                     <IconList size={14} />
                   </button>
                   <button onClick={() => setDisplayView("calendar")}
-                    className={`p-1.5 transition-colors ${displayView === "calendar" ? "bg-neutral-900 text-white dutch:bg-[#1a1a1a] dutch:text-white" : "text-neutral-400 hover:bg-neutral-50 dutch:text-[#888] dutch:hover:bg-[#ece7de]"}`}
+                    className={`p-1.5 transition-colors ${displayView === "calendar" ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
                     title="Calendar view"
                   >
                     <IconCalendar size={14} />
@@ -160,7 +158,6 @@ export default function DiscoverFeed({ isStatic = false }: { isStatic?: boolean 
                       companyName={show.company_id ? companyMap[show.company_id] : undefined}
                       watchStatus={watchMap[show.id]}
                       onWatchChange={reload}
-                      isDutch={isDutch}
                     />
                   ))}
                 </div>

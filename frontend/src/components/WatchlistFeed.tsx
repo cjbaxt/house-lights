@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useTheme } from "../lib/theme";
 import type React from "react";
 import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconUsers } from "@tabler/icons-react";
 import { api, STATIC } from "../lib/api";
@@ -31,7 +30,6 @@ function GroupedCard({
   onWatchChange,
   readOnly = false,
   claireToo = false,
-  isDutch = false,
 }: {
   group: ShowGroup;
   venueMap: Record<string, string>;
@@ -39,7 +37,6 @@ function GroupedCard({
   onWatchChange: () => void;
   readOnly?: boolean;
   claireToo?: boolean;
-  isDutch?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
@@ -51,7 +48,6 @@ function GroupedCard({
 
   // Any entry has tickets_bought?
   const anyBought = group.entries.some((e) => e.watchlist.status === "tickets_bought");
-  const allStatuses = new Set(group.entries.map((e) => e.watchlist.status));
   // representative status for bookmark icon
   const repStatus = anyBought ? "tickets_bought" : (group.entries[0]?.watchlist.status as WatchStatus);
 
@@ -85,140 +81,61 @@ function GroupedCard({
     />
   );
 
-  if (isDutch) {
-    return (
-      <div className={`group border-b border-[#ece7de] hover:bg-white transition-colors ${anyBought ? "border-l-2 border-l-[#e85d2f]" : ""}`}>
-        <div className="flex items-start gap-4 px-4 pt-3 pb-2">
-          <a href={show.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 flex-1 min-w-0">
-            {show.image_url && (
-              <div className="w-16 flex-shrink-0 overflow-hidden" style={{ aspectRatio: "4/3" }}>
-                <img src={show.image_url} alt="" className="w-full h-full object-cover" loading="lazy"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-1">
-                {show.type ?? "other"}{location ? ` · ${location}` : ""}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-sans font-black text-sm uppercase tracking-tight text-[#1a1a1a] leading-tight truncate">
-                  {show.title}
-                </span>
-                {claireToo && <IconUsers size={12} className="flex-shrink-0 text-[#e85d2f]" />}
-              </div>
-              {show.subtitle && <div className="text-xs text-[#888] mt-0.5 truncate">{show.subtitle}</div>}
-            </div>
-          </a>
-          <div className={`relative flex-shrink-0 ${readOnly ? "hidden" : ""}`}>
-            <button onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
-              className="p-1 hover:bg-[#ece7de] transition-colors mt-0.5">
-              <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
-            </button>
-            {menuOpen && watchMenu}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-1 px-4 pb-3">
-          {(showAllDates ? group.entries : group.entries.slice(0, DATE_CHIPS_LIMIT)).map((entry) => {
-            const d = new Date(entry.show.date + "T00:00:00");
-            const isToday = entry.show.date === new Date().toISOString().slice(0, 10);
-            const isCurrentYear = d.getFullYear() === new Date().getFullYear();
-            const label = (isToday ? "TODAY" : d.toLocaleDateString("en-GB", {
-              day: "numeric", month: "short", ...(!isCurrentYear && { year: "numeric" }),
-            })).toUpperCase();
-            const isBought = entry.watchlist.status === "tickets_bought";
-            const st = entry.show.ticket_status;
-            const chipClass = isBought
-              ? "bg-[#1a1a1a] border-[#1a1a1a] text-white"
-              : st === "sold_out" ? "border-[#ece7de] text-[#ccc] line-through"
-              : st === "few_left" ? "border-amber-300 text-amber-700"
-              : "border-[#ece7de] text-[#888] hover:border-[#e85d2f] hover:text-[#e85d2f]";
-            return (
-              <div key={entry.show.id} className="flex items-center gap-0.5">
-                <a href={entry.show.url} target="_blank" rel="noopener noreferrer"
-                  className={`text-[10px] font-bold px-2 py-0.5 border transition-colors tracking-wide ${chipClass}`}>
-                  {label}{entry.show.time ? ` ${entry.show.time.slice(0, 5)}` : ""}
-                </a>
-                {!readOnly && (
-                  <button onClick={(e) => handleMarkBought(e, entry)}
-                    className={`p-0.5 transition-colors ${isBought ? "text-[#e85d2f]" : "text-[#d4c9b8] hover:text-[#888]"}`}>
-                    <IconTicket size={11} />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-          {group.entries.length > DATE_CHIPS_LIMIT && (
-            <button onClick={() => setShowAllDates((v) => !v)}
-              className="text-[10px] font-bold px-2 py-0.5 border border-[#ece7de] text-[#aaa] hover:border-[#e85d2f] hover:text-[#e85d2f] transition-colors tracking-wide">
-              {showAllDates ? "SHOW LESS" : `+${group.entries.length - DATE_CHIPS_LIMIT} MORE`}
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Default theme
   return (
-    <div className={`bg-white border rounded-xl hover:border-neutral-300 transition-colors group ${anyBought ? "border-l-2 border-neutral-300 border-l-amber-400" : "border-neutral-100"}`}>
-      <div className="flex items-start gap-3 px-4 pt-3 pb-2">
-        <a href={show.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 flex-1 min-w-0">
-          {show.image_url ? (
-            <div className="w-12 md:w-20 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-100" style={{ aspectRatio: "4/3" }}>
+    <div className={`group border-b border-[#ece7de] hover:bg-white transition-colors ${anyBought ? "border-l-2 border-l-[#e85d2f]" : ""}`}>
+      <div className="flex items-start gap-4 px-4 pt-3 pb-2">
+        <a href={show.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 flex-1 min-w-0">
+          {show.image_url && (
+            <div className="w-16 flex-shrink-0 overflow-hidden" style={{ aspectRatio: "4/3" }}>
               <img src={show.image_url} alt="" className="w-full h-full object-cover" loading="lazy"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             </div>
-          ) : (
-            <div className="w-12 md:w-20 border border-neutral-200 rounded-lg flex items-center justify-center flex-shrink-0 text-neutral-400" style={{ aspectRatio: "4/3" }}>
-              <EventTypeIcon type={show.type} size={14} />
-            </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-neutral-400 flex-shrink-0"><EventTypeIcon type={show.type} size={13} /></span>
-              <span className="font-serif text-sm md:text-base font-medium text-neutral-900 truncate">{show.title}</span>
-              {claireToo && (
-                <span title="Claire wants to see this too" className="flex-shrink-0 text-rose-400 cursor-default">
-                  <IconUsers size={13} />
-                </span>
-              )}
+            <div className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-1">
+              {show.type ?? "other"}{location ? ` · ${location}` : ""}
             </div>
-            {show.subtitle && <div className="text-xs text-neutral-400 mt-0.5 truncate">{show.subtitle}</div>}
-            <div className="text-xs text-neutral-400 mt-0.5">{location}</div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-sans font-black text-sm uppercase tracking-tight text-[#1a1a1a] leading-tight truncate">
+                {show.title}
+              </span>
+              {claireToo && <IconUsers size={12} className="flex-shrink-0 text-[#e85d2f]" />}
+            </div>
+            {show.subtitle && <div className="text-xs text-[#888] mt-0.5 truncate">{show.subtitle}</div>}
           </div>
         </a>
         <div className={`relative flex-shrink-0 ${readOnly ? "hidden" : ""}`}>
           <button onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
-            className="p-1 rounded-lg hover:bg-neutral-100 transition-colors mt-0.5">
-            <IconBookmarkFilled size={15} className="text-neutral-700" />
+            className="p-1 hover:bg-[#ece7de] transition-colors mt-0.5">
+            <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
           </button>
           {menuOpen && watchMenu}
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+      <div className="flex flex-wrap items-center gap-1 px-4 pb-3">
         {(showAllDates ? group.entries : group.entries.slice(0, DATE_CHIPS_LIMIT)).map((entry) => {
           const d = new Date(entry.show.date + "T00:00:00");
           const isToday = entry.show.date === new Date().toISOString().slice(0, 10);
           const isCurrentYear = d.getFullYear() === new Date().getFullYear();
-          const label = isToday ? "Today" : d.toLocaleDateString("en-GB", {
+          const label = (isToday ? "TODAY" : d.toLocaleDateString("en-GB", {
             day: "numeric", month: "short", ...(!isCurrentYear && { year: "numeric" }),
-          });
+          })).toUpperCase();
           const isBought = entry.watchlist.status === "tickets_bought";
           const st = entry.show.ticket_status;
           const chipClass = isBought
-            ? "border-neutral-700 bg-neutral-900 text-white"
-            : st === "sold_out" ? "border-neutral-100 text-neutral-300 line-through"
-            : st === "few_left" ? "border-amber-100 text-amber-600"
-            : "border-neutral-200 text-neutral-500 hover:border-neutral-400";
+            ? "bg-[#1a1a1a] border-[#1a1a1a] text-white"
+            : st === "sold_out" ? "border-[#ece7de] text-[#ccc] line-through"
+            : st === "few_left" ? "border-amber-300 text-amber-700"
+            : "border-[#ece7de] text-[#888] hover:border-[#e85d2f] hover:text-[#e85d2f]";
           return (
             <div key={entry.show.id} className="flex items-center gap-0.5">
               <a href={entry.show.url} target="_blank" rel="noopener noreferrer"
-                className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${chipClass}`}>
+                className={`text-[10px] font-bold px-2 py-0.5 border transition-colors tracking-wide ${chipClass}`}>
                 {label}{entry.show.time ? ` ${entry.show.time.slice(0, 5)}` : ""}
               </a>
               {!readOnly && (
                 <button onClick={(e) => handleMarkBought(e, entry)}
-                  className={`p-0.5 rounded transition-colors ${isBought ? "text-neutral-700" : "text-neutral-300 hover:text-neutral-500"}`}>
+                  className={`p-0.5 transition-colors ${isBought ? "text-[#e85d2f]" : "text-[#d4c9b8] hover:text-[#888]"}`}>
                   <IconTicket size={11} />
                 </button>
               )}
@@ -227,8 +144,8 @@ function GroupedCard({
         })}
         {group.entries.length > DATE_CHIPS_LIMIT && (
           <button onClick={() => setShowAllDates((v) => !v)}
-            className="text-[11px] px-2 py-0.5 rounded-full border border-neutral-200 text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors">
-            {showAllDates ? "show less" : `+${group.entries.length - DATE_CHIPS_LIMIT} more`}
+            className="text-[10px] font-bold px-2 py-0.5 border border-[#ece7de] text-[#aaa] hover:border-[#e85d2f] hover:text-[#e85d2f] transition-colors tracking-wide">
+            {showAllDates ? "SHOW LESS" : `+${group.entries.length - DATE_CHIPS_LIMIT} MORE`}
           </button>
         )}
       </div>
@@ -237,7 +154,6 @@ function GroupedCard({
 }
 
 export default function WatchlistFeed() {
-  const isDutch = useTheme() === "dutch";
   const [myWatchlist, setMyWatchlist] = useState<WatchlistEntry[]>([]);
   const [clairesWatchlist, setClairesWatchlist] = useState<WatchlistEntry[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -313,13 +229,13 @@ export default function WatchlistFeed() {
     <div>
       <div className="flex items-center justify-between mb-4">
         {/* Who toggle */}
-        <div className="flex items-center border border-neutral-200 rounded-lg dutch:rounded-none overflow-hidden dutch:border-[#ece7de]">
+        <div className="flex items-center border border-[#ece7de] overflow-hidden">
           {([
             { key: "claire" as WhoView, label: "Claire's" },
             { key: "yours" as WhoView, label: "Yours" },
           ]).map(({ key, label }) => (
             <button key={key} onClick={() => setWhoView(key)}
-              className={`text-xs px-3 py-1.5 transition-colors ${whoView === key ? "bg-neutral-900 text-white dutch:bg-[#1a1a1a] dutch:text-white" : "text-neutral-500 hover:bg-neutral-50 dutch:text-[#888] dutch:hover:bg-[#ece7de]"}`}
+              className={`text-xs px-3 py-1.5 transition-colors ${whoView === key ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
             >
               {label}
             </button>
@@ -336,13 +252,13 @@ export default function WatchlistFeed() {
               Export .ics
             </a>
           )}
-          <div className="flex items-center border border-neutral-200 rounded-lg dutch:rounded-none overflow-hidden dutch:border-[#ece7de]">
+          <div className="flex items-center border border-[#ece7de] overflow-hidden">
             {([
               { key: "calendar", icon: <IconCalendar size={13} /> },
               { key: "list",     icon: <IconList size={13} /> },
             ] as { key: DisplayView; icon: React.ReactNode }[]).map(({ key, icon }) => (
               <button key={key} onClick={() => setDisplayView(key)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${displayView === key ? "bg-neutral-900 text-white dutch:bg-[#1a1a1a] dutch:text-white" : "text-neutral-400 hover:bg-neutral-50 dutch:text-[#888] dutch:hover:bg-[#ece7de]"}`}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${displayView === key ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
               >
                 {icon}
               </button>
@@ -380,7 +296,6 @@ export default function WatchlistFeed() {
               onWatchChange={reloadMine}
               readOnly={isClaires}
               claireToo={!isClaires && clairesKeys.has(group.key)}
-              isDutch={isDutch}
             />
           ))}
         </div>

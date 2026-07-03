@@ -187,7 +187,7 @@ function VenueRow({
   );
 
   return (
-    <div className="bg-white dutch:bg-[#f5f3ef] border border-neutral-100 dutch:border-0 dutch:border-b dutch:border-[#ece7de] rounded-xl dutch:rounded-none overflow-hidden hover:border-neutral-300 dutch:hover:bg-white transition-colors flex">
+    <div className="bg-[#f5f3ef] border-b border-[#ece7de] overflow-hidden hover:bg-white transition-colors flex">
       {image_url && (
         <div className="venue-img">
           <img src={image_url} alt={name} className="w-full h-full object-cover" loading="lazy"
@@ -197,26 +197,21 @@ function VenueRow({
       <div className="px-4 py-3 flex-1 min-w-0">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            {meta && <div className="hidden dutch:block text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-0.5">{meta}</div>}
-            <span className="font-serif dutch:font-sans text-sm font-medium dutch:font-black dutch:uppercase dutch:tracking-tight text-neutral-900 dutch:text-[#1a1a1a]">{name}</span>
+            {meta && <div className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-0.5">{meta}</div>}
+            <span className="font-sans text-sm font-black uppercase tracking-tight text-[#1a1a1a]">{name}</span>
           </div>
           {editControls}
           {website_url && (
             <a href={website_url} target="_blank" rel="noopener noreferrer"
-              className="text-neutral-300 dutch:text-[#d4c9b8] hover:text-neutral-600 dutch:hover:text-[#e85d2f] transition-colors flex-shrink-0">
+              className="text-[#d4c9b8] hover:text-[#e85d2f] transition-colors flex-shrink-0">
               <svg className="w-3 h-3" viewBox="0 0 6 10" fill="none">
                 <path d="M1 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </a>
           )}
         </div>
-        <div className="dutch:hidden flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
-          {venue_type && <span className="text-[11px] text-neutral-400">{VENUE_TYPE_LABEL[venue_type] ?? venue_type}</span>}
-          {neighbourhood && <span className="text-[11px] text-neutral-400">{neighbourhood}</span>}
-          {capacity && <span className="text-[11px] text-neutral-400">{capacityLabel(capacity)} · {capacity.toLocaleString()}</span>}
-        </div>
         {description && (
-          <p className="text-[11px] text-neutral-500 dutch:text-[#888] mt-1.5 leading-relaxed line-clamp-3 dutch:line-clamp-2">{description}</p>
+          <p className="text-[11px] text-[#888] mt-1.5 leading-relaxed line-clamp-2">{description}</p>
         )}
       </div>
     </div>
@@ -274,12 +269,12 @@ export default function VenueList() {
 
       {/* Tab toggle */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="flex items-center border border-neutral-200 rounded-lg dutch:rounded-none overflow-hidden dutch:border-[#ece7de]">
+        <div className="flex items-center border border-[#ece7de] overflow-hidden">
           {(["venues", "companies"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`text-xs px-4 py-1.5 capitalize transition-colors ${tab === t ? "bg-neutral-900 text-white dutch:bg-[#1a1a1a] dutch:text-white" : "text-neutral-500 hover:bg-neutral-50 dutch:text-[#888] dutch:hover:bg-[#ece7de]"}`}
+              className={`text-xs px-4 py-1.5 capitalize transition-colors ${tab === t ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
             >
               {t}
             </button>
@@ -297,9 +292,9 @@ export default function VenueList() {
         return (
           <div key={p} className="mb-6">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-[11px] font-medium uppercase tracking-widest text-neutral-400 dutch:text-[#e85d2f] dutch:font-bold">{PRIORITY_LABEL[p]}</span>
-              <span className="text-[10px] text-neutral-300 dutch:text-[#bbb]">{group.length}</span>
-              <div className="flex-1 h-px bg-neutral-100 dutch:bg-[#ece7de]" />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[#e85d2f]">{PRIORITY_LABEL[p]}</span>
+              <span className="text-[10px] text-[#bbb]">{group.length}</span>
+              <div className="flex-1 h-px bg-[#ece7de]" />
             </div>
             <div className="flex flex-col">
               {group.map((item) => (

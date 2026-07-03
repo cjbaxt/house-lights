@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { IconLayoutList, IconSparkles, IconBuildingStore, IconCalendarHeart, IconInfoCircle } from "@tabler/icons-react";
-import ThemeToggle from "./ThemeToggle";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
@@ -33,8 +32,8 @@ export default function Nav({ current }: { current: string }) {
   return (
     <>
       {/* Desktop top bar */}
-      <header className="hidden md:flex fixed top-0 inset-x-0 z-40 h-14 border-b border-neutral-100 bg-white/90 backdrop-blur-sm items-center px-8 dutch:bg-[#1a1a1a] dutch:border-transparent dutch:backdrop-blur-none">
-        <a href={href("/")} className="font-serif italic text-lg tracking-tight mr-10 hover:opacity-70 transition-opacity dutch:font-sans dutch:not-italic dutch:font-black dutch:text-[13px] dutch:tracking-[0.1em] dutch:uppercase dutch:text-[#f5f3ef]">
+      <header className="hidden md:flex fixed top-0 inset-x-0 z-40 h-14 border-b border-transparent bg-[#1a1a1a] items-center px-8">
+        <a href={href("/")} className="font-sans font-black text-[13px] tracking-[0.1em] uppercase text-[#f5f3ef] mr-10 hover:opacity-70 transition-opacity">
           house lights
         </a>
         <nav className="flex gap-8 flex-1">
@@ -46,8 +45,8 @@ export default function Nav({ current }: { current: string }) {
                 href={href(path)}
                 className={`text-sm pb-0.5 transition-colors ${
                   active
-                    ? "text-neutral-900 border-b border-neutral-900 dutch:text-[#e85d2f] dutch:border-[#e85d2f]"
-                    : "text-neutral-400 hover:text-neutral-700 dutch:text-[#f5f3ef]/40 dutch:hover:text-[#f5f3ef]"
+                    ? "text-[#e85d2f] border-b border-[#e85d2f]"
+                    : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
                 }`}
               >
                 {label}
@@ -55,7 +54,6 @@ export default function Nav({ current }: { current: string }) {
             );
           })}
         </nav>
-        <ThemeToggle />
       </header>
 
       {/* Mobile top bar — hides on scroll down */}
@@ -67,12 +65,11 @@ export default function Nav({ current }: { current: string }) {
         <a href={href("/")} className="font-sans font-black text-[13px] tracking-[0.1em] uppercase text-[#f5f3ef] hover:opacity-70 transition-opacity">
           house lights
         </a>
-        <ThemeToggle />
       </header>
 
       {/* Mobile bottom tab bar */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dutch:bg-[#1a1a1a] border-t border-neutral-100 dutch:border-transparent"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#1a1a1a] border-t border-transparent"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="flex items-center h-16">
@@ -84,8 +81,8 @@ export default function Nav({ current }: { current: string }) {
                 href={href(path)}
                 className={`flex-1 flex flex-col items-center gap-1 pt-2 transition-colors ${
                   active
-                    ? "text-neutral-900 dutch:text-[#e85d2f]"
-                    : "text-neutral-400 dutch:text-[#f5f3ef]/30"
+                    ? "text-[#e85d2f]"
+                    : "text-[#f5f3ef]/30"
                 }`}
               >
                 <Icon size={22} strokeWidth={active ? 2 : 1.5} />
