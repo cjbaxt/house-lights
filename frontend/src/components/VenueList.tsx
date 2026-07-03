@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { isEditor } from "../lib/editor";
 import type { Venue, Company } from "../lib/api";
 import { IconPencil, IconX, IconCheck } from "@tabler/icons-react";
+import ExpandableText from "./ExpandableText";
 
 type Tab = "venues" | "companies";
 type Priority = "high" | "medium" | "low";
@@ -211,7 +212,7 @@ function VenueRow({
           )}
         </div>
         {description && (
-          <p className="text-[11px] text-[#888] mt-1.5 leading-relaxed line-clamp-2">{description}</p>
+          <ExpandableText text={description} className="text-[11px] text-[#888] mt-1.5 leading-relaxed" lines={2} />
         )}
       </div>
     </div>

@@ -61,7 +61,7 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
             {show.title}
           </div>
           {show.subtitle && (
-            <div className="text-xs text-[#888] mt-0.5 truncate">{show.subtitle}</div>
+            <div className="text-xs text-[#888] mt-0.5 line-clamp-2">{show.subtitle}</div>
           )}
         </div>
 

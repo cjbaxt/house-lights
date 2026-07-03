@@ -6,6 +6,7 @@ import type { Show, Venue, Company, WatchlistEntry, WatchStatus } from "../lib/a
 import ShowCard from "./ShowCard";
 import CalendarBody from "./CalendarBody";
 import EventTypeIcon from "./EventTypeIcon";
+import ExpandableText from "./ExpandableText";
 
 const MONTH_NAMES = [
   "", "January", "February", "March", "April", "May", "June",
@@ -88,8 +89,8 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
             <div className="font-sans font-black text-sm uppercase tracking-tight text-[#1a1a1a] leading-tight truncate">
               {show.title}
             </div>
-            {show.subtitle && <div className="text-xs text-[#888] mt-0.5 truncate">{show.subtitle}</div>}
-            {show.summary && <div className="text-[11px] text-[#888] mt-1 leading-relaxed line-clamp-2">{show.summary}</div>}
+            {show.subtitle && <div className="text-xs text-[#888] mt-0.5 line-clamp-2">{show.subtitle}</div>}
+            {show.summary && <ExpandableText text={show.summary} className="text-[11px] text-[#888] mt-1 leading-relaxed" lines={2} />}
           </div>
         </a>
         <button onClick={handleBookmark}
