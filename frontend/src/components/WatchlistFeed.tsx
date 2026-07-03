@@ -96,8 +96,16 @@ function GroupedCard({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-1">
-              {show.type ?? "other"}{location ? ` · ${location}` : ""}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase">
+                {show.type ?? "other"}{location ? ` · ${location}` : ""}
+              </span>
+              {readOnly && anyBought && (
+                <span className="flex items-center gap-0.5 text-[8px] font-bold tracking-widest uppercase px-1.5 py-0.5 bg-[#e85d2f] text-white">
+                  <IconTicket size={9} />
+                  has tickets
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1.5">
               <span className="font-sans font-black text-sm uppercase tracking-tight text-[#1a1a1a] leading-tight truncate">
