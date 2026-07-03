@@ -29,7 +29,7 @@ export default function ExpandableText({
       {(overflows || expanded) && (
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded((v) => !v); }}
-          className="text-[10px] font-bold text-[#e85d2f] uppercase tracking-widest mt-1"
+          className="text-[10px] font-bold text-[#aaa] uppercase tracking-widest mt-1 hover:text-[#666] transition-colors"
         >
           {expanded ? "show less" : "show more"}
         </button>
