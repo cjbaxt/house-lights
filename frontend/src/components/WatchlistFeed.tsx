@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type React from "react";
 import { IconCalendarDown, IconBookmark, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconUsers } from "@tabler/icons-react";
 import { api, STATIC } from "../lib/api";
@@ -189,7 +189,6 @@ export default function WatchlistFeed() {
   const [displayView, setDisplayView] = useState<DisplayView>("list");
   const [whoView, setWhoView] = useState<WhoView>(STATIC ? "yours" : "claire");
   const [visibleCount, setVisibleCount] = useState(12);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -212,17 +211,6 @@ export default function WatchlistFeed() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => { setVisibleCount(12); }, [whoView]);
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisibleCount((n) => n + 10); },
-      { rootMargin: "200px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   const venueMap = Object.fromEntries(venues.map((v) => [v.id, v.name]));
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
@@ -350,7 +338,12 @@ export default function WatchlistFeed() {
             />
           ))}
           {visibleCount < sortedGroups.length && (
-            <div ref={sentinelRef} className="h-8" />
+            <button
+              onClick={() => setVisibleCount((n) => n + 10)}
+              className="text-[11px] font-bold uppercase tracking-widest text-[#aaa] hover:text-[#666] transition-colors py-4 text-center"
+            >
+              Load more ({sortedGroups.length - visibleCount} remaining)
+            </button>
           )}
         </div>
       )}
