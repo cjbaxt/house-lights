@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type React from "react";
 import { IconCalendarDown, IconBookmark, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconUsers } from "@tabler/icons-react";
 import { api, STATIC } from "../lib/api";
@@ -188,6 +188,8 @@ export default function WatchlistFeed() {
   const [loading, setLoading] = useState(true);
   const [displayView, setDisplayView] = useState<DisplayView>("list");
   const [whoView, setWhoView] = useState<WhoView>(STATIC ? "yours" : "claire");
+  const [visibleCount, setVisibleCount] = useState(12);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -208,6 +210,19 @@ export default function WatchlistFeed() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => { setVisibleCount(12); }, [whoView]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisibleCount((n) => n + 10); },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const venueMap = Object.fromEntries(venues.map((v) => [v.id, v.name]));
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
@@ -315,7 +330,7 @@ export default function WatchlistFeed() {
         <CalendarBody shows={allShows} venueMap={venueNameMap} defaultView="month" />
       ) : (
         <div className="flex flex-col gap-2">
-          {sortedGroups.map((group) => (
+          {sortedGroups.slice(0, visibleCount).map((group) => (
             <GroupedCard
               key={group.key}
               group={group}
@@ -334,6 +349,9 @@ export default function WatchlistFeed() {
               } : undefined}
             />
           ))}
+          {visibleCount < sortedGroups.length && (
+            <div ref={sentinelRef} className="h-8" />
+          )}
         </div>
       )}
     </div>
