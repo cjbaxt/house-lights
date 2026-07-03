@@ -22,30 +22,38 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
     {import.meta.env.PUBLIC_STATIC_DATA === "true" && <link rel="apple-touch-icon" href={`${import.meta.env.BASE_URL}apple-touch-icon.png`} />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
     <Nav current="/about" client:load transition:persist />
     <EditorUnlock client:load transition:persist />
     <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
-      <p class="font-sans font-black uppercase text-xl tracking-tight text-[#1a1a1a] mt-4 mb-8">About</p>
-      <div class="space-y-5 text-sm text-[#444] leading-relaxed">
+      <div class="mt-4 mb-8">
+        <div class="w-8 h-0.5 bg-[#e85d2f] mb-3"></div>
+        <p class="font-sans font-black uppercase text-xl tracking-tight text-[#1a1a1a]">About</p>
+      </div>
+      <div class="space-y-5 text-sm text-[#444] leading-relaxed font-sans">
         {paragraphs.map((p) => {
           const lines = p.split("\n");
           const isList = lines.every((l) => l.trimStart().startsWith("- "));
-          const render = (s: string) => s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+          const render = (s: string) => s.replace(/\*\*(.+?)\*\*/g, '<span class="font-black text-[#1a1a1a] uppercase tracking-tight">$1</span>');
           if (isList) {
             return (
-              <ul class="list-disc list-outside pl-4 space-y-1.5">
-                {lines.map((l) => <li set:html={render(l.replace(/^-\s+/, ""))} />)}
+              <ul class="space-y-2">
+                {lines.map((l) => (
+                  <li class="flex items-baseline gap-3">
+                    <span class="text-[#e85d2f] font-black text-xs flex-shrink-0">—</span>
+                    <span set:html={render(l.replace(/^-\s+/, ""))} />
+                  </li>
+                ))}
               </ul>
             );
           }
           return <p set:html={render(p)} />;
         })}
       </div>
-      <div class="mt-12 pt-8 border-t border-[#ece7de] flex items-center justify-center">
-        <span class="font-serif text-2xl text-[#ece7de] select-none">⁂</span>
+      <div class="mt-12 pt-8 border-t border-[#ece7de]">
+        <div class="w-4 h-0.5 bg-[#e85d2f]"></div>
       </div>
     </main>
   </body>
