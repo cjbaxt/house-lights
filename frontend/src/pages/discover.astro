@@ -26,7 +26,7 @@ import DiscoverFeed from "../components/DiscoverFeed";
   <body class="bg-white min-h-screen dutch:bg-[#f5f3ef]">
     <Nav current="/discover" client:load transition:persist />
     <EditorUnlock client:load transition:persist />
-    <main class="max-w-3xl mx-auto px-4 md:px-8 pt-4 md:pt-20 pb-24 md:pb-8">
+    <main class="max-w-3xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
       <DiscoverFeed isStatic={import.meta.env.PROD} client:load />
     </main>
   </body>
