@@ -221,6 +221,7 @@ export default function ShowFeed() {
   const [activeVenues, setActiveVenues] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const defaultsInitialized = useRef(false);
 
   const PAGE_SIZE = 75;
 
@@ -229,6 +230,13 @@ export default function ShowFeed() {
       api.getUpcoming(2000, 0), api.getVenues(), api.getCompanies(), api.getWatchlist(),
     ]);
     setShows(s); setVenues(v); setCompanies(c); setWatchlist(w); setLoading(false);
+    if (!defaultsInitialized.current) {
+      defaultsInitialized.current = true;
+      setActiveVenues(new Set([
+        ...v.filter(x => x.priority === "high").map(x => x.id),
+        ...c.filter(x => x.priority === "high").map(x => x.id),
+      ]));
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -348,12 +356,29 @@ export default function ShowFeed() {
     setDateFrom("");
     setDateTo("");
     setActiveTypes(new Set());
-    setActiveVenues(new Set());
+    setActiveVenues(new Set([
+      ...venues.filter(x => x.priority === "high").map(x => x.id),
+      ...companies.filter(x => x.priority === "high").map(x => x.id),
+    ]));
     setSearchQuery("");
   }
 
   const hasFilters = timeframe !== "all" || activeTypes.size > 0 || activeVenues.size > 0 || !!searchQuery.trim();
   const filterCount = (timeframe !== "all" ? 1 : 0) + (activeTypes.size > 0 ? 1 : 0) + (activeVenues.size > 0 ? 1 : 0);
+
+  // Total unique productions across all upcoming shows (unfiltered)
+  const totalProgrammeCount = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const upcoming = shows.filter((s) => {
+      if (s.date > todayStr) return true;
+      if (s.date < todayStr) return false;
+      return s.time ? s.time.slice(0, 5) > currentTime : true;
+    });
+    const keys = new Set(upcoming.map(s => `${s.title.toLowerCase().trim()}||${s.venue_id ?? s.company_id ?? ""}`));
+    return keys.size;
+  }, [shows]);
 
   // Programme view: group all shows by title+venue, keeping all dates
   const programmeGroups = useMemo(() => {
@@ -547,12 +572,21 @@ export default function ShowFeed() {
         </div>
       )}
 
-      {/* Results count when filtered */}
-      {hasFilters && (
-        <div className="text-[11px] uppercase tracking-widest text-neutral-400 mb-3">
-          {filtered.length} show{filtered.length !== 1 ? "s" : ""}
-        </div>
-      )}
+      {/* Results count */}
+      <div className="text-[11px] uppercase tracking-widest text-neutral-400 mb-3">
+        {displayView === "programme" ? (
+          <>
+            {programmeGroups.length} show{programmeGroups.length !== 1 ? "s" : ""}
+            {programmeGroups.length < totalProgrammeCount && (
+              <span className="text-neutral-300"> (out of {totalProgrammeCount})</span>
+            )}
+          </>
+        ) : (
+          <>
+            {filtered.length} show{filtered.length !== 1 ? "s" : ""}
+          </>
+        )}
+      </div>
 
       {/* Calendar view */}
       {displayView === "calendar" ? (
