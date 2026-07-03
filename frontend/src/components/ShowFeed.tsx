@@ -13,7 +13,7 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-type Timeframe = "today" | "week" | "month" | "all";
+type Timeframe = "today" | "week" | "month" | "all" | "custom";
 type Priority = "high" | "medium" | "low";
 type DisplayView = "programme" | "agenda" | "calendar";
 
@@ -215,6 +215,8 @@ export default function ShowFeed() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [timeframe, setTimeframe] = useState<Timeframe>("month");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
   const [activeVenues, setActiveVenues] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
@@ -256,7 +258,7 @@ export default function ShowFeed() {
     })).filter(g => g.items.length > 0);
   }, [venues]);
 
-  useEffect(() => { setPage(0); }, [timeframe, activeTypes, activeVenues, searchQuery]);
+  useEffect(() => { setPage(0); }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues, searchQuery]);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -278,6 +280,9 @@ export default function ShowFeed() {
     } else if (timeframe === "month") {
       const end = endOfMonth();
       result = result.filter((s) => new Date(s.date + "T00:00:00") <= end);
+    } else if (timeframe === "custom") {
+      if (dateFrom) result = result.filter((s) => s.date >= dateFrom);
+      if (dateTo) result = result.filter((s) => s.date <= dateTo);
     }
 
     if (activeTypes.size > 0) {
@@ -304,7 +309,7 @@ export default function ShowFeed() {
     }
 
     return result;
-  }, [shows, timeframe, activeTypes, activeVenues, searchQuery, venueMap, companyMap]);
+  }, [shows, timeframe, dateFrom, dateTo, activeTypes, activeVenues, searchQuery, venueMap, companyMap]);
 
   function toggleType(type: string) {
     setActiveTypes((prev) => {
@@ -340,6 +345,8 @@ export default function ShowFeed() {
 
   function clearAll() {
     setTimeframe("week");
+    setDateFrom("");
+    setDateTo("");
     setActiveTypes(new Set());
     setActiveVenues(new Set());
     setSearchQuery("");
@@ -450,15 +457,49 @@ export default function ShowFeed() {
           {/* When */}
           <div>
             <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-2">When</div>
-            <div className="flex items-center border border-[#ece7de] overflow-hidden w-fit">
-              {(["today", "week", "month", "all"] as Timeframe[]).map((t) => (
-                <button key={t} onClick={() => setTimeframe(t)}
-                  className={`text-xs px-3 py-1.5 transition-colors ${timeframe === t ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
-                >
-                  {t === "today" ? "Today" : t === "week" ? "This week" : t === "month" ? "This month" : "All"}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex items-center border border-[#ece7de] overflow-hidden">
+                {(["today", "week", "month", "all"] as Timeframe[]).map((t) => (
+                  <button key={t} onClick={() => setTimeframe(t)}
+                    className={`text-xs px-3 py-1.5 transition-colors ${timeframe === t ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
+                  >
+                    {t === "today" ? "Today" : t === "week" ? "This week" : t === "month" ? "This month" : "All"}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setTimeframe("custom")}
+                className={`text-xs px-3 py-1.5 border transition-colors ${timeframe === "custom" ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : "border-[#ece7de] text-[#888] hover:bg-[#ece7de]"}`}
+              >
+                Custom
+              </button>
             </div>
+            {timeframe === "custom" && (
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                />
+                <span className="text-[#aaa] text-xs">to</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom || undefined}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                />
+                {(dateFrom || dateTo) && (
+                  <button
+                    onClick={() => { setDateFrom(""); setDateTo(""); }}
+                    className="text-[#aaa] hover:text-[#666] transition-colors"
+                  >
+                    <IconX size={12} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Type */}
