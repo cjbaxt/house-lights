@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type React from "react";
-import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconUsers } from "@tabler/icons-react";
+import { IconCalendarDown, IconBookmark, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconUsers } from "@tabler/icons-react";
 import { api, STATIC } from "../lib/api";
 import type { WatchlistEntry, Venue, Company, Show, WatchStatus } from "../lib/api";
 import EventTypeIcon from "./EventTypeIcon";
@@ -30,6 +30,8 @@ function GroupedCard({
   onWatchChange,
   readOnly = false,
   claireToo = false,
+  inMyWatchlist = false,
+  onAddToMine,
 }: {
   group: ShowGroup;
   venueMap: Record<string, string>;
@@ -37,6 +39,8 @@ function GroupedCard({
   onWatchChange: () => void;
   readOnly?: boolean;
   claireToo?: boolean;
+  inMyWatchlist?: boolean;
+  onAddToMine?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
@@ -104,13 +108,28 @@ function GroupedCard({
             {show.subtitle && <div className="text-xs text-[#888] mt-0.5 truncate">{show.subtitle}</div>}
           </div>
         </a>
-        <div className={`relative flex-shrink-0 ${readOnly ? "hidden" : ""}`}>
-          <button onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
-            className="p-1 hover:bg-[#ece7de] transition-colors mt-0.5">
-            <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
-          </button>
-          {menuOpen && watchMenu}
-        </div>
+        {readOnly ? (
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={(e) => { e.stopPropagation(); onAddToMine?.(); }}
+              className="p-1 hover:bg-[#ece7de] transition-colors mt-0.5"
+              title={inMyWatchlist ? "Remove from your watchlist" : "Add to your watchlist"}
+            >
+              {inMyWatchlist
+                ? <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
+                : <IconBookmark size={15} className="text-[#d4c9b8] hover:text-[#888] transition-colors" />
+              }
+            </button>
+          </div>
+        ) : (
+          <div className="relative flex-shrink-0">
+            <button onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
+              className="p-1 hover:bg-[#ece7de] transition-colors mt-0.5">
+              <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
+            </button>
+            {menuOpen && watchMenu}
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-1 px-4 pb-3">
         {(showAllDates ? group.entries : group.entries.slice(0, DATE_CHIPS_LIMIT)).map((entry) => {
@@ -196,6 +215,7 @@ export default function WatchlistFeed() {
   const isClaires = whoView === "claire";
   const watchlist = isClaires ? clairesWatchlist : myWatchlist;
   const clairesKeys = new Set(clairesWatchlist.map((e) => groupKey(e.show)));
+  const myGroupKeys = new Set(myWatchlist.map((e) => groupKey(e.show)));
 
   // Build show groups: key → ShowGroup
   const groupMap = new Map<string, ShowGroup>();
@@ -268,7 +288,7 @@ export default function WatchlistFeed() {
       </div>
 
       <div className="text-[11px] uppercase tracking-widest text-neutral-400 mb-4">
-        {watchlist.length} performance{watchlist.length !== 1 ? "s" : ""}
+        {sortedGroups.length} show{sortedGroups.length !== 1 ? "s" : ""}
       </div>
 
       {!isClaires && STATIC && (
@@ -296,6 +316,14 @@ export default function WatchlistFeed() {
               onWatchChange={reloadMine}
               readOnly={isClaires}
               claireToo={!isClaires && clairesKeys.has(group.key)}
+              inMyWatchlist={isClaires ? myGroupKeys.has(group.key) : undefined}
+              onAddToMine={isClaires ? async () => {
+                const isIn = myGroupKeys.has(group.key);
+                await Promise.all(group.entries.map((e) =>
+                  isIn ? api.removeWatch(e.show.id) : api.upsertWatch(e.show.id, "interested")
+                ));
+                reloadMine();
+              } : undefined}
             />
           ))}
         </div>
