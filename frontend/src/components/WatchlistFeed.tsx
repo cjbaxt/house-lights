@@ -278,15 +278,15 @@ export default function WatchlistFeed() {
         </div>
 
         <div className="flex items-center gap-3">
-          {!isClaires && (
+          {(isClaires && STATIC) || (!isClaires && !STATIC) ? (
             <a
               href={api.calendarUrl()}
               className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
             >
               <IconCalendarDown size={13} />
-              Export .ics
+              {isClaires ? "Subscribe" : "Export .ics"}
             </a>
-          )}
+          ) : null}
           <div className="flex items-center border border-[#ece7de] overflow-hidden">
             {([
               { key: "calendar", icon: <IconCalendar size={13} /> },

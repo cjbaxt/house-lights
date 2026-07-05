@@ -179,6 +179,11 @@ export const api = {
     return r.json();
   },
   calendarUrl() {
+    if (STATIC) {
+      // webcal:// triggers calendar subscription in Google Calendar / Apple Calendar
+      const httpsUrl = `${window.location.origin}${DATA_BASE}/data/watchlist.ics`;
+      return httpsUrl.replace(/^https?:\/\//, "webcal://");
+    }
     return `${BASE}/calendar/watchlist.ics`;
   },
 };
