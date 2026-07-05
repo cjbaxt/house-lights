@@ -2,7 +2,7 @@
 ITA (Internationaal Theater Amsterdam) — static HTML.
 Events as a.agendaItem__item
 """
-import httpx, re
+import httpx, re, asyncio
 from bs4 import BeautifulSoup
 from datetime import date
 from .base import BaseScraper, ScrapedShow
@@ -56,35 +56,65 @@ class ITAScraper(BaseScraper):
             resp = await client.get(AGENDA_URL)
             resp.raise_for_status()
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+            soup = BeautifulSoup(resp.text, "html.parser")
+            items = []
+            seen = set()
+
+            for item in soup.select("a.agendaItem__item, .agendaItem a[href]"):
+                href = item.get("href", "")
+                if not href or href in seen: continue
+                seen.add(href)
+                url = BASE_URL + href if href.startswith("/") else href
+
+                # Date is in the .row parent, not the link itself
+                row = item.find_parent(class_="row") or item
+                text = row.get_text(" ", strip=True)
+                d, tm = _parse(text)
+                if not d or d < date.today(): continue
+
+                # Title comes from the link itself, not the row (which has date prefix)
+                title_el = item.select_one(".agendaItem__title, h2, h3, strong")
+                title = title_el.get_text(strip=True) if title_el else item.get_text(" ", strip=True)
+                # Strip any leading date like "Fri 26 Jun"
+                title = re.sub(r"^\w{3}\s+\d{1,2}\s+\w{3}\s+", "", title).strip()[:80]
+                if not title: continue
+
+                sold_out = "sold out" in text.lower() or "uitverkocht" in text.lower()
+                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href,
+                               "sold_out": sold_out})
+
+            # Fetch descriptions from detail pages in parallel
+            async def fetch_desc(url: str) -> tuple[str, str | None]:
+                try:
+                    r = await client.get(url, timeout=15)
+                    if r.status_code == 200:
+                        ds = BeautifulSoup(r.text, "html.parser")
+                        meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
+                        if meta:
+                            desc = meta.get("content", "").strip()
+                            if desc:
+                                return url, desc
+                        el = ds.select_one(".production-description, .content-body, .show-description, main p")
+                        if el:
+                            text = el.get_text(" ", strip=True)[:1000]
+                            if text:
+                                return url, text
+                except Exception:
+                    pass
+                return url, None
+
+            unique_urls = list({it["url"] for it in items})
+            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
+            descriptions = dict(desc_results)
+
         shows = []
-        seen = set()
-
-        for item in soup.select("a.agendaItem__item, .agendaItem a[href]"):
-            href = item.get("href", "")
-            if not href or href in seen: continue
-            seen.add(href)
-            url = BASE_URL + href if href.startswith("/") else href
-
-            # Date is in the .row parent, not the link itself
-            row = item.find_parent(class_="row") or item
-            text = row.get_text(" ", strip=True)
-            d, tm = _parse(text)
-            if not d or d < date.today(): continue
-
-            # Title comes from the link itself, not the row (which has date prefix)
-            title_el = item.select_one(".agendaItem__title, h2, h3, strong")
-            title = title_el.get_text(strip=True) if title_el else item.get_text(" ", strip=True)
-            # Strip any leading date like "Fri 26 Jun"
-            title = re.sub(r"^\w{3}\s+\d{1,2}\s+\w{3}\s+", "", title).strip()[:80]
-            if not title: continue
-
-            sold_out = "sold out" in text.lower() or "uitverkocht" in text.lower()
+        for it in items:
             shows.append(ScrapedShow(
-                title=title, date=d, time=tm, url=url,
-                source_id=f"ita:{href}",
+                title=it["title"], date=it["date"], time=it["time"], url=it["url"],
+                source_id=f"ita:{it['href']}",
                 type="theatre",
-                ticket_status="sold_out" if sold_out else "available",
+                ticket_status="sold_out" if it["sold_out"] else "available",
+                description=descriptions.get(it["url"]),
             ))
 
         return shows

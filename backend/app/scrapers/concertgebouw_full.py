@@ -3,7 +3,7 @@ Royal Concertgebouw — static HTML (Nuxt SSR).
 Concerts on /concerten-en-tickets as article elements with /concerten/ links.
 Date format: "ma 29 jun 2026"
 """
-import httpx, re
+import httpx, re, asyncio
 from bs4 import BeautifulSoup
 from datetime import date, time
 from .base import BaseScraper, ScrapedShow
@@ -41,42 +41,72 @@ class ConcertgebouwFullScraper(BaseScraper):
             resp = await client.get(AGENDA_URL)
             resp.raise_for_status()
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+            soup = BeautifulSoup(resp.text, "html.parser")
+            items = []
+            seen = set()
+
+            for link in soup.select("a[href*='/concerten/']"):
+                href = link.get("href", "")
+                if href in seen or not href or href.rstrip("/") in ("/concerten", "/concerten-en-tickets"):
+                    continue
+                seen.add(href)
+                url = BASE_URL + href if href.startswith("/") else href
+
+                container = link.find_parent("li") or link.find_parent("article") or link
+                text = container.get_text(" ", strip=True)
+
+                d, tm = _parse(text)
+                if not d or d < date.today():
+                    continue
+
+                title_el = container.select_one("h2, h3, h4, [class*='title']")
+                title = title_el.get_text(strip=True) if title_el else ""
+                if not title:
+                    # Extract from link text before the time
+                    title = re.sub(r"\d{1,2}:\d{2}.*", "", link.get_text(strip=True)).strip()[:80]
+                if not title:
+                    continue
+
+                sold_out = "uitverkocht" in text.lower()
+                price_m = PRICE_RE.search(text)
+                price = float(price_m.group(1).replace(",", ".")) if price_m else None
+
+                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href,
+                               "sold_out": sold_out, "price": price})
+
+            # Fetch descriptions from detail pages in parallel
+            async def fetch_desc(url: str) -> tuple[str, str | None]:
+                try:
+                    r = await client.get(url, timeout=15)
+                    if r.status_code == 200:
+                        ds = BeautifulSoup(r.text, "html.parser")
+                        meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
+                        if meta:
+                            desc = meta.get("content", "").strip()
+                            if desc:
+                                return url, desc
+                        el = ds.select_one(".concert-description, .description, .content-body, main p")
+                        if el:
+                            text = el.get_text(" ", strip=True)[:1000]
+                            if text:
+                                return url, text
+                except Exception:
+                    pass
+                return url, None
+
+            unique_urls = list({it["url"] for it in items})
+            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
+            descriptions = dict(desc_results)
+
         shows = []
-        seen = set()
-
-        for link in soup.select("a[href*='/concerten/']"):
-            href = link.get("href", "")
-            if href in seen or not href or href.rstrip("/") in ("/concerten", "/concerten-en-tickets"):
-                continue
-            seen.add(href)
-            url = BASE_URL + href if href.startswith("/") else href
-
-            container = link.find_parent("li") or link.find_parent("article") or link
-            text = container.get_text(" ", strip=True)
-
-            d, tm = _parse(text)
-            if not d or d < date.today():
-                continue
-
-            title_el = container.select_one("h2, h3, h4, [class*='title']")
-            title = title_el.get_text(strip=True) if title_el else ""
-            if not title:
-                # Extract from link text before the time
-                title = re.sub(r"\d{1,2}:\d{2}.*", "", link.get_text(strip=True)).strip()[:80]
-            if not title:
-                continue
-
-            sold_out = "uitverkocht" in text.lower()
-            price_m = PRICE_RE.search(text)
-            price = float(price_m.group(1).replace(",", ".")) if price_m else None
-
+        for it in items:
             shows.append(ScrapedShow(
-                title=title, date=d, time=tm, url=url,
-                source_id=f"concertgebouw:{href}",
+                title=it["title"], date=it["date"], time=it["time"], url=it["url"],
+                source_id=f"concertgebouw:{it['href']}",
                 type="classical",
-                ticket_status="sold_out" if sold_out else "available",
-                price_from=price,
+                ticket_status="sold_out" if it["sold_out"] else "available",
+                price_from=it["price"],
+                description=descriptions.get(it["url"]),
             ))
 
         return shows

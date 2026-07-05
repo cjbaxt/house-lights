@@ -5,6 +5,7 @@ Date format: "vr 26 juni 2026 20:30" (Dutch)
 """
 import httpx
 import re
+import asyncio
 from bs4 import BeautifulSoup
 from datetime import date, time
 from .base import BaseScraper, ScrapedShow
@@ -43,35 +44,67 @@ class BimhuisScraper(BaseScraper):
             resp = await client.get(AGENDA_URL)
             resp.raise_for_status()
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+            soup = BeautifulSoup(resp.text, "html.parser")
+            items = []
+
+            for tile in soup.select("div.agenda-tile"):
+                link_el = tile.select_one("a[href*='/agenda/']")
+                if not link_el:
+                    continue
+
+                href = link_el.get("href", "")
+                url = href if href.startswith("http") else BASE_URL + href
+                title = link_el.get_text(strip=True)
+                if not title:
+                    continue
+
+                full_text = tile.get_text(" ", strip=True)
+                event_date, event_time = _parse(full_text)
+                if not event_date or event_date < date.today():
+                    continue
+
+                cancelled = "geannuleerd" in full_text.lower() or "cancelled" in full_text.lower()
+
+                items.append({
+                    "title": title, "date": event_date, "time": event_time,
+                    "url": url, "href": href, "cancelled": cancelled,
+                })
+
+            # Fetch descriptions from detail pages in parallel
+            async def fetch_desc(url: str) -> tuple[str, str | None]:
+                try:
+                    r = await client.get(url, timeout=15)
+                    if r.status_code == 200:
+                        ds = BeautifulSoup(r.text, "html.parser")
+                        meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
+                        if meta:
+                            desc = meta.get("content", "").strip()
+                            if desc:
+                                return url, desc
+                        el = ds.select_one(".program-detail__description, .event-description, .content")
+                        if el:
+                            text = el.get_text(" ", strip=True)[:1000]
+                            if text:
+                                return url, text
+                except Exception:
+                    pass
+                return url, None
+
+            unique_urls = list({it["url"] for it in items})
+            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
+            descriptions = dict(desc_results)
+
         shows = []
-
-        for tile in soup.select("div.agenda-tile"):
-            link_el = tile.select_one("a[href*='/agenda/']")
-            if not link_el:
-                continue
-
-            href = link_el.get("href", "")
-            url = href if href.startswith("http") else BASE_URL + href
-            title = link_el.get_text(strip=True)
-            if not title:
-                continue
-
-            full_text = tile.get_text(" ", strip=True)
-            event_date, event_time = _parse(full_text)
-            if not event_date or event_date < date.today():
-                continue
-
-            cancelled = "geannuleerd" in full_text.lower() or "cancelled" in full_text.lower()
-
+        for it in items:
             shows.append(ScrapedShow(
-                title=title,
-                date=event_date,
-                time=event_time,
-                url=url,
-                source_id=f"bimhuis:{href}",
+                title=it["title"],
+                date=it["date"],
+                time=it["time"],
+                url=it["url"],
+                source_id=f"bimhuis:{it['href']}",
                 type="music",
-                ticket_status="sold_out" if cancelled else "available",
+                ticket_status="sold_out" if it["cancelled"] else "available",
+                description=descriptions.get(it["url"]),
             ))
 
         return shows

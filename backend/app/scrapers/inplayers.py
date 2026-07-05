@@ -2,7 +2,7 @@
 InPlayers — Squarespace site, static HTML.
 Events at /upcoming-events/ with date "Sat, DD Mon YYYY HH:MM"
 """
-import httpx, re
+import httpx, re, asyncio
 from bs4 import BeautifulSoup
 from datetime import date, time
 from .base import BaseScraper, ScrapedShow
@@ -45,31 +45,68 @@ class InPlayersScraper(BaseScraper):
             resp = await client.get(EVENTS_URL)
             resp.raise_for_status()
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+            soup = BeautifulSoup(resp.text, "html.parser")
+            items = []
+            seen = set()
+
+            for item in soup.select("article, .eventlist-event, li[class*='event']"):
+                link_el = item.select_one("a[href*='/upcoming-events/'], a[href]")
+                if not link_el: continue
+                href = link_el.get("href", "")
+                if href in seen: continue
+                seen.add(href)
+                url = href if href.startswith("http") else BASE_URL + href
+
+                text = item.get_text(" ", strip=True)
+                d, tm = _parse(text)
+                if not d or d < date.today(): continue
+
+                title_el = item.select_one("h1, h2, h3, .eventlist-title")
+                title = title_el.get_text(strip=True) if title_el else text[:60]
+                if not title: continue
+
+                # Description from the listing card
+                desc_el = item.select_one(".eventlist-description, .event-excerpt, p")
+                description = desc_el.get_text(" ", strip=True)[:1000] if desc_el else None
+
+                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href,
+                               "description": description})
+
+            # If no description from listing, fetch from detail pages
+            no_desc = [it for it in items if not it["description"]]
+            if no_desc:
+                async def fetch_desc(url: str) -> tuple[str, str | None]:
+                    try:
+                        r = await client.get(url, timeout=15)
+                        if r.status_code == 200:
+                            ds = BeautifulSoup(r.text, "html.parser")
+                            meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
+                            if meta:
+                                desc = meta.get("content", "").strip()
+                                if desc:
+                                    return url, desc
+                            el = ds.select_one(".eventlist-description, .sqs-block-content, .entry-content")
+                            if el:
+                                text = el.get_text(" ", strip=True)[:1000]
+                                if text:
+                                    return url, text
+                    except Exception:
+                        pass
+                    return url, None
+
+                detail_results = await asyncio.gather(*[fetch_desc(it["url"]) for it in no_desc])
+                detail_descs = dict(detail_results)
+                for it in no_desc:
+                    it["description"] = detail_descs.get(it["url"])
+
         shows = []
-        seen = set()
-
-        for item in soup.select("article, .eventlist-event, li[class*='event']"):
-            link_el = item.select_one("a[href*='/upcoming-events/'], a[href]")
-            if not link_el: continue
-            href = link_el.get("href", "")
-            if href in seen: continue
-            seen.add(href)
-            url = href if href.startswith("http") else BASE_URL + href
-
-            text = item.get_text(" ", strip=True)
-            d, tm = _parse(text)
-            if not d or d < date.today(): continue
-
-            title_el = item.select_one("h1, h2, h3, .eventlist-title")
-            title = title_el.get_text(strip=True) if title_el else text[:60]
-            if not title: continue
-
+        for it in items:
             shows.append(ScrapedShow(
-                title=title, date=d, time=tm, url=url,
-                source_id=f"inplayers:{href}",
+                title=it["title"], date=it["date"], time=it["time"], url=it["url"],
+                source_id=f"inplayers:{it['href']}",
                 type="theatre",
                 ticket_status="available",
+                description=it["description"],
             ))
 
         return shows

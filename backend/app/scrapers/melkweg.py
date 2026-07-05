@@ -5,6 +5,7 @@ Date embedded in the slug and in the page HTML.
 """
 import httpx
 import re
+import asyncio
 from bs4 import BeautifulSoup
 from datetime import date
 from .base import BaseScraper, ScrapedShow
@@ -14,6 +15,7 @@ BASE_URL = "https://www.melkweg.nl"
 
 # Dutch month names used in the slug dates aren't needed — date is in the URL path
 SLUG_DATE_RE = re.compile(r"-(\d{2})-(\d{2})-(\d{4})/?$")
+TIME_RE = re.compile(r"(\d{1,2}):(\d{2})")
 
 
 def _parse_date_from_url(url: str) -> date | None:
@@ -26,6 +28,17 @@ def _parse_date_from_url(url: str) -> date | None:
         return None
 
 
+def _parse_time(text: str):
+    m = TIME_RE.search(text)
+    if not m:
+        return None
+    try:
+        from datetime import time
+        return time(int(m.group(1)), int(m.group(2)))
+    except ValueError:
+        return None
+
+
 class MelkwegScraper(BaseScraper):
     key = "melkweg"
 
@@ -34,57 +47,93 @@ class MelkwegScraper(BaseScraper):
             resp = await client.get(AGENDA_URL)
             resp.raise_for_status()
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+            soup = BeautifulSoup(resp.text, "html.parser")
+            items = []
+
+            for link in soup.select("a[href*='/nl/agenda/']"):
+                href = link.get("href", "")
+                if not SLUG_DATE_RE.search(href):
+                    continue
+
+                event_date = _parse_date_from_url(href)
+                if not event_date:
+                    continue
+
+                # Skip past dates
+                if event_date < date.today():
+                    continue
+
+                url = BASE_URL + href if href.startswith("/") else href
+
+                # Title: look for heading or strong text inside the link
+                title_el = link.select_one("h2, h3, h4, strong, .title, [class*='title']")
+                title = title_el.get_text(strip=True) if title_el else link.get_text(strip=True)
+                title = re.sub(r"\s+", " ", title).strip()
+                if not title or len(title) < 2:
+                    continue
+
+                # Genre / subtitle — skip tag strings (·-separated genres)
+                genre_el = link.select_one("[class*='genre'], [class*='tag'], [class*='category'], em")
+                raw_subtitle = genre_el.get_text(strip=True) if genre_el else None
+                subtitle = None if (raw_subtitle and "·" in raw_subtitle) else raw_subtitle
+
+                # Time from listing card
+                text = link.get_text(" ", strip=True)
+                tm = _parse_time(text)
+
+                sold_out = "uitverkocht" in text.lower() or "sold out" in text.lower()
+                ticket_status = "sold_out" if sold_out else "available"
+
+                items.append({
+                    "title": title, "subtitle": subtitle, "date": event_date,
+                    "time": tm, "url": url, "href": href, "ticket_status": ticket_status,
+                })
+
+            # Deduplicate by source_id
+            seen = set()
+            unique_items = []
+            for it in items:
+                sid = f"melkweg:{it['href']}"
+                if sid not in seen:
+                    seen.add(sid)
+                    unique_items.append(it)
+
+            # Fetch descriptions from detail pages in parallel
+            async def fetch_desc(url: str) -> tuple[str, str | None]:
+                try:
+                    r = await client.get(url, timeout=15)
+                    if r.status_code == 200:
+                        ds = BeautifulSoup(r.text, "html.parser")
+                        meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
+                        if meta:
+                            desc = meta.get("content", "").strip()
+                            if desc:
+                                return url, desc
+                        el = ds.select_one(".event-description, .description, .content, main p")
+                        if el:
+                            text = el.get_text(" ", strip=True)[:1000]
+                            if text:
+                                return url, text
+                except Exception:
+                    pass
+                return url, None
+
+            unique_urls = list({it["url"] for it in unique_items})
+            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
+            descriptions = dict(desc_results)
+
         shows = []
-
-        for link in soup.select("a[href*='/nl/agenda/']"):
-            href = link.get("href", "")
-            if not SLUG_DATE_RE.search(href):
-                continue
-
-            event_date = _parse_date_from_url(href)
-            if not event_date:
-                continue
-
-            # Skip past dates
-            if event_date < date.today():
-                continue
-
-            url = BASE_URL + href if href.startswith("/") else href
-
-            # Title: look for heading or strong text inside the link
-            title_el = link.select_one("h2, h3, h4, strong, .title, [class*='title']")
-            title = title_el.get_text(strip=True) if title_el else link.get_text(strip=True)
-            title = re.sub(r"\s+", " ", title).strip()
-            if not title or len(title) < 2:
-                continue
-
-            # Genre / subtitle — skip tag strings (·-separated genres)
-            genre_el = link.select_one("[class*='genre'], [class*='tag'], [class*='category'], em")
-            raw_subtitle = genre_el.get_text(strip=True) if genre_el else None
-            subtitle = None if (raw_subtitle and "·" in raw_subtitle) else raw_subtitle
-
-            # Sold out
-            text = link.get_text(" ", strip=True)
-            sold_out = "uitverkocht" in text.lower() or "sold out" in text.lower()
-            ticket_status = "sold_out" if sold_out else "available"
-
+        for it in unique_items:
             shows.append(ScrapedShow(
-                title=title,
-                subtitle=subtitle,
-                date=event_date,
-                url=url,
-                source_id=f"melkweg:{href}",
+                title=it["title"],
+                subtitle=it["subtitle"],
+                date=it["date"],
+                time=it["time"],
+                url=it["url"],
+                source_id=f"melkweg:{it['href']}",
                 type="music",
-                ticket_status=ticket_status,
+                ticket_status=it["ticket_status"],
+                description=descriptions.get(it["url"]),
             ))
 
-        # Deduplicate by source_id (same event can appear multiple times as different links)
-        seen = set()
-        unique = []
-        for s in shows:
-            if s.source_id not in seen:
-                seen.add(s.source_id)
-                unique.append(s)
-
-        return unique
+        return shows

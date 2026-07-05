@@ -3,7 +3,7 @@ Royal Concertgebouw — static HTML.
 Events as <article> on homepage; date like "di 30 jun 2026"
 Full agenda: /concerten
 """
-import httpx, re
+import httpx, re, asyncio
 from bs4 import BeautifulSoup
 from datetime import date
 from .base import BaseScraper, ScrapedShow
@@ -44,36 +44,65 @@ class ConcertgebouwScraper(BaseScraper):
             resp = await client.get(AGENDA_URL)
             resp.raise_for_status()
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+            soup = BeautifulSoup(resp.text, "html.parser")
+            items = []
+            seen = set()
+
+            for article in soup.select("article"):
+                link_el = article.select_one("a[href*='/concerten/']")
+                if not link_el:
+                    continue
+                href = link_el.get("href", "")
+                if href in seen:
+                    continue
+                seen.add(href)
+                url = BASE_URL + href if href.startswith("/") else href
+
+                text = article.get_text(" ", strip=True)
+                d, tm = _parse(text)
+                if not d or d < date.today():
+                    continue
+
+                title_el = article.select_one("h2, h3, h4, strong")
+                title = title_el.get_text(strip=True) if title_el else re.sub(DATE_RE, "", text).strip()[:80]
+                if not title:
+                    continue
+
+                sold_out = "uitverkocht" in text.lower()
+                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href, "sold_out": sold_out})
+
+            # Fetch descriptions from detail pages in parallel
+            async def fetch_desc(url: str) -> tuple[str, str | None]:
+                try:
+                    r = await client.get(url, timeout=15)
+                    if r.status_code == 200:
+                        ds = BeautifulSoup(r.text, "html.parser")
+                        meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
+                        if meta:
+                            desc = meta.get("content", "").strip()
+                            if desc:
+                                return url, desc
+                        el = ds.select_one(".concert-description, .description, .content-body, main p")
+                        if el:
+                            text = el.get_text(" ", strip=True)[:1000]
+                            if text:
+                                return url, text
+                except Exception:
+                    pass
+                return url, None
+
+            unique_urls = list({it["url"] for it in items})
+            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
+            descriptions = dict(desc_results)
+
         shows = []
-        seen = set()
-
-        for article in soup.select("article"):
-            link_el = article.select_one("a[href*='/concerten/']")
-            if not link_el:
-                continue
-            href = link_el.get("href", "")
-            if href in seen:
-                continue
-            seen.add(href)
-            url = BASE_URL + href if href.startswith("/") else href
-
-            text = article.get_text(" ", strip=True)
-            d, tm = _parse(text)
-            if not d or d < date.today():
-                continue
-
-            title_el = article.select_one("h2, h3, h4, strong")
-            title = title_el.get_text(strip=True) if title_el else re.sub(DATE_RE, "", text).strip()[:80]
-            if not title:
-                continue
-
-            sold_out = "uitverkocht" in text.lower()
+        for it in items:
             shows.append(ScrapedShow(
-                title=title, date=d, time=tm, url=url,
-                source_id=f"concertgebouw:{href}",
+                title=it["title"], date=it["date"], time=it["time"], url=it["url"],
+                source_id=f"concertgebouw:{it['href']}",
                 type="classical",
-                ticket_status="sold_out" if sold_out else "available",
+                ticket_status="sold_out" if it["sold_out"] else "available",
+                description=descriptions.get(it["url"]),
             ))
 
         return shows
