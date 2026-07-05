@@ -83,8 +83,16 @@ class EnglishTheatreNetherlandsScraper(BaseScraper):
                 continue
             seen.add(key)
 
+            import re as _re
             img_el = a.select_one("img[src]")
             image_url = img_el.get("src") if img_el else None
+            if not image_url:
+                # Check for CSS background-image in .wpem-event-banner-img or similar
+                bg_el = a.select_one("[style*='background-image']")
+                if bg_el:
+                    m = _re.search(r"background-image:\s*url\(['\"]?([^'\")\s]+)['\"]?\)", bg_el.get("style", ""))
+                    if m:
+                        image_url = m.group(1)
 
             items.append({
                 "title": title, "date": d, "url": href,

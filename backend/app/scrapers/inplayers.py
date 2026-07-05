@@ -69,8 +69,10 @@ class InPlayersScraper(BaseScraper):
                 desc_el = item.select_one(".eventlist-description, .event-excerpt, p")
                 description = desc_el.get_text(" ", strip=True)[:1000] if desc_el else None
 
+                img_el = item.select_one("img")
+                image_url = img_el.get("src") if img_el else None
                 items.append({"title": title, "date": d, "time": tm, "url": url, "href": href,
-                               "description": description})
+                               "description": description, "image_url": image_url})
 
             # If no description from listing, fetch from detail pages
             no_desc = [it for it in items if not it["description"]]
@@ -107,6 +109,7 @@ class InPlayersScraper(BaseScraper):
                 type="theatre",
                 ticket_status="available",
                 description=it["description"],
+                image_url=it.get("image_url"),
             ))
 
         return shows

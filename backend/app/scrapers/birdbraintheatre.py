@@ -90,13 +90,18 @@ class BirdbBrainTheatreScraper(BaseScraper):
                 except ValueError:
                     pass
 
-            # Description: use the surrounding paragraph text if available
+            # Description and image: use the surrounding container
             description = None
+            image_url = None
             container = link.find_parent("div") or link.find_parent("section")
             if container:
                 paras = [p.get_text(" ", strip=True) for p in container.select("p") if p.get_text(strip=True)]
                 if paras:
                     description = " ".join(paras[:3])[:1000] or None
+                img_el = container.select_one("img")
+                if img_el:
+                    src = img_el.get("src", "")
+                    image_url = src if src.startswith("http") else BASE_URL + "/" + src.lstrip("/")
 
             for d in dates:
                 source_id = f"birdbraintheatre:{href}:{d.isoformat()}"
@@ -109,6 +114,7 @@ class BirdbBrainTheatreScraper(BaseScraper):
                     type="theatre",
                     ticket_status="available",
                     description=description,
+                    image_url=image_url,
                 ))
 
         return shows

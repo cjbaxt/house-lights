@@ -111,14 +111,18 @@ class OTCScraper(BaseScraper):
                 continue
             seen.add(key)
 
-            # Description from the surrounding block paragraphs
+            # Description and image from the surrounding block
             description = None
+            image_url = None
             if p:
                 block = link.find_parent("div") or link.find_parent("section")
                 if block:
                     paras = [para.get_text(" ", strip=True) for para in block.select("p") if para.get_text(strip=True)]
                     if paras:
                         description = " ".join(paras[:3])[:1000] or None
+                    img_el = block.select_one("img")
+                    if img_el:
+                        image_url = img_el.get("src")
 
             shows.append(ScrapedShow(
                 title=title, date=d, time=tm, url=href,
@@ -126,6 +130,7 @@ class OTCScraper(BaseScraper):
                 type="theatre",
                 ticket_status="available",
                 description=description,
+                image_url=image_url,
             ))
 
         return shows
