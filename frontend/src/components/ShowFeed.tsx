@@ -220,10 +220,9 @@ export default function ShowFeed() {
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
   const [activeVenues, setActiveVenues] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [pageSize, setPageSize] = useState(20);
   const searchRef = useRef<HTMLInputElement>(null);
   const defaultsInitialized = useRef(false);
-
-  const PAGE_SIZE = 75;
 
   const load = async () => {
     const [s, v, c, w] = await Promise.all([
@@ -266,7 +265,7 @@ export default function ShowFeed() {
     })).filter(g => g.items.length > 0);
   }, [venues]);
 
-  useEffect(() => { setPage(0); }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues, searchQuery]);
+  useEffect(() => { setPage(0); }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues, searchQuery, pageSize]);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -396,15 +395,15 @@ export default function ShowFeed() {
   }, [filtered]);
 
   const pagedProgramme = useMemo(
-    () => programmeGroups.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    () => programmeGroups.slice(page * pageSize, (page + 1) * pageSize),
     [programmeGroups, page]
   );
   const pagedAgenda = useMemo(
-    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    () => filtered.slice(page * pageSize, (page + 1) * pageSize),
     [filtered, page]
   );
   const totalPages = Math.ceil(
-    (displayView === "programme" ? programmeGroups.length : filtered.length) / PAGE_SIZE
+    (displayView === "programme" ? programmeGroups.length : filtered.length) / pageSize
   );
 
   const groups = pagedAgenda.reduce<Record<string, Record<string, Show[]>>>((acc, show) => {
@@ -572,19 +571,33 @@ export default function ShowFeed() {
         </div>
       )}
 
-      {/* Results count */}
-      <div className="text-[11px] uppercase tracking-widest text-neutral-400 mb-3">
-        {displayView === "programme" ? (
-          <>
-            {programmeGroups.length} show{programmeGroups.length !== 1 ? "s" : ""}
-            {programmeGroups.length < totalProgrammeCount && (
-              <span className="text-neutral-300"> (out of {totalProgrammeCount})</span>
-            )}
-          </>
-        ) : (
-          <>
-            {filtered.length} show{filtered.length !== 1 ? "s" : ""}
-          </>
+      {/* Results count + page size */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[11px] uppercase tracking-widest text-neutral-400">
+          {displayView === "programme" ? (
+            <>
+              {programmeGroups.length} show{programmeGroups.length !== 1 ? "s" : ""}
+              {programmeGroups.length < totalProgrammeCount && (
+                <span className="text-neutral-300"> (out of {totalProgrammeCount})</span>
+              )}
+            </>
+          ) : (
+            <>{filtered.length} show{filtered.length !== 1 ? "s" : ""}</>
+          )}
+        </div>
+        {displayView !== "calendar" && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-neutral-300 uppercase tracking-widest">Per page</span>
+            <div className="flex items-center border border-[#ece7de] overflow-hidden">
+              {[10, 20, 50].map((n) => (
+                <button key={n} onClick={() => setPageSize(n)}
+                  className={`text-[11px] px-2 py-1 transition-colors ${pageSize === n ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
@@ -663,21 +676,34 @@ export default function ShowFeed() {
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-6 pb-2">
+        <div className="flex items-center justify-center gap-1 pt-6 pb-2">
           <button
             onClick={() => { setPage((p) => p - 1); window.scrollTo(0, 0); }}
             disabled={page === 0}
-            className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-30"
+            className="text-xs px-2.5 py-1.5 border border-[#ece7de] text-[#888] hover:bg-[#ece7de] transition-colors disabled:opacity-30"
           >
-            ← Prev
+            ←
           </button>
-          <span className="text-xs text-neutral-400">{page + 1} / {totalPages}</span>
+          {Array.from({ length: totalPages }, (_, i) => i).map((i) => {
+            const near = Math.abs(i - page) <= 2 || i === 0 || i === totalPages - 1;
+            const ellipsisBefore = i === page - 3 && page > 3;
+            const ellipsisAfter = i === page + 3 && page < totalPages - 4;
+            if (ellipsisBefore || ellipsisAfter) return <span key={i} className="text-xs text-neutral-300 px-1">…</span>;
+            if (!near) return null;
+            return (
+              <button key={i} onClick={() => { setPage(i); window.scrollTo(0, 0); }}
+                className={`text-xs px-2.5 py-1.5 border transition-colors ${page === i ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : "border-[#ece7de] text-[#888] hover:bg-[#ece7de]"}`}
+              >
+                {i + 1}
+              </button>
+            );
+          })}
           <button
             onClick={() => { setPage((p) => p + 1); window.scrollTo(0, 0); }}
             disabled={page >= totalPages - 1}
-            className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-30"
+            className="text-xs px-2.5 py-1.5 border border-[#ece7de] text-[#888] hover:bg-[#ece7de] transition-colors disabled:opacity-30"
           >
-            Next →
+            →
           </button>
         </div>
       )}
