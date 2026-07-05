@@ -6,40 +6,6 @@ X-WR-CALNAME:Claire's Watchlist
 REFRESH-INTERVAL;VALUE=DURATION:P1D
 X-PUBLISHED-TTL:P1D
 BEGIN:VEVENT
-SUMMARY:Muse
-DTSTART:20261129T190000Z
-UID:cd09c687-1143-4747-b3d3-5faaed38b6c1@house-lights
-DESCRIPTION:Status: Interested\nhttps://www.ticketmaster.nl/artist/muse-ti
- ckets/26326
-URL:https://www.ticketmaster.nl/artist/muse-tickets/26326
-END:VEVENT
-BEGIN:VEVENT
-SUMMARY:The Prodigy
-DTSTART:20261128T190000Z
-UID:d997bc85-16a6-4bef-bd8f-a8d020ff90b3@house-lights
-DESCRIPTION:Status: Interested\nhttps://www.ticketmaster.nl/event/the-prod
- igy-european-tour-tickets/2090976842
-URL:https://www.ticketmaster.nl/event/the-prodigy-european-tour-tickets/20
- 90976842
-END:VEVENT
-BEGIN:VEVENT
-SUMMARY:Westlife
-DTSTART:20261123T190000Z
-UID:f00953ec-2e30-4160-8cab-3d756dc8950c@house-lights
-DESCRIPTION:Status: Interested\nhttps://www.ticketmaster.nl/artist/westlif
- e-tickets/26400
-URL:https://www.ticketmaster.nl/artist/westlife-tickets/26400
-END:VEVENT
-BEGIN:VEVENT
-SUMMARY:The Strokes
-DTSTART:20261011T180000Z
-UID:5dee0e15-cd20-4b7d-a368-023d244d6c52@house-lights
-DESCRIPTION:Status: Interested\nhttps://www.ticketmaster.nl/event/the-stro
- kes-reality-awaits-tickets/929757677
-URL:https://www.ticketmaster.nl/event/the-strokes-reality-awaits-tickets/9
- 29757677
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:Jacob Collier - The Light For Days Tour
 DTSTART:20260915T200000Z
 UID:fbc7c76b-9d50-42ca-99a6-243f61c367f7@house-lights
@@ -958,14 +924,6 @@ URL:https://www.paradiso.nl/programma/science-cocktails-emergence-cosmic-o
  rigins-and-collective-patterns/2896778
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:The Pussycat Dolls
-DTSTART:20260927T180000Z
-UID:f40dba87-d119-49fe-b15a-2531f6c7294c@house-lights
-DESCRIPTION:Status: Interested\nhttps://www.ticketmaster.nl/artist/the-pus
- sycat-dolls-tickets/30974
-URL:https://www.ticketmaster.nl/artist/the-pussycat-dolls-tickets/30974
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:CAKE
 DTSTART:20260929T203000Z
 UID:06de5ecc-a8dc-4cae-a30c-786248e6cc26@house-lights
@@ -981,14 +939,6 @@ DESCRIPTION:Status: Interested\nhttps://carre.nl/voorstelling/ed-o-brien
 URL:https://carre.nl/voorstelling/ed-o-brien
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:Bryan Adams
-DTSTART:20261014T180000Z
-UID:33f549bf-5ff1-4e7a-b865-6fc35bf0ee80@house-lights
-DESCRIPTION:Status: Interested\nhttps://www.ticketmaster.nl/artist/bryan-a
- dams-tickets/1629
-URL:https://www.ticketmaster.nl/artist/bryan-adams-tickets/1629
-END:VEVENT
-BEGIN:VEVENT
 SUMMARY:Darkride  - Ed Wubbe's Dance Spectacle
 DTSTART:20271031T140000Z
 UID:6c7523f3-ffc4-4d7c-b9e5-3f9db29e5abd@house-lights
@@ -1001,5 +951,13 @@ DTSTART:20271030T200000Z
 UID:d3c80e5a-3c72-4298-ad37-633eb4f22bf7@house-lights
 DESCRIPTION:Status: Interested\nhttps://carre.nl/voorstelling/darkride
 URL:https://carre.nl/voorstelling/darkride
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Ludovico Einaudi
+DTSTART:20260706T180000Z
+UID:6b9730de-249c-4a9d-a38b-8b1b6be8da0b@house-lights
+DESCRIPTION:Status: Interested\nhttps://www.ticketmaster.nl/artist/ludovic
+ o-eindaudi-tickets/865388
+URL:https://www.ticketmaster.nl/artist/ludovico-eindaudi-tickets/865388
 END:VEVENT
 END:VCALENDAR
