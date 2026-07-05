@@ -69,7 +69,9 @@ class ConcertgebouwScraper(BaseScraper):
                     continue
 
                 sold_out = "uitverkocht" in text.lower()
-                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href, "sold_out": sold_out})
+                img_el = article.select_one("img")
+                image_url = img_el.get("src") if img_el else None
+                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href, "sold_out": sold_out, "image_url": image_url})
 
             # Fetch descriptions from detail pages in parallel
             async def fetch_desc(url: str) -> tuple[str, str | None]:
@@ -103,6 +105,7 @@ class ConcertgebouwScraper(BaseScraper):
                 type="classical",
                 ticket_status="sold_out" if it["sold_out"] else "available",
                 description=descriptions.get(it["url"]),
+                image_url=it.get("image_url"),
             ))
 
         return shows

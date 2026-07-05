@@ -70,29 +70,33 @@ class BimhuisScraper(BaseScraper):
                     "url": url, "href": href, "cancelled": cancelled,
                 })
 
-            # Fetch descriptions from detail pages in parallel
-            async def fetch_desc(url: str) -> tuple[str, str | None]:
+            # Fetch descriptions and og:image from detail pages in parallel
+            async def fetch_desc(url: str) -> tuple[str, str | None, str | None]:
                 try:
                     r = await client.get(url, timeout=15)
                     if r.status_code == 200:
                         ds = BeautifulSoup(r.text, "html.parser")
+                        og_img = ds.select_one('meta[property="og:image"]')
+                        img = og_img.get("content", "").strip() if og_img else None
                         meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
                         if meta:
                             desc = meta.get("content", "").strip()
                             if desc:
-                                return url, desc
+                                return url, desc, img
                         el = ds.select_one(".program-detail__description, .event-description, .content")
                         if el:
                             text = el.get_text(" ", strip=True)[:1000]
                             if text:
-                                return url, text
+                                return url, text, img
+                        return url, None, img
                 except Exception:
                     pass
-                return url, None
+                return url, None, None
 
             unique_urls = list({it["url"] for it in items})
-            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
-            descriptions = dict(desc_results)
+            detail_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
+            descriptions = {r[0]: r[1] for r in detail_results}
+            detail_images = {r[0]: r[2] for r in detail_results}
 
         shows = []
         for it in items:
@@ -105,6 +109,7 @@ class BimhuisScraper(BaseScraper):
                 type="music",
                 ticket_status="sold_out" if it["cancelled"] else "available",
                 description=descriptions.get(it["url"]),
+                image_url=detail_images.get(it["url"]),
             ))
 
         return shows

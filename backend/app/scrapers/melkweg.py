@@ -77,16 +77,21 @@ class MelkwegScraper(BaseScraper):
                 raw_subtitle = genre_el.get_text(strip=True) if genre_el else None
                 subtitle = None if (raw_subtitle and "·" in raw_subtitle) else raw_subtitle
 
-                # Time from listing card
-                text = link.get_text(" ", strip=True)
-                tm = _parse_time(text)
+                # Time from listing card — try parent container first since time element
+                # may be a sibling of the <a> tag, not inside it
+                container_text = (link.parent or link).get_text(" ", strip=True)
+                tm = _parse_time(container_text)
 
-                sold_out = "uitverkocht" in text.lower() or "sold out" in text.lower()
+                sold_out = "uitverkocht" in container_text.lower() or "sold out" in container_text.lower()
                 ticket_status = "sold_out" if sold_out else "available"
+
+                img_el = link.select_one("img")
+                image_url = img_el.get("src") if img_el else None
 
                 items.append({
                     "title": title, "subtitle": subtitle, "date": event_date,
                     "time": tm, "url": url, "href": href, "ticket_status": ticket_status,
+                    "image_url": image_url,
                 })
 
             # Deduplicate by source_id
@@ -98,29 +103,47 @@ class MelkwegScraper(BaseScraper):
                     seen.add(sid)
                     unique_items.append(it)
 
-            # Fetch descriptions from detail pages in parallel
-            async def fetch_desc(url: str) -> tuple[str, str | None]:
+            # Fetch descriptions, og:image, and time from detail pages in parallel
+            async def fetch_desc(url: str) -> tuple[str, str | None, str | None, object]:
                 try:
                     r = await client.get(url, timeout=15)
                     if r.status_code == 200:
                         ds = BeautifulSoup(r.text, "html.parser")
+                        og_img = ds.select_one('meta[property="og:image"]')
+                        img = og_img.get("content", "").strip() if og_img else None
+                        # Time: look for <time> elements or "Aanvang"/"Doors" text
+                        detail_time = None
+                        time_el = ds.select_one("time[datetime]")
+                        if time_el:
+                            detail_time = _parse_time(time_el.get("datetime", "") + " " + time_el.get_text())
+                        if not detail_time:
+                            for label in ["aanvang", "doors", "start", "aanvang:"]:
+                                for el in ds.find_all(string=re.compile(label, re.I)):
+                                    detail_time = _parse_time(str(el.parent.get_text(" ", strip=True)))
+                                    if detail_time:
+                                        break
+                                if detail_time:
+                                    break
                         meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
                         if meta:
                             desc = meta.get("content", "").strip()
                             if desc:
-                                return url, desc
+                                return url, desc, img, detail_time
                         el = ds.select_one(".event-description, .description, .content, main p")
                         if el:
                             text = el.get_text(" ", strip=True)[:1000]
                             if text:
-                                return url, text
+                                return url, text, img, detail_time
+                        return url, None, img, detail_time
                 except Exception:
                     pass
-                return url, None
+                return url, None, None, None
 
             unique_urls = list({it["url"] for it in unique_items})
-            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
-            descriptions = dict(desc_results)
+            detail_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
+            descriptions = {r[0]: r[1] for r in detail_results}
+            detail_images = {r[0]: r[2] for r in detail_results}
+            detail_times = {r[0]: r[3] for r in detail_results}
 
         shows = []
         for it in unique_items:
@@ -128,12 +151,13 @@ class MelkwegScraper(BaseScraper):
                 title=it["title"],
                 subtitle=it["subtitle"],
                 date=it["date"],
-                time=it["time"],
+                time=it["time"] or detail_times.get(it["url"]),
                 url=it["url"],
                 source_id=f"melkweg:{it['href']}",
                 type="music",
                 ticket_status=it["ticket_status"],
                 description=descriptions.get(it["url"]),
+                image_url=it.get("image_url") or detail_images.get(it["url"]),
             ))
 
         return shows

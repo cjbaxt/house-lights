@@ -85,8 +85,10 @@ class DownStageLeftScraper(BaseScraper):
                 paras = [p.get_text(" ", strip=True) for p in article.select("p") if p.get_text(strip=True)]
                 description = " ".join(paras[:3])[:1000] or None
 
+                img_el = article.select_one("img")
+                image_url = img_el.get("src") if img_el else None
                 items.append({"title": title, "date": d, "time": tm, "url": url, "href": href,
-                               "description": description})
+                               "description": description, "image_url": image_url})
 
         shows = []
         for it in items:
@@ -96,6 +98,7 @@ class DownStageLeftScraper(BaseScraper):
                 type="theatre",
                 ticket_status="available",
                 description=it["description"],
+                image_url=it.get("image_url"),
             ))
 
         return shows

@@ -64,7 +64,11 @@ class DeLaMarScraper(BaseScraper):
                 if not d:
                     d = date.today()
 
-                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href})
+                img_el = tile.select_one("img")
+                image_url = img_el.get("src") if img_el else None
+                if image_url and image_url.startswith("/"):
+                    image_url = BASE_URL + image_url
+                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href, "image_url": image_url})
 
             # Fetch descriptions from detail pages in parallel
             async def fetch_desc(url: str) -> tuple[str, str | None]:
@@ -98,6 +102,7 @@ class DeLaMarScraper(BaseScraper):
                 type="theatre",
                 ticket_status="available",
                 description=descriptions.get(it["url"]),
+                image_url=it.get("image_url"),
             ))
 
         return shows

@@ -57,11 +57,18 @@ class OT301Scraper(BaseScraper):
                     if not title or len(title) < 2: continue
 
                     free = "free" in text.lower() or "€ 0" in text or "€ free" in text.lower()
+                    img_span = item.select_one("span.image[style*='background-image']")
+                    image_url = None
+                    if img_span:
+                        import re as _re
+                        m = _re.search(r"background-image:url\(([^)]+)\)", img_span.get("style", ""))
+                        if m:
+                            image_url = m.group(1).strip("'\"")
                     items.append({
                         "title": title, "date": current_date, "time": tm,
                         "url": url, "href": href,
                         "source_id": f"ot301:{href or title}:{current_date}",
-                        "free": free,
+                        "free": free, "image_url": image_url,
                     })
 
             # Fetch descriptions in parallel
@@ -90,6 +97,7 @@ class OT301Scraper(BaseScraper):
                 ticket_status="available",
                 price_from=0 if it["free"] else None,
                 description=descriptions.get(it["url"]),
+                image_url=it.get("image_url"),
             ))
 
         return shows

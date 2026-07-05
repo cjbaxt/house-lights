@@ -63,7 +63,9 @@ class ShelterScraper(BaseScraper):
                 title = title_el.get_text(strip=True) if title_el else text.split("\n")[0][:80]
                 if not title: continue
 
-                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href})
+                img_el = article.select_one("img")
+                image_url = img_el.get("src") if img_el else None
+                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href, "image_url": image_url})
 
             # Fetch descriptions from detail pages in parallel
             async def fetch_desc(url: str) -> tuple[str, str | None]:
@@ -97,6 +99,7 @@ class ShelterScraper(BaseScraper):
                 type="music",
                 ticket_status="available",
                 description=descriptions.get(it["url"]),
+                image_url=it.get("image_url"),
             ))
 
         return shows
