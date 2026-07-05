@@ -2,7 +2,7 @@
 Shelter Amsterdam — WordPress portfolio-based site.
 Events as article.dt_portfolio with date like "Friday 26.06 23:00 - 06:00"
 """
-import httpx, re
+import httpx, re, asyncio
 from bs4 import BeautifulSoup
 from datetime import date, time
 from .base import BaseScraper, ScrapedShow
@@ -46,28 +46,57 @@ class ShelterScraper(BaseScraper):
             resp = await client.get(AGENDA_URL)
             resp.raise_for_status()
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+            soup = BeautifulSoup(resp.text, "html.parser")
+            items = []
+
+            for article in soup.select("article[class*='dt_portfolio']"):
+                link_el = article.select_one("a[href]")
+                if not link_el: continue
+                href = link_el.get("href", "")
+                url = href if href.startswith("http") else BASE_URL + href
+
+                text = article.get_text(" ", strip=True)
+                d, tm = _parse(text)
+                if not d or d < date.today(): continue
+
+                title_el = article.select_one("h2, h3, .dt-post-title")
+                title = title_el.get_text(strip=True) if title_el else text.split("\n")[0][:80]
+                if not title: continue
+
+                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href})
+
+            # Fetch descriptions from detail pages in parallel
+            async def fetch_desc(url: str) -> tuple[str, str | None]:
+                try:
+                    r = await client.get(url, timeout=15)
+                    if r.status_code == 200:
+                        ds = BeautifulSoup(r.text, "html.parser")
+                        meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
+                        if meta:
+                            desc = meta.get("content", "").strip()
+                            if desc:
+                                return url, desc
+                        el = ds.select_one(".entry-content, .post-content, .dt-post-content, main p")
+                        if el:
+                            text = el.get_text(" ", strip=True)[:1000]
+                            if text:
+                                return url, text
+                except Exception:
+                    pass
+                return url, None
+
+            unique_urls = list({it["url"] for it in items})
+            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
+            descriptions = dict(desc_results)
+
         shows = []
-
-        for article in soup.select("article[class*='dt_portfolio']"):
-            link_el = article.select_one("a[href]")
-            if not link_el: continue
-            href = link_el.get("href", "")
-            url = href if href.startswith("http") else BASE_URL + href
-
-            text = article.get_text(" ", strip=True)
-            d, tm = _parse(text)
-            if not d or d < date.today(): continue
-
-            title_el = article.select_one("h2, h3, .dt-post-title")
-            title = title_el.get_text(strip=True) if title_el else text.split("\n")[0][:80]
-            if not title: continue
-
+        for it in items:
             shows.append(ScrapedShow(
-                title=title, date=d, time=tm, url=url,
-                source_id=f"shelter:{href}",
+                title=it["title"], date=it["date"], time=it["time"], url=it["url"],
+                source_id=f"shelter:{it['href']}",
                 type="music",
                 ticket_status="available",
+                description=descriptions.get(it["url"]),
             ))
 
         return shows

@@ -4,7 +4,7 @@ Shows listed as anchor blocks containing title, city, dates, venue.
 Date format: "5, 6, 7 of June 2026" or "19 & 21 of June 2026"
 Each block links to an external ticket URL (Eventbrite / weticket).
 """
-import httpx, re
+import httpx, re, asyncio
 from bs4 import BeautifulSoup
 from datetime import date
 from .base import BaseScraper, ScrapedShow
@@ -20,6 +20,8 @@ _DATE_BLOCK_RE = re.compile(
     r"([\d,\s&]+)\s+of\s+([A-Za-z]+)\s+(\d{4})", re.I
 )
 _NAV_TEXTS = {"home", "tickets", "previous shows", "about"}
+
+TIME_RE = re.compile(r"(\d{1,2}):(\d{2})")
 
 
 def _parse_dates(text: str, today: date) -> list[date]:
@@ -78,16 +80,35 @@ class BirdbBrainTheatreScraper(BaseScraper):
             if not title or len(title) < 2:
                 continue
 
+            # Try to extract time from the link text
+            tm = None
+            tm_m = TIME_RE.search(text)
+            if tm_m:
+                try:
+                    from datetime import time as time_type
+                    tm = time_type(int(tm_m.group(1)), int(tm_m.group(2)))
+                except ValueError:
+                    pass
+
+            # Description: use the surrounding paragraph text if available
+            description = None
+            container = link.find_parent("div") or link.find_parent("section")
+            if container:
+                paras = [p.get_text(" ", strip=True) for p in container.select("p") if p.get_text(strip=True)]
+                if paras:
+                    description = " ".join(paras[:3])[:1000] or None
+
             for d in dates:
                 source_id = f"birdbraintheatre:{href}:{d.isoformat()}"
                 if source_id in seen:
                     continue
                 seen.add(source_id)
                 shows.append(ScrapedShow(
-                    title=title, date=d, url=href,
+                    title=title, date=d, time=tm, url=href,
                     source_id=source_id,
                     type="theatre",
                     ticket_status="available",
+                    description=description,
                 ))
 
         return shows
