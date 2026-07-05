@@ -12,7 +12,7 @@ Outputs to frontend/public/data/:
 import json
 import sys
 import os
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
@@ -22,6 +22,8 @@ load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
 
 from sqlmodel import Session, create_engine, select
 from app.models.core import Show, Venue, Company, Watchlist
+from icalendar import Calendar, Event as CalEvent
+import uuid
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://clairebaxter@localhost:5432/house_lights"
@@ -80,6 +82,49 @@ def main():
                     "show": model_dict(show),
                 })
         write(OUT / "watchlist.json", watchlist_out)
+
+        print("Watchlist ICS...")
+        cal = Calendar()
+        cal.add("prodid", "-//house-lights//EN")
+        cal.add("version", "2.0")
+        cal.add("x-wr-calname", "Claire's Watchlist")
+        cal.add("x-wr-caldesc", "Shows on Claire's watchlist at claireheaded.com/house-lights")
+        cal.add("refresh-interval;value=duration", "P1D")
+        cal.add("x-published-ttl", "P1D")
+        for entry in watchlist_out:
+            w = entry["watchlist"]
+            s = entry["show"]
+            if w.get("status") == "passed":
+                continue
+            ev = CalEvent()
+            ev.add("uid", f"{s['id']}@house-lights")
+            ev.add("summary", s["title"])
+            t = s.get("time")
+            if t:
+                if hasattr(t, "hour"):  # datetime.time object
+                    h, m = t.hour, t.minute
+                else:
+                    h, m = int(str(t)[:2]), int(str(t)[3:5])
+                dt_start = datetime(
+                    *[int(x) for x in str(s["date"]).split("-")], h, m, tzinfo=timezone.utc
+                )
+                ev.add("dtstart", dt_start)
+            else:
+                d = s["date"] if isinstance(s["date"], date) else date.fromisoformat(str(s["date"]))
+                ev.add("dtstart", d)
+            parts = []
+            if w.get("status"):
+                parts.append(f"Status: {w['status'].replace('_', ' ').title()}")
+            if s.get("url"):
+                parts.append(s["url"])
+            if parts:
+                ev.add("description", "\n".join(parts))
+            if s.get("url"):
+                ev.add("url", s["url"])
+            cal.add_component(ev)
+        ics_path = OUT / "watchlist.ics"
+        ics_path.write_bytes(cal.to_ical())
+        print(f"  wrote {ics_path.relative_to(OUT.parent.parent)} ({len(watchlist_out)} events)")
 
     print(f"\nDone. {len(shows)} shows, {len(venues)} venues, {len(companies)} companies, {len(watchlist_out)} watchlist entries.")
 
