@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+
+function localDateStr(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 import type React from "react";
 import { IconCalendarDown, IconBookmark, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconUsers } from "@tabler/icons-react";
 import { api, STATIC } from "../lib/api";
@@ -142,7 +146,7 @@ function GroupedCard({
       <div className="flex flex-wrap items-center gap-1 px-4 pb-3">
         {(showAllDates ? group.entries : group.entries.slice(0, DATE_CHIPS_LIMIT)).map((entry) => {
           const d = new Date(entry.show.date + "T00:00:00");
-          const isToday = entry.show.date === new Date().toISOString().slice(0, 10);
+          const isToday = entry.show.date === localDateStr();
           const isCurrentYear = d.getFullYear() === new Date().getFullYear();
           const label = (isToday ? "TODAY" : d.toLocaleDateString("en-GB", {
             day: "numeric", month: "short", ...(!isCurrentYear && { year: "numeric" }),

@@ -20,6 +20,10 @@ type DisplayView = "programme" | "agenda" | "calendar";
 const ALL_TYPES = ["music", "classical", "theatre", "comedy", "ballet", "dance", "opera", "other"];
 const PRIORITY_LABELS: Record<Priority, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
 
+function localDateStr(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function endOfWeek(): Date {
   const d = new Date();
   d.setDate(d.getDate() + (7 - d.getDay()));
@@ -106,7 +110,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
       <div className="flex flex-wrap items-center gap-1 px-4 pb-3">
         {visible.map(({ id, date, status, time }) => {
           const d = new Date(date + "T00:00:00");
-          const isToday = date === new Date().toISOString().slice(0, 10);
+          const isToday = date === localDateStr();
           const isCurrentYear = d.getFullYear() === new Date().getFullYear();
           const label = isToday ? "TODAY" : d.toLocaleDateString("en-GB", {
             day: "numeric", month: "short", ...(!isCurrentYear && { year: "numeric" })
@@ -269,7 +273,7 @@ export default function ShowFeed() {
 
   const filtered = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    const todayStr = localDateStr(now);
     const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     let result = shows.filter((s) => {
@@ -368,7 +372,7 @@ export default function ShowFeed() {
   // Total unique productions across all upcoming shows (unfiltered)
   const totalProgrammeCount = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    const todayStr = localDateStr(now);
     const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const upcoming = shows.filter((s) => {
       if (s.date > todayStr) return true;
@@ -642,7 +646,7 @@ export default function ShowFeed() {
                 </div>
                 {Object.entries(dayGroups).map(([dayKey, dayShows], i) => {
                   const d = new Date(dayKey + "T00:00:00");
-                  const isToday = dayKey === new Date().toISOString().slice(0, 10);
+                  const isToday = dayKey === localDateStr();
                   const dayLabel = isToday
                     ? "Today"
                     : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric" });
