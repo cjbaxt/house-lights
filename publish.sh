@@ -6,6 +6,11 @@ source backend/.venv/bin/activate && python3 scripts/dump_to_json.py
 echo "✓ Database dumped"
 
 echo ""
+echo "▶ Stripping backend-only fields from shows.json..."
+node frontend/scripts/strip-shows.mjs
+echo "✓ Stripped"
+
+echo ""
 echo "▶ Staging data files..."
 git add frontend/public/data
 CHANGED=$(git diff --cached --name-only | wc -l | tr -d ' ')

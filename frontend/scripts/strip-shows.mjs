@@ -4,7 +4,10 @@ import { readFileSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
-if (process.env.PUBLIC_STATIC_DATA !== "true") {
+// Allow running directly (e.g. from publish.sh) or as part of a static CI build
+const isStaticBuild = process.env.PUBLIC_STATIC_DATA === "true";
+const isDirect = process.argv[1]?.endsWith("strip-shows.mjs") && !process.env.npm_lifecycle_event;
+if (!isStaticBuild && !isDirect) {
   console.log("strip-shows: skipping (not a static build)");
   process.exit(0);
 }
