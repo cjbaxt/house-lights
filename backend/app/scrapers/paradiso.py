@@ -132,6 +132,8 @@ class ParadisoScraper(BaseScraper):
                     image_url = candidate
                     break
 
+            location_title = _location_title(evt.get("location"))
+
             shows.append(ScrapedShow(
                 title=title, date=d, time=tm, url=url,
                 source_id=f"paradiso:{href}",
@@ -139,6 +141,7 @@ class ParadisoScraper(BaseScraper):
                 ticket_status="sold_out" if sold_out else "available",
                 description=description,
                 image_url=image_url,
+                venue_name=location_title or None,
             ))
 
         return shows
