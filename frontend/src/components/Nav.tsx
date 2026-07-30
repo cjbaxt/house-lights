@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { IconLayoutList, IconSparkles, IconCalendarHeart, IconInfoCircle } from "@tabler/icons-react";
+import { IconLayoutList, IconCalendarHeart, IconInfoCircle } from "@tabler/icons-react";
 import { createClient } from "../lib/supabase/client";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
 const links = [
   { path: "/", label: "Browse", icon: IconLayoutList },
-  { path: "/discover", label: "Discover", icon: IconSparkles },
   { path: "/watchlist", label: "Watchlist", icon: IconCalendarHeart },
   { path: "/about", label: "About", icon: IconInfoCircle },
 ];
