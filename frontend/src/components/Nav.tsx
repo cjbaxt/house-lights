@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { IconLayoutList, IconSparkles, IconBuildingStore, IconCalendarHeart, IconInfoCircle } from "@tabler/icons-react";
+import { createClient } from "../lib/supabase/client";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
@@ -17,7 +18,12 @@ function href(path: string) {
 
 export default function Nav({ current }: { current: string }) {
   const [showMobileTop, setShowMobileTop] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user } }) => setIsLoggedIn(!!user));
+  }, []);
 
   useEffect(() => {
     function onScroll() {
@@ -54,16 +60,23 @@ export default function Nav({ current }: { current: string }) {
             );
           })}
         </nav>
-        <a
-          href={href("/settings")}
-          className={`text-sm pb-0.5 transition-colors ${
-            current === "/settings"
-              ? "text-[#e85d2f] border-b border-[#e85d2f]"
-              : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
-          }`}
-        >
-          Settings
-        </a>
+        {isLoggedIn === true && (
+          <a
+            href={href("/settings")}
+            className={`text-sm pb-0.5 transition-colors ${
+              current === "/settings"
+                ? "text-[#e85d2f] border-b border-[#e85d2f]"
+                : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
+            }`}
+          >
+            Settings
+          </a>
+        )}
+        {isLoggedIn === false && (
+          <a href={href("/login")} className="text-sm pb-0.5 text-[#f5f3ef]/40 hover:text-[#f5f3ef] transition-colors">
+            Sign in
+          </a>
+        )}
       </header>
 
       {/* Mobile top bar — hides on scroll down */}

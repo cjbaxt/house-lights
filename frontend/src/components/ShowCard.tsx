@@ -12,6 +12,7 @@ interface Props {
   watchStatus?: WatchStatus;
   onWatchChange?: () => void;
   extraDates?: number;
+  currentUser?: { id: string } | null;
 }
 
 const TICKET_BADGE: Record<string, string> = {
@@ -26,7 +27,7 @@ const TICKET_LABEL: Record<string, string> = {
   sold_out: "sold out",
 };
 
-export default function ShowCard({ show, venueName, companyName, watchStatus, onWatchChange, extraDates }: Props) {
+export default function ShowCard({ show, venueName, companyName, watchStatus, onWatchChange, extraDates, currentUser }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const date = new Date(show.date + "T00:00:00");
@@ -85,7 +86,7 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
       {/* Bookmark */}
       <div className="relative flex-shrink-0 flex items-center pr-3">
         <button
-          onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
+          onClick={(e) => { e.stopPropagation(); if (!currentUser) { window.location.href = "/login"; return; } setMenuOpen((o) => !o); }}
           className="p-1 hover:bg-[#ece7de] transition-colors"
         >
           {isWatched
