@@ -11,6 +11,31 @@ const { data: profile } = await Astro.locals.supabase
   .eq("id", Astro.locals.user.id)
   .single();
 
+const { data: venuesData } = await Astro.locals.supabase
+  .from("venue")
+  .select("id, name, priority")
+  .order("name");
+
+const { data: companiesData } = await Astro.locals.supabase
+  .from("company")
+  .select("id, name, priority")
+  .order("name");
+
+const venues = venuesData ?? [];
+const companies = companiesData ?? [];
+
+const PRIORITY_ORDER = ["high", "medium", "low"];
+const PRIORITY_LABEL: Record<string, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
+
+type Item = { id: string; name: string; priority: string };
+
+const grouped = PRIORITY_ORDER.map(p => ({
+  label: PRIORITY_LABEL[p],
+  priority: p,
+  venues: venues.filter((v: Item) => v.priority === p),
+  companies: companies.filter((c: Item) => c.priority === p),
+}));
+
 const updated = Astro.url.searchParams.get("updated");
 const error = Astro.url.searchParams.get("error");
 ---
@@ -27,50 +52,82 @@ const error = Astro.url.searchParams.get("error");
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
     <Nav current="/settings" client:load transition:persist />
-    <main class="max-w-md mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
-      <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a] mb-8">Account settings</h1>
+    <main class="max-w-xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
+      <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a] mb-8">Settings</h1>
 
       {updated && <p class="text-xs text-green-700 mb-6">Saved.</p>}
       {error && <p class="text-xs text-[#e85d2f] mb-6">{decodeURIComponent(error)}</p>}
 
-      <form method="POST" action="/api/profile/update" class="space-y-5">
-        <div>
-          <label class="block text-xs uppercase tracking-widest text-[#888] mb-2">Username</label>
-          <input
-            type="text"
-            name="username"
-            value={profile?.username ?? ""}
-            required
-            pattern="[a-z0-9_-]+"
-            title="Lowercase letters, numbers, hyphens and underscores only"
-            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
-          />
-          <p class="text-xs text-[#aaa] mt-1">Lowercase letters, numbers, - and _ only</p>
-        </div>
+      <!-- Profile -->
+      <section class="mb-12">
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-5">Profile</h2>
+        <form method="POST" action="/api/profile/update" class="space-y-5">
+          <div>
+            <label class="block text-xs uppercase tracking-widest text-[#888] mb-2">Username</label>
+            <input
+              type="text"
+              name="username"
+              value={profile?.username ?? ""}
+              required
+              pattern="[a-z0-9_-]+"
+              title="Lowercase letters, numbers, hyphens and underscores only"
+              class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
+            />
+            <p class="text-xs text-[#aaa] mt-1">Lowercase letters, numbers, - and _ only</p>
+          </div>
+          <div>
+            <label class="block text-xs uppercase tracking-widest text-[#888] mb-2">Display name</label>
+            <input
+              type="text"
+              name="display_name"
+              value={profile?.display_name ?? ""}
+              class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
+            />
+          </div>
+          <button type="submit" class="bg-[#1a1a1a] text-white text-xs py-2 px-6 hover:bg-[#333] transition-colors uppercase tracking-widest font-bold">
+            Save profile
+          </button>
+        </form>
+      </section>
 
-        <div>
-          <label class="block text-xs uppercase tracking-widest text-[#888] mb-2">Display name</label>
-          <input
-            type="text"
-            name="display_name"
-            value={profile?.display_name ?? ""}
-            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
-          />
-        </div>
+      <!-- Venue rankings -->
+      <section class="mb-12 border-t border-[#ece7de] pt-10">
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-2">Venue rankings</h2>
+        <p class="text-xs text-[#aaa] mb-6">Controls how venues are weighted in filters. Regular = shown by default.</p>
 
-        <button
-          type="submit"
-          class="w-full bg-[#1a1a1a] text-white text-sm py-3 hover:bg-[#333] transition-colors uppercase tracking-widest font-bold"
-        >
-          Save
-        </button>
-      </form>
+        {grouped.map(group => (
+          <div class="mb-8">
+            <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-3">{group.label}</div>
+            <div class="flex flex-wrap gap-2">
+              {[...group.venues.map((v: Item) => ({ ...v, kind: "venue" })), ...group.companies.map((c: Item) => ({ ...c, kind: "company" }))].sort((a, b) => a.name.localeCompare(b.name)).map((item) => (
+                <form method="POST" action="/api/venue/priority" class="inline">
+                  <input type="hidden" name="id" value={item.id} />
+                  <input type="hidden" name="kind" value={item.kind} />
+                  <div class="flex items-center gap-0 border border-[#ece7de] bg-white text-xs text-[#555]">
+                    <span class="px-3 py-1.5">{item.name}</span>
+                    <select
+                      name="priority"
+                      onchange="this.form.submit()"
+                      class="text-[10px] border-l border-[#ece7de] px-2 py-1.5 bg-white text-[#888] focus:outline-none cursor-pointer"
+                    >
+                      {PRIORITY_ORDER.map(p => (
+                        <option value={p} selected={item.priority === p}>{PRIORITY_LABEL[p]}</option>
+                      ))}
+                    </select>
+                  </div>
+                </form>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
 
-      <div class="mt-12 pt-8 border-t border-[#ece7de]">
+      <!-- Account -->
+      <section class="border-t border-[#ece7de] pt-8">
         <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-4">Account</h2>
         <p class="text-xs text-[#888] mb-4">Signed in as {Astro.locals.user.email}</p>
         <a href="/api/auth/logout" class="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">Sign out</a>
-      </div>
+      </section>
     </main>
   </body>
 </html>
