@@ -1,13 +1,38 @@
 ---
 import "../styles/global.css";
 import Nav from "../components/Nav";
-import EditorUnlock from "../components/EditorUnlock";
 import ClientRouter from "astro/components/ClientRouter.astro";
-import fs from "fs";
-import path from "path";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
-const raw = fs.readFileSync(path.resolve("src/content/about.md"), "utf-8");
+const raw = readFileSync(resolve("src/content/about.md"), "utf-8");
 const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+
+const { data: venuesData } = await Astro.locals.supabase
+  .from("venue")
+  .select("id, name, priority, website_url")
+  .order("name");
+
+const { data: companiesData } = await Astro.locals.supabase
+  .from("company")
+  .select("id, name, priority, website_url")
+  .order("name");
+
+const venues = venuesData ?? [];
+const companies = companiesData ?? [];
+
+const PRIORITY_LABEL: Record<string, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
+const PRIORITY_ORDER = ["high", "medium", "low"];
+
+type VenueItem = { id: string; name: string; priority: string; website_url?: string | null };
+
+const grouped = PRIORITY_ORDER.map(p => ({
+  label: PRIORITY_LABEL[p],
+  items: [
+    ...venues.filter((v: VenueItem) => v.priority === p),
+    ...companies.filter((c: VenueItem) => c.priority === p),
+  ].sort((a: VenueItem, b: VenueItem) => a.name.localeCompare(b.name)),
+})).filter(g => g.items.length > 0);
 ---
 
 <html lang="en">
@@ -16,45 +41,61 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
     <ClientRouter />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>About — house lights</title>
-    <link rel="icon" type="image/png" href={`${import.meta.env.BASE_URL}${import.meta.env.PUBLIC_STATIC_DATA === "true" ? "favicon.png" : "favicon-local.png"}`} />
-    <link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL}${import.meta.env.PUBLIC_STATIC_DATA === "true" ? "favicon.svg" : "favicon-local.svg"}`} />
-    {import.meta.env.PUBLIC_STATIC_DATA === "true" && <link rel="alternate icon" type="image/x-icon" href={`${import.meta.env.BASE_URL}favicon.ico`} />}
-    {import.meta.env.PUBLIC_STATIC_DATA === "true" && <link rel="apple-touch-icon" href={`${import.meta.env.BASE_URL}apple-touch-icon.png`} />}
+    <link rel="icon" type="image/svg+xml" href="/favicon-local.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
     <Nav current="/about" client:load transition:persist />
-    <EditorUnlock client:load transition:persist />
     <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
-      <div class="mt-4 mb-8">
-        <div class="w-8 h-0.5 bg-[#e85d2f] mb-3"></div>
-        <p class="font-sans font-black uppercase text-xl tracking-tight text-[#1a1a1a]">About</p>
-      </div>
-      <div class="space-y-5 text-sm text-[#444] leading-relaxed font-sans">
-        {paragraphs.map((p) => {
-          const lines = p.split("\n");
-          const isList = lines.every((l) => l.trimStart().startsWith("- "));
-          const render = (s: string) => s.replace(/\*\*(.+?)\*\*/g, '<span class="font-black text-[#1a1a1a] uppercase tracking-tight">$1</span>');
-          if (isList) {
+
+      <div class="text-sm text-[#555] leading-relaxed space-y-4 mb-16">
+        {paragraphs.map((p: string) => {
+          if (p.startsWith("- ")) {
+            const items = p.split("\n").filter((l: string) => l.startsWith("- "));
             return (
-              <ul class="space-y-2">
-                {lines.map((l) => (
-                  <li class="flex items-baseline gap-3">
-                    <span class="text-[#e85d2f] font-black text-xs flex-shrink-0">—</span>
-                    <span set:html={render(l.replace(/^-\s+/, ""))} />
-                  </li>
-                ))}
+              <ul class="space-y-2 pl-0">
+                {items.map((item: string) => {
+                  const content = item.slice(2);
+                  const formatted = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                  return <li class="flex gap-2"><span class="text-[#e85d2f]">—</span><span set:html={formatted} /></li>;
+                })}
               </ul>
             );
           }
-          return <p set:html={render(p)} />;
+          return <p>{p}</p>;
         })}
       </div>
-      <div class="mt-12 pt-8 border-t border-[#ece7de]">
-        <div class="w-4 h-0.5 bg-[#e85d2f]"></div>
-      </div>
+
+      <section class="mb-16">
+        <h2 class="font-sans font-black text-xs uppercase tracking-widest text-[#1a1a1a] mb-6">Venues & companies</h2>
+        {grouped.map(group => (
+          <div class="mb-6">
+            <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-2">{group.label}</div>
+            <div class="flex flex-wrap gap-2">
+              {group.items.map((item: VenueItem) => (
+                item.website_url
+                  ? <a href={item.website_url} target="_blank" rel="noopener noreferrer"
+                      class="text-xs border border-[#ece7de] px-3 py-1 text-[#555] hover:border-[#1a1a1a] hover:text-[#1a1a1a] transition-colors">
+                      {item.name}
+                    </a>
+                  : <span class="text-xs border border-[#ece7de] px-3 py-1 text-[#555]">{item.name}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+        {Astro.locals.user && (
+          <p class="text-xs text-[#aaa] mt-4">
+            Adjust rankings in <a href="/settings" class="underline hover:text-[#555]">Settings</a>.
+          </p>
+        )}
+      </section>
+
+      <section class="text-xs text-[#aaa] border-t border-[#ece7de] pt-8 flex gap-6">
+        <a href="/privacy" class="hover:text-[#555] transition-colors">Privacy policy</a>
+      </section>
+
     </main>
   </body>
 </html>

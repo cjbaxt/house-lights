@@ -2,7 +2,7 @@ name: Scrape & summarise
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 6am UTC daily
+    - cron: '0 6 * * 1'   # 6am UTC every Monday
   workflow_dispatch:        # manual trigger from GitHub Actions tab
 
 jobs:
