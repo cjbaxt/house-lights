@@ -1,28 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
-
-function localDateStr(d = new Date()): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+import { localDateStr } from "../lib/api";
 import type React from "react";
 import { IconCalendarDown, IconBookmark, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconUsers } from "@tabler/icons-react";
-import { api, STATIC } from "../lib/api";
-import type { WatchlistEntry, Venue, Company, Show, WatchStatus } from "../lib/api";
+import { createClient } from "../lib/supabase/client";
+import { api } from "../lib/api";
+import type { WatchlistEntry, Venue, Company, Show, WatchStatus, Profile } from "../lib/api";
 import EventTypeIcon from "./EventTypeIcon";
 import WatchMenu from "./WatchMenu";
 import CalendarBody from "./CalendarBody";
 
 type DisplayView = "list" | "calendar";
-type WhoView = "claire" | "yours";
+// whoView: "mine" = logged-in user's own watchlist, username = viewing someone else's
+type WhoView = "mine" | string;
 
-// Group key: title + venue/company — groups all dates of the same production together
+const CLAIRE_USERNAME = "claireheaded";
+
 function groupKey(show: Show): string {
   return `${show.title.toLowerCase()}|${show.venue_id ?? show.company_id ?? ""}`;
 }
 
 interface ShowGroup {
   key: string;
-  show: Show; // representative show (first, for image/title/venue)
-  entries: WatchlistEntry[]; // all dates, sorted by date
+  show: Show;
+  entries: WatchlistEntry[];
 }
 
 const DATE_CHIPS_LIMIT = 5;
@@ -54,20 +54,14 @@ function GroupedCard({
     (show.company_id ? companyMap[show.company_id] : undefined) ||
     "";
 
-  // Any entry has tickets_bought?
   const anyBought = group.entries.some((e) => e.watchlist.status === "tickets_bought");
-  // representative status for bookmark icon
   const repStatus = anyBought ? "tickets_bought" : (group.entries[0]?.watchlist.status as WatchStatus);
 
   async function handleMarkBought(e: React.MouseEvent, entry: WatchlistEntry) {
     e.preventDefault();
     e.stopPropagation();
     const current = entry.watchlist.status;
-    if (current === "tickets_bought") {
-      await api.upsertWatch(entry.show.id, "interested");
-    } else {
-      await api.upsertWatch(entry.show.id, "tickets_bought");
-    }
+    await api.upsertWatch(entry.show.id, current === "tickets_bought" ? "interested" : "tickets_bought");
     onWatchChange();
   }
 
@@ -186,34 +180,48 @@ function GroupedCard({
 
 export default function WatchlistFeed() {
   const [myWatchlist, setMyWatchlist] = useState<WatchlistEntry[]>([]);
-  const [clairesWatchlist, setClairesWatchlist] = useState<WatchlistEntry[]>([]);
+  const [viewedWatchlist, setViewedWatchlist] = useState<WatchlistEntry[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayView, setDisplayView] = useState<DisplayView>("list");
-  const [whoView, setWhoView] = useState<WhoView>(STATIC ? "yours" : "claire");
+  const [whoView, setWhoView] = useState<WhoView>(CLAIRE_USERNAME);
   const [visibleCount, setVisibleCount] = useState(12);
 
   const load = useCallback(async () => {
     try {
-      const [cw, v, c] = await Promise.all([
-        api.getClairesWatchlist(), api.getVenues(), api.getCompanies(),
-      ]);
-      setMyWatchlist(api.getLocalWatchlist());
-      setClairesWatchlist(cw);
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+
+      const [v, c] = await Promise.all([api.getVenues(), api.getCompanies()]);
       setVenues(v);
       setCompanies(c);
+
+      // Always load Claire's watchlist for the default view
+      const claireProfile = await api.getProfile(CLAIRE_USERNAME);
+      if (claireProfile) {
+        const cw = await api.getUserWatchlist(claireProfile.id);
+        setViewedWatchlist(cw);
+      }
+
+      // Load own watchlist if logged in
+      if (user) {
+        const mw = await api.getWatchlist();
+        setMyWatchlist(mw);
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const reloadMine = useCallback(() => {
-    setMyWatchlist(api.getLocalWatchlist());
+  const reloadMine = useCallback(async () => {
+    const mw = await api.getWatchlist();
+    setMyWatchlist(mw);
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
   useEffect(() => { setVisibleCount(12); }, [whoView]);
 
   const venueMap = Object.fromEntries(venues.map((v) => [v.id, v.name]));
@@ -227,74 +235,60 @@ export default function WatchlistFeed() {
     );
   }
 
-  const isClaires = whoView === "claire";
-  const watchlist = isClaires ? clairesWatchlist : myWatchlist;
-  const clairesKeys = new Set(clairesWatchlist.map((e) => groupKey(e.show)));
+  const isViewingOwn = whoView === "mine";
+  const isViewingClaire = whoView === CLAIRE_USERNAME;
+  const watchlist = isViewingOwn ? myWatchlist : viewedWatchlist;
   const myGroupKeys = new Set(myWatchlist.map((e) => groupKey(e.show)));
 
-  // Build show groups: key → ShowGroup
   const groupMap = new Map<string, ShowGroup>();
   for (const entry of watchlist) {
     const key = groupKey(entry.show);
-    if (!groupMap.has(key)) {
-      groupMap.set(key, { key, show: entry.show, entries: [] });
-    }
+    if (!groupMap.has(key)) groupMap.set(key, { key, show: entry.show, entries: [] });
     groupMap.get(key)!.entries.push(entry);
   }
-  // Sort entries within each group by date then time
   for (const g of groupMap.values()) {
     g.entries.sort((a, b) => {
       const dc = a.show.date.localeCompare(b.show.date);
-      if (dc !== 0) return dc;
-      return (a.show.time ?? "").localeCompare(b.show.time ?? "");
+      return dc !== 0 ? dc : (a.show.time ?? "").localeCompare(b.show.time ?? "");
     });
   }
 
-  const allGroups = Array.from(groupMap.values());
-
-  // Single timeline sorted by earliest date in each group
-  const sortedGroups = allGroups.sort(
+  const sortedGroups = Array.from(groupMap.values()).sort(
     (a, b) => a.entries[0].show.date.localeCompare(b.entries[0].show.date)
   );
-
   const allShows = watchlist.map((e) => e.show);
-  const venueNameMap = Object.fromEntries(venues.map((v) => [v.id, v.name]));
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        {/* Who toggle */}
         <div className="flex items-center border border-[#ece7de] overflow-hidden">
-          {([
-            { key: "claire" as WhoView, label: "Claire's" },
-            { key: "yours" as WhoView, label: "Yours" },
-          ]).map(({ key, label }) => (
-            <button key={key} onClick={() => setWhoView(key)}
-              className={`text-xs px-3 py-1.5 transition-colors ${whoView === key ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
-            >
-              {label}
+          <button onClick={() => setWhoView(CLAIRE_USERNAME)}
+            className={`text-xs px-3 py-1.5 transition-colors ${isViewingClaire ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}>
+            Claire's
+          </button>
+          {currentUser && (
+            <button onClick={() => setWhoView("mine")}
+              className={`text-xs px-3 py-1.5 transition-colors ${isViewingOwn ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}>
+              Yours
             </button>
-          ))}
+          )}
         </div>
 
         <div className="flex items-center gap-3">
-          {(isClaires && STATIC) || (!isClaires && !STATIC) ? (
-            <a
-              href={api.calendarUrl()}
-              className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
-            >
-              <IconCalendarDown size={13} />
-              {isClaires ? "Subscribe" : "Export .ics"}
-            </a>
-          ) : null}
+          <a
+            href={api.calendarUrl(isViewingOwn && currentUser ? undefined : CLAIRE_USERNAME)}
+            className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
+          >
+            <IconCalendarDown size={13} />
+            Subscribe
+          </a>
           <div className="flex items-center border border-[#ece7de] overflow-hidden">
             {([
               { key: "calendar", icon: <IconCalendar size={13} /> },
               { key: "list",     icon: <IconList size={13} /> },
             ] as { key: DisplayView; icon: React.ReactNode }[]).map(({ key, icon }) => (
               <button key={key} onClick={() => setDisplayView(key)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${displayView === key ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
-              >
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 transition-colors ${displayView === key ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}>
                 {icon}
               </button>
             ))}
@@ -306,20 +300,20 @@ export default function WatchlistFeed() {
         {sortedGroups.length} show{sortedGroups.length !== 1 ? "s" : ""}
       </div>
 
-      {!isClaires && STATIC && (
+      {!currentUser && isViewingOwn === false && (
         <p className="text-xs text-neutral-400 mb-4">
-          Your watchlist is saved in this browser. Clearing your cache will remove it.
+          <a href="/login" className="underline hover:text-neutral-700">Sign in</a> to build your own watchlist.
         </p>
       )}
 
       {watchlist.length === 0 && (
         <div className="flex items-center justify-center h-64 text-neutral-400 text-sm">
-          {isClaires ? "Claire hasn't watched anything yet." : "Nothing on your watchlist yet."}
+          {isViewingOwn ? "Nothing on your watchlist yet." : "Nothing on this watchlist yet."}
         </div>
       )}
 
       {displayView === "calendar" ? (
-        <CalendarBody shows={allShows} venueMap={venueNameMap} defaultView="month" />
+        <CalendarBody shows={allShows} venueMap={venueMap} defaultView="month" />
       ) : (
         <div className="flex flex-col gap-2">
           {sortedGroups.slice(0, visibleCount).map((group) => (
@@ -328,11 +322,11 @@ export default function WatchlistFeed() {
               group={group}
               venueMap={venueMap}
               companyMap={companyMap}
-              onWatchChange={reloadMine}
-              readOnly={isClaires}
-              claireToo={!isClaires && clairesKeys.has(group.key)}
-              inMyWatchlist={isClaires ? myGroupKeys.has(group.key) : undefined}
-              onAddToMine={isClaires ? async () => {
+              onWatchChange={isViewingOwn ? reloadMine : load}
+              readOnly={!isViewingOwn}
+              claireToo={isViewingOwn && myGroupKeys.has(group.key)}
+              inMyWatchlist={!isViewingOwn ? myGroupKeys.has(group.key) : undefined}
+              onAddToMine={!isViewingOwn && currentUser ? async () => {
                 const isIn = myGroupKeys.has(group.key);
                 await Promise.all(group.entries.map((e) =>
                   isIn ? api.removeWatch(e.show.id) : api.upsertWatch(e.show.id, "interested")

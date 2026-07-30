@@ -1,19 +1,21 @@
 """
-Generates one-sentence AI summaries for shows using a local Ollama model.
+Generates one-sentence AI summaries for shows using Groq (free tier).
 Run: python enrich_summaries.py [--all]
 
-Requires a generative model — pull one first:
-  ollama pull llama3.2:3b
+Requires GROQ_API_KEY env var — get a free key at console.groq.com
 """
 import sys
 import html
-import ollama
+import os
+import httpx
 from sqlmodel import Session, select
 from app.db import engine
 from app.models.core import Show
 
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_MODEL = "llama-3.3-70b-versatile"
+
 BATCH_SIZE = 20
-MODEL = "llama3.2:3b"
 
 PROMPT_TEMPLATE = """Write a single sentence (max 20 words) describing this event for someone deciding whether to go.
 Be specific and vivid. No filler phrases like "Don't miss" or "An unmissable". No trailing punctuation needed.
@@ -26,18 +28,37 @@ One sentence:"""
 
 PROMPT_TEMPLATE_NO_DESC = """Write a single sentence (max 20 words) about the artist or act "{title}" — what kind of music or performance they are known for.
 Be specific. No filler phrases like "Don't miss" or "An unmissable". No trailing punctuation needed.
-If you don't recognise the name, write nothing.
+If you don't recognise the name, write exactly: UNKNOWN
 
 One sentence:"""
+
+# Boilerplate patterns that indicate a non-description scraped from a listing page
+_BOILERPLATE_PATTERNS = (
+    "klik hier voor meer",
+    "click here for more",
+    "voor meer informatie",
+    "for more information",
+    "klik hier voor tickets",
+    "buy tickets",
+    "meer info & tickets",
+)
 
 
 def clean(text: str) -> str:
     return html.unescape(text).strip()
 
 
+def _is_boilerplate(desc: str) -> bool:
+    lower = desc.lower()
+    return any(p in lower for p in _BOILERPLATE_PATTERNS) and len(desc) < 200
+
+
 def summarise(show: Show) -> str | None:
-    if show.description:
-        desc = clean(show.description)[:800]
+    desc = clean(show.description)[:800] if show.description else None
+    if desc and _is_boilerplate(desc):
+        desc = None  # treat as no description
+
+    if desc:
         prompt = PROMPT_TEMPLATE.format(
             title=clean(show.title),
             type=show.type or "performance",
@@ -47,13 +68,26 @@ def summarise(show: Show) -> str | None:
         # No description — ask the model what it knows about the act from its training data
         prompt = PROMPT_TEMPLATE_NO_DESC.format(title=clean(show.title))
 
-    resp = ollama.generate(model=MODEL, prompt=prompt, options={"temperature": 0.3})
-    text = resp["response"].strip().strip('"').strip("'")
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY not set")
+    resp = httpx.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+        json={"model": GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.3, "max_tokens": 60},
+        timeout=20,
+    )
+    resp.raise_for_status()
+    text = resp.json()["choices"][0]["message"]["content"].strip().strip('"').strip("'")
     if not text:
         return None
-    # Discard "I don't know" responses from the no-description path
+    # Discard unhelpful / hallucinated responses
     lower = text.lower()
-    if any(p in lower for p in ("couldn't find", "i don't know", "no information", "not familiar", "i'm not sure")):
+    if any(p in lower for p in (
+        "couldn't find", "i don't know", "no information", "not familiar", "i'm not sure",
+        "unknown", "i cannot", "i can't", "i was unable", "i have no",
+        "unique musical experience", "unique experience", "to the iconic venue",
+        "bringing a unique", "a truly unique",
+    )):
         return None
     # trim to first sentence if the model rambles
     for sep in [".", "!", "?"]:

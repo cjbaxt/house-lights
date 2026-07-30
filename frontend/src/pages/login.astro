@@ -1,0 +1,57 @@
+---
+import "../styles/global.css";
+import ClientRouter from "astro/components/ClientRouter.astro";
+
+if (Astro.locals.user) return Astro.redirect("/");
+const error = Astro.url.searchParams.get("error");
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <ClientRouter />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in — house lights</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon-local.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#f5f0e8] min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-xs px-6">
+      <h1 class="font-sans font-black text-2xl uppercase tracking-tight text-[#1a1a1a] mb-1">
+        house lights
+      </h1>
+      <p class="text-sm text-[#888] mb-8">Amsterdam events</p>
+
+      <form method="POST" action="/api/auth/login" class="space-y-4">
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          required
+          autocomplete="email"
+          class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+          autocomplete="current-password"
+          class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
+        />
+        {error && <p class="text-xs text-[#e85d2f]">{decodeURIComponent(error)}</p>}
+        <button
+          type="submit"
+          class="w-full bg-[#1a1a1a] text-white text-sm py-3 hover:bg-[#333] transition-colors uppercase tracking-widest font-bold"
+        >
+          Sign in
+        </button>
+      </form>
+
+      <p class="text-xs text-[#bbb] text-center mt-8">
+        <a href="/" class="hover:text-[#888] transition-colors">← Back</a>
+      </p>
+    </div>
+  </body>
+</html>
