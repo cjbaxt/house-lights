@@ -1,12 +1,4 @@
-const BASE = "/api";
-
-export const STATIC = import.meta.env.PUBLIC_STATIC_DATA === "true";
-const DATA_BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-
-async function staticFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${DATA_BASE}${path}`);
-  return res.json();
-}
+import { createClient } from "./supabase/client";
 
 export type TicketStatus = "available" | "sold_out" | "few_left" | "unknown";
 export type WatchStatus = "interested" | "tickets_bought" | "waitlisting" | "maybe" | "passed";
@@ -56,134 +48,192 @@ export interface WatchlistEntry {
   show: Show;
 }
 
-// Watchlist in static mode uses localStorage
-const STATIC_WATCHLIST_KEY = "house_lights_watchlist";
-
-function staticGetWatchlist(): WatchlistEntry[] {
-  try {
-    return JSON.parse(localStorage.getItem(STATIC_WATCHLIST_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
+export interface Profile {
+  id: string;
+  username: string;
+  display_name?: string;
+  is_public: boolean;
 }
 
-function staticSaveWatchlist(entries: WatchlistEntry[]) {
-  localStorage.setItem(STATIC_WATCHLIST_KEY, JSON.stringify(entries));
-}
+// ----------------------------------------------------------------
+// Core data fetchers (public, no auth needed)
+// ----------------------------------------------------------------
 
 export const api = {
   async getUpcoming(limit = 100, offset = 0): Promise<Show[]> {
-    if (STATIC) {
-      const all = await staticFetch<Show[]>("/data/shows.json");
-      return all.slice(offset, offset + limit);
-    }
-    const r = await fetch(`${BASE}/shows/upcoming?limit=${limit}&offset=${offset}`);
-    if (!r.ok) return [];
-    const data = await r.json();
-    return Array.isArray(data) ? data : [];
+    const supabase = createClient();
+    const today = localDateStr();
+    const { data, error } = await supabase
+      .from("show")
+      .select("id,title,subtitle,venue_id,company_id,date,time,type,url,ticket_status,price_from,currency,summary,image_url")
+      .gte("date", today)
+      .order("date", { ascending: true })
+      .order("time", { ascending: true, nullsFirst: false })
+      .range(offset, offset + limit - 1);
+    if (error) { console.error(error); return []; }
+    return (data ?? []) as Show[];
   },
+
   async getVenues(): Promise<Venue[]> {
-    if (STATIC) return staticFetch<Venue[]>("/data/venues.json");
-    const r = await fetch(`${BASE}/venues`);
-    return r.json();
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("venue")
+      .select("*")
+      .eq("active", true)
+      .order("name");
+    return (data ?? []) as Venue[];
   },
+
   async getCompanies(): Promise<Company[]> {
-    if (STATIC) return staticFetch<Company[]>("/data/companies.json");
-    const r = await fetch(`${BASE}/companies`);
-    return r.json();
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("company")
+      .select("*")
+      .eq("active", true)
+      .order("name");
+    return (data ?? []) as Company[];
   },
-  async getClairesWatchlist(): Promise<WatchlistEntry[]> {
-    if (STATIC) {
-      const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-      try {
-        const res = await fetch(`${base}/data/watchlist.json`);
-        return res.ok ? res.json() : [];
-      } catch {
-        return [];
-      }
-    }
-    const r = await fetch(`${BASE}/watchlist/`);
-    return r.json();
-  },
-  getLocalWatchlist(): WatchlistEntry[] {
-    return staticGetWatchlist();
-  },
+
+  // ----------------------------------------------------------------
+  // Watchlist (requires auth session in browser)
+  // ----------------------------------------------------------------
+
   async getWatchlist(): Promise<WatchlistEntry[]> {
-    if (STATIC) return staticGetWatchlist();
-    const r = await fetch(`${BASE}/watchlist/`);
-    return r.json();
+    const supabase = createClient();
+    const today = localDateStr();
+    const { data, error } = await supabase
+      .from("watchlist")
+      .select("id, show_id, status, notes, show:show_id(*)")
+      .gte("show.date", today)
+      .order("show.date", { referencedTable: "show", ascending: true });
+    if (error) { console.error(error); return []; }
+    return (data ?? []).filter(r => r.show).map(r => ({
+      watchlist: { id: r.id, show_id: r.show_id, status: r.status as WatchStatus, notes: r.notes ?? undefined },
+      show: r.show as unknown as Show,
+    }));
   },
+
+  async getUserWatchlist(userId: string): Promise<WatchlistEntry[]> {
+    const supabase = createClient();
+    const today = localDateStr();
+    const { data, error } = await supabase
+      .from("watchlist")
+      .select("id, show_id, status, notes, show:show_id(*)")
+      .eq("user_id", userId)
+      .gte("show.date", today);
+    if (error) { console.error(error); return []; }
+    return (data ?? []).filter(r => r.show).map(r => ({
+      watchlist: { id: r.id, show_id: r.show_id, status: r.status as WatchStatus, notes: r.notes ?? undefined },
+      show: r.show as unknown as Show,
+    }));
+  },
+
   async upsertWatch(showId: string, status: WatchStatus, notes?: string) {
-    if (STATIC) {
-      const entries = staticGetWatchlist();
-      const idx = entries.findIndex(e => e.watchlist.show_id === showId);
-      if (idx >= 0) {
-        entries[idx].watchlist.status = status;
-        entries[idx].watchlist.notes = notes;
-      } else {
-        // find the show from the static data
-        const shows = await staticFetch<Show[]>("/data/shows.json");
-        const show = shows.find(s => s.id === showId);
-        if (show) {
-          entries.push({
-            watchlist: { id: crypto.randomUUID(), show_id: showId, status, notes },
-            show,
-          });
-        }
-      }
-      staticSaveWatchlist(entries);
-      return;
-    }
-    await fetch(`${BASE}/watchlist/${showId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ show_id: showId, status, notes }),
-    });
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+    const { error } = await supabase.from("watchlist").upsert({
+      user_id: user.id,
+      show_id: showId,
+      status,
+      notes: notes ?? null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id,show_id" });
+    if (error) throw error;
   },
+
   async removeWatch(showId: string) {
-    if (STATIC) {
-      staticSaveWatchlist(staticGetWatchlist().filter(e => e.watchlist.show_id !== showId));
-      return;
-    }
-    await fetch(`${BASE}/watchlist/${showId}`, { method: "DELETE" });
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+    const { error } = await supabase
+      .from("watchlist")
+      .delete()
+      .match({ user_id: user.id, show_id: showId });
+    if (error) throw error;
   },
-  async getRecommended(q?: string, limit = 20): Promise<Show[]> {
-    if (STATIC) return [];
-    const params = new URLSearchParams({ limit: String(limit) });
-    if (q) params.set("q", q);
-    const r = await fetch(`${BASE}/shows/recommended?${params}`);
-    return r.json();
+
+  // ----------------------------------------------------------------
+  // Social
+  // ----------------------------------------------------------------
+
+  async getProfile(username: string): Promise<Profile | null> {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("profile")
+      .select("*")
+      .eq("username", username)
+      .single();
+    return data as Profile | null;
   },
-  async updateVenuePriority(id: string, priority: "high" | "medium" | "low"): Promise<Venue> {
-    const r = await fetch(`${BASE}/venues/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priority }),
-    });
-    return r.json();
+
+  async getCurrentUser() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
   },
+
+  async getFriends(): Promise<Profile[]> {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+    const { data } = await supabase
+      .from("friendship")
+      .select("profile:friend_id(id, username, display_name, is_public)")
+      .eq("user_id", user.id);
+    return ((data ?? []).map(r => r.profile).filter(Boolean) as Profile[]);
+  },
+
+  async addFriend(friendId: string) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+    await supabase.from("friendship").upsert({ user_id: user.id, friend_id: friendId });
+  },
+
+  async removeFriend(friendId: string) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+    await supabase.from("friendship").delete().match({ user_id: user.id, friend_id: friendId });
+  },
+
+  // ----------------------------------------------------------------
+  // Admin (venue/company management — owner only)
+  // ----------------------------------------------------------------
+
   async updateVenue(id: string, fields: Partial<Pick<Venue, "name" | "description" | "image_url" | "website_url" | "address" | "neighbourhood" | "priority">>): Promise<Venue> {
-    const r = await fetch(`${BASE}/venues/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(fields),
-    });
-    return r.json();
+    const supabase = createClient();
+    const { data, error } = await supabase.from("venue").update(fields).eq("id", id).select().single();
+    if (error) throw error;
+    return data as Venue;
   },
+
   async updateCompanyPriority(id: string, priority: "high" | "medium" | "low"): Promise<Company> {
-    const r = await fetch(`${BASE}/companies/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priority }),
-    });
-    return r.json();
+    const supabase = createClient();
+    const { data, error } = await supabase.from("company").update({ priority }).eq("id", id).select().single();
+    if (error) throw error;
+    return data as Company;
   },
-  calendarUrl() {
-    if (STATIC) {
-      // webcal:// triggers calendar subscription in Google Calendar / Apple Calendar
-      const httpsUrl = `${window.location.origin}${DATA_BASE}/data/watchlist.ics`;
-      return httpsUrl.replace(/^https?:\/\//, "webcal://");
-    }
-    return `${BASE}/calendar/watchlist.ics`;
+
+  // ----------------------------------------------------------------
+  // Calendar
+  // ----------------------------------------------------------------
+
+  calendarUrl(username?: string): string {
+    const u = username ?? "claireheaded";
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://houselights.claireheaded.com";
+    return `${origin}/api/calendar/${u}.ics`.replace(/^https?:\/\//, "webcal://");
   },
 };
+
+// ----------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------
+
+export function localDateStr(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Keep STATIC export for any remaining references — always false now
+export const STATIC = false;

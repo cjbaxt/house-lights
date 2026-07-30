@@ -2,21 +2,15 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
-
-const isStatic = process.env.PUBLIC_STATIC_DATA === "true";
+import vercel from '@astrojs/vercel';
 
 export default defineConfig({
+  output: 'server',
+  adapter: vercel(),
   integrations: [react()],
-  ...(isStatic ? { base: "/house-lights/", outDir: "dist" } : {}),
   vite: {
     plugins: [tailwindcss()],
     server: {
-      proxy: {
-        "/api": {
-          target: "http://localhost:8000",
-          changeOrigin: true,
-        },
-      },
       watch: {
         ignored: ["**/public/data/**"],
       },

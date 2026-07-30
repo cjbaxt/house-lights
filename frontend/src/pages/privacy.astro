@@ -1,0 +1,62 @@
+---
+import "../styles/global.css";
+import Nav from "../components/Nav";
+import ClientRouter from "astro/components/ClientRouter.astro";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <ClientRouter />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy — house lights</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon-local.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#f5f3ef] min-h-screen">
+    <Nav current="/privacy" client:load transition:persist />
+    <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 text-sm text-[#555] leading-relaxed">
+      <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a] mb-8">Privacy policy</h1>
+
+      <p class="mb-6">
+        house lights is a personal Amsterdam events tracker. This policy explains what data is collected and how it is used.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">What we collect</h2>
+      <ul class="space-y-2 mb-6">
+        <li>— Your email address (used only to sign in)</li>
+        <li>— A username and optional display name you choose</li>
+        <li>— Your watchlist entries (shows you've marked as interested, attending, etc.)</li>
+      </ul>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Why</h2>
+      <p class="mb-6">
+        Solely to provide the watchlist feature. We do not use your data for advertising, analytics, or any purpose beyond the app itself.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Where it's stored</h2>
+      <p class="mb-6">
+        Data is stored on <a href="https://supabase.com" class="underline hover:text-[#1a1a1a]">Supabase</a>, hosted in Frankfurt, Germany (EU West). Supabase acts as a data processor under GDPR.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">How long</h2>
+      <p class="mb-6">Until you delete your account. You can delete your account and all data at any time from account settings.</p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Third parties</h2>
+      <p class="mb-6">None. We do not share your data with any third party, use tracking cookies, or run analytics.</p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Your rights</h2>
+      <p class="mb-6">
+        Under GDPR you have the right to access, correct, or erase your data. To delete your account email
+        <a href="mailto:dev@claireheaded.com" class="underline hover:text-[#1a1a1a]">dev@claireheaded.com</a>
+        or use the delete option in account settings.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Contact</h2>
+      <p><a href="mailto:dev@claireheaded.com" class="underline hover:text-[#1a1a1a]">dev@claireheaded.com</a></p>
+
+      <p class="mt-12 text-xs text-[#aaa]">Last updated July 2026</p>
+    </main>
+  </body>
+</html>

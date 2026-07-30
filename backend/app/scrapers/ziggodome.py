@@ -112,7 +112,8 @@ class ZiggoDomeScraper(BaseScraper):
                 continue
 
             ticket_url = evt.get("salesUrl") or ""
-            event_id = evt.get("eventId") or evt.get("id") or ""
+            # Use the per-show `id` not `eventId` — multiple shows can share the same eventId
+            event_id = evt.get("id") or evt.get("eventId") or ""
             url = ticket_url or f"{BASE_URL}/agenda/"
             sold_out = (evt.get("showState") or "").lower() in ("soldout", "sold out")
 
