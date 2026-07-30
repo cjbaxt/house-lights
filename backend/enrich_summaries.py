@@ -70,13 +70,23 @@ def summarise(show: Show) -> str | None:
 
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY not set")
-    resp = httpx.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
-        json={"model": GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.3, "max_tokens": 60},
-        timeout=20,
-    )
-    resp.raise_for_status()
+
+    import time
+    for attempt in range(5):
+        resp = httpx.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+            json={"model": GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.3, "max_tokens": 60},
+            timeout=20,
+        )
+        if resp.status_code == 429:
+            retry_after = int(resp.headers.get("retry-after", 60))
+            print(f"  rate limited, waiting {retry_after}s...")
+            time.sleep(retry_after)
+            continue
+        resp.raise_for_status()
+        break
+
     text = resp.json()["choices"][0]["message"]["content"].strip().strip('"').strip("'")
     if not text:
         return None
