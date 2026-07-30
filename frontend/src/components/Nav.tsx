@@ -54,6 +54,16 @@ export default function Nav({ current }: { current: string }) {
             );
           })}
         </nav>
+        <a
+          href={href("/settings")}
+          className={`text-sm pb-0.5 transition-colors ${
+            current === "/settings"
+              ? "text-[#e85d2f] border-b border-[#e85d2f]"
+              : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
+          }`}
+        >
+          Settings
+        </a>
       </header>
 
       {/* Mobile top bar — hides on scroll down */}
