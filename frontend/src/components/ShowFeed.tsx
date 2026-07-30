@@ -42,12 +42,13 @@ const CHIP_LIMIT = 5;
 
 type DateEntry = { id: string; date: string; status: string; time?: string };
 
-function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
+function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, currentUser }: {
   show: Show;
   allDates: DateEntry[];
   location: string;
   watchMap: Record<string, WatchStatus>;
   onWatchChange: () => void;
+  currentUser: { id: string } | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? allDates : allDates.slice(0, CHIP_LIMIT);
@@ -56,6 +57,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
 
   async function handleBookmark(e: React.MouseEvent) {
     e.preventDefault();
+    if (!currentUser) { window.location.href = "/login"; return; }
     if (anyWatched) {
       await Promise.all(allDates.map(d => api.removeWatch(d.id)));
     } else {
@@ -67,6 +69,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange }: {
   async function handleMarkBought(e: React.MouseEvent, showId: string) {
     e.preventDefault();
     e.stopPropagation();
+    if (!currentUser) { window.location.href = "/login"; return; }
     const current = watchMap[showId];
     if (current === "tickets_bought") {
       await api.upsertWatch(showId, "interested");
@@ -213,6 +216,7 @@ export default function ShowFeed() {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [displayView, setDisplayView] = useState<DisplayView>("programme");
@@ -229,8 +233,12 @@ export default function ShowFeed() {
   const defaultsInitialized = useRef(false);
 
   const load = async () => {
+    const supabase = (await import("../lib/supabase/client")).createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUser(user ? { id: user.id } : null);
     const [s, v, c, w] = await Promise.all([
-      api.getUpcoming(2000, 0), api.getVenues(), api.getCompanies(), api.getWatchlist(),
+      api.getUpcoming(2000, 0), api.getVenues(), api.getCompanies(),
+      user ? api.getWatchlist() : Promise.resolve([]),
     ]);
     setShows(s); setVenues(v); setCompanies(c); setWatchlist(w); setLoading(false);
     if (!defaultsInitialized.current) {
@@ -623,6 +631,7 @@ export default function ShowFeed() {
                   location={location ?? ""}
                   watchMap={watchMap}
                   onWatchChange={load}
+                  currentUser={currentUser}
                 />
               );
             })}
@@ -667,6 +676,7 @@ export default function ShowFeed() {
                             companyName={show.company_id ? companyMap[show.company_id]?.name : undefined}
                             watchStatus={watchMap[show.id]}
                             onWatchChange={load}
+                            currentUser={currentUser}
                           />
                         ))}
                       </div>
