@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          pip install --force-reinstall -e ".[dev]" 2>/dev/null || pip install --force-reinstall -e .
 
       - name: Install Playwright browsers
         run: |
@@ -35,6 +35,7 @@ jobs:
           DATABASE_URL: ${{ secrets.SUPABASE_SESSION_POOLER_URI }}
         run: |
           cd backend
+          python -c "import os; url=os.environ.get('DATABASE_URL','MISSING'); print('URL set:', bool(url), '| starts with:', url[:20] if url else 'empty')"
           python run_scrapers.py
 
       - name: Enrich summaries (new shows only)
