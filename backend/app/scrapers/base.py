@@ -18,6 +18,7 @@ class ScrapedShow:
     price_from: Optional[float] = None
     description: Optional[str] = None
     image_url: Optional[str] = None
+    venue_name: Optional[str] = None  # override venue resolution by name (e.g. sub-venues)
 
 
 class BaseScraper(ABC):
