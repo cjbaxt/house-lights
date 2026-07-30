@@ -154,9 +154,9 @@ create policy "read incoming friendships" on friendship
 -- ============================================================
 
 create or replace function handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into profile (id, username, display_name)
+  insert into public.profile (id, username, display_name)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
