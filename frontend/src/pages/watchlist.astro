@@ -1,7 +1,6 @@
 ---
 import "../styles/global.css";
 import Nav from "../components/Nav";
-import EditorUnlock from "../components/EditorUnlock";
 import ClientRouter from "astro/components/ClientRouter.astro";
 import WatchlistFeed from "../components/WatchlistFeed";
 ---
@@ -20,7 +19,6 @@ import WatchlistFeed from "../components/WatchlistFeed";
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
     <Nav current="/watchlist" client:load transition:persist />
-    <EditorUnlock client:load transition:persist />
     <main class="max-w-3xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
       <WatchlistFeed client:load />
     </main>
