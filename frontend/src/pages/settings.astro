@@ -14,7 +14,7 @@ const { data: profile } = await Astro.locals.supabase
 
 const { data: venuesData } = await Astro.locals.supabase
   .from("venue")
-  .select("id, name, priority")
+  .select("id, name, city_id, city:city_id(name, country)")
   .eq("active", true)
   .order("name");
 
@@ -34,17 +34,25 @@ const { data: userCitiesData } = await Astro.locals.supabase
 
 const enabledCityIds = new Set((userCitiesData ?? []).map((r: { city_id: string }) => r.city_id));
 
-const PRIORITY_ORDER = ["high", "medium", "low"];
-const PRIORITY_LABEL: Record<string, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
+const { data: hiddenVenueData } = await Astro.locals.supabase
+  .from("user_venue")
+  .select("venue_id")
+  .eq("user_id", Astro.locals.user.id)
+  .eq("hidden", true);
 
-type Item = { id: string; name: string; priority: string };
+const hiddenVenueIds = new Set((hiddenVenueData ?? []).map((r: { venue_id: string }) => r.venue_id));
+
+type VenueItem = { id: string; name: string; city_id: string; city: { name: string; country: string } | null };
 type CityItem = { id: string; name: string; country: string; is_active: boolean };
 
-const grouped = PRIORITY_ORDER.map(p => ({
-  label: PRIORITY_LABEL[p],
-  priority: p,
-  venues: venues.filter((v: Item) => v.priority === p),
-}));
+// Group venues by city for display
+const venuesByCity = (cities as CityItem[])
+  .filter(c => c.is_active)
+  .map(c => ({
+    city: c,
+    venues: (venues as VenueItem[]).filter(v => v.city_id === c.id),
+  }))
+  .filter(g => g.venues.length > 0);
 
 const updated = Astro.url.searchParams.get("updated");
 const error = Astro.url.searchParams.get("error");
@@ -138,33 +146,36 @@ const error = Astro.url.searchParams.get("error");
         </div>
       </section>
 
-      <!-- Venue rankings -->
+      <!-- Venues -->
       <section class="mb-12 border-t border-[#ece7de] pt-10">
-        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-2">Venue rankings</h2>
-        <p class="text-xs text-[#aaa] mb-6">Controls how venues are weighted in filters. Regular = shown by default.</p>
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-2">Venues</h2>
+        <p class="text-xs text-[#aaa] mb-6">Hide venues you never want to see in Browse. Hidden venues are greyed out.</p>
 
-        {grouped.map(group => (
+        {venuesByCity.map(group => (
           <div class="mb-8">
-            <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-3">{group.label}</div>
+            {venuesByCity.length > 1 && (
+              <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-3">{group.city.name}</div>
+            )}
             <div class="flex flex-wrap gap-2">
-              {group.venues.sort((a: Item, b: Item) => a.name.localeCompare(b.name)).map((item: Item) => (
-                <form method="POST" action="/api/venue/priority" class="inline">
-                  <input type="hidden" name="id" value={item.id} />
-                  <input type="hidden" name="kind" value="venue" />
-                  <div class="flex items-center gap-0 border border-[#ece7de] bg-white text-xs text-[#555]">
-                    <span class="px-3 py-1.5">{item.name}</span>
-                    <select
-                      name="priority"
-                      onchange="this.form.submit()"
-                      class="text-[10px] border-l border-[#ece7de] px-2 py-1.5 bg-white text-[#888] focus:outline-none cursor-pointer"
+              {group.venues.map((item: VenueItem) => {
+                const isHidden = hiddenVenueIds.has(item.id);
+                return (
+                  <form method="POST" action="/api/user/venues" class="inline">
+                    <input type="hidden" name="venue_id" value={item.id} />
+                    <input type="hidden" name="hidden" value={isHidden ? "false" : "true"} />
+                    <button
+                      type="submit"
+                      class={`text-xs px-3 py-1.5 border transition-colors ${
+                        isHidden
+                          ? "border-dashed border-[#ddd8cf] text-[#bbb]"
+                          : "border-[#ece7de] text-[#555] hover:border-[#1a1a1a] hover:text-[#1a1a1a]"
+                      }`}
                     >
-                      {PRIORITY_ORDER.map(p => (
-                        <option value={p} selected={item.priority === p}>{PRIORITY_LABEL[p]}</option>
-                      ))}
-                    </select>
-                  </div>
-                </form>
-              ))}
+                      {item.name}
+                    </button>
+                  </form>
+                );
+              })}
             </div>
           </div>
         ))}
