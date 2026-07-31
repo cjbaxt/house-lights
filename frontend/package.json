@@ -11,6 +11,9 @@
     "preview": "astro preview",
     "astro": "astro"
   },
+  "overrides": {
+    "path-to-regexp": ">=6.3.0"
+  },
   "dependencies": {
     "@astrojs/react": "^6.0.0",
     "@astrojs/vercel": "^11.0.4",
