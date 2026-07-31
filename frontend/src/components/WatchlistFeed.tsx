@@ -144,6 +144,9 @@ export default function WatchlistFeed() {
   const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayView, setDisplayView] = useState<DisplayView>("list");
+  const [hideDuplicates, setHideDuplicates] = useState(() => {
+    try { return localStorage.getItem("watchlist_hideDuplicates") !== "false"; } catch { return true; }
+  });
   const [visibleCount, setVisibleCount] = useState(12);
 
   const load = useCallback(async () => {
@@ -205,7 +208,19 @@ export default function WatchlistFeed() {
   const sortedGroups = Array.from(groupMap.values()).sort(
     (a, b) => a.entries[0].show.date.localeCompare(b.entries[0].show.date)
   );
-  const allShows = watchlist.map((e) => e.show);
+
+  const showStatuses = Object.fromEntries(watchlist.map((e) => [e.show.id, e.watchlist.status]));
+
+  // For calendar: if hideDuplicates, drop "interested" entries for shows where you already have tickets
+  const calendarShows = (() => {
+    if (!hideDuplicates) return watchlist.map((e) => e.show);
+    const boughtKeys = new Set(
+      sortedGroups.filter(g => g.entries.some(e => e.watchlist.status === "tickets_bought")).map(g => g.key)
+    );
+    return watchlist
+      .filter(e => !(boughtKeys.has(groupKey(e.show)) && e.watchlist.status !== "tickets_bought"))
+      .map(e => e.show);
+  })();
 
   return (
     <div>
@@ -242,8 +257,22 @@ export default function WatchlistFeed() {
         </div>
       )}
 
+      {displayView === "calendar" && (
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => {
+              const next = !hideDuplicates;
+              setHideDuplicates(next);
+              try { localStorage.setItem("watchlist_hideDuplicates", String(next)); } catch {}
+            }}
+            className={`text-[10px] uppercase tracking-widest px-3 py-1 border transition-colors ${hideDuplicates ? "bg-[#1a1a1a] text-white border-[#1a1a1a]" : "border-[#ece7de] text-[#888] hover:border-[#1a1a1a]"}`}
+          >
+            Hide other dates when I have tickets
+          </button>
+        </div>
+      )}
       {displayView === "calendar" ? (
-        <CalendarBody shows={allShows} venueMap={venueMap} defaultView="month" />
+        <CalendarBody shows={calendarShows} venueMap={venueMap} defaultView="month" showStatuses={showStatuses} />
       ) : (
         <div className="flex flex-col gap-2">
           {sortedGroups.slice(0, visibleCount).map((group) => (
