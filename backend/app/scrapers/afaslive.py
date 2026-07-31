@@ -30,8 +30,14 @@ DATE_RE = re.compile(
 BTN_RE = re.compile(r"(\d{1,2})\s+(\w+)\.?\s*(\d{2}:\d{2})?")
 TIME_RE = re.compile(r"(\d{2}):(\d{2})")
 
-COMEDY_WORDS = re.compile(r"\bcomedi|comedian|stand.?up|humor|comedy\b", re.I)
+COMEDY_WORDS  = re.compile(r"\bcomedi|comedian|stand.?up|humor|comedy\b", re.I)
 THEATRE_WORDS = re.compile(r"\btheater|theatre|musical|toneel|voorstelling\b", re.I)
+CABARET_WORDS = re.compile(r"\bcabaret\b", re.I)
+CIRCUS_WORDS  = re.compile(r"\bcircus|acrobat|clown\b", re.I)
+SPOKEN_WORDS  = re.compile(r"\bspoken.?word|storytell|verhalen|poetry.?slam\b", re.I)
+TALK_WORDS    = re.compile(r"\blecture|lezing|symposium|panel\b", re.I)
+CLASSICAL_W   = re.compile(r"\bclassical|orkest|symphony|kamer.?muziek|philharmon\b", re.I)
+DANCE_WORDS   = re.compile(r"\bdans\b|dance|choreograph\b", re.I)
 
 
 def _parse_date(text: str) -> date | None:
@@ -68,8 +74,20 @@ def _parse_timetable(soup: BeautifulSoup) -> dict[tuple[int, int], time_type | N
 
 
 def _infer_type(title: str) -> str:
+    if CABARET_WORDS.search(title):
+        return "cabaret"
+    if CIRCUS_WORDS.search(title):
+        return "circus"
+    if SPOKEN_WORDS.search(title):
+        return "spoken_word"
+    if TALK_WORDS.search(title):
+        return "talk"
     if COMEDY_WORDS.search(title):
         return "comedy"
+    if CLASSICAL_W.search(title):
+        return "classical"
+    if DANCE_WORDS.search(title):
+        return "dance"
     if THEATRE_WORDS.search(title):
         return "theatre"
     return "music"

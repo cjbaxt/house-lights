@@ -5,7 +5,7 @@ Individual show pages needed for dates — scrape the full agenda page.
 import httpx, re, asyncio
 from bs4 import BeautifulSoup
 from datetime import date
-from .base import BaseScraper, ScrapedShow
+from .base import BaseScraper, ScrapedShow, infer_type
 
 AGENDA_URL = "https://www.delamar.nl/agenda"
 BASE_URL = "https://www.delamar.nl"
@@ -99,7 +99,7 @@ class DeLaMarScraper(BaseScraper):
             shows.append(ScrapedShow(
                 title=it["title"], date=it["date"], time=it["time"], url=it["url"],
                 source_id=f"delamar:{it['href']}",
-                type="theatre",
+                type=infer_type(it["title"], descriptions.get(it["url"]) or ""),
                 ticket_status="available",
                 description=descriptions.get(it["url"]),
                 image_url=it.get("image_url"),
