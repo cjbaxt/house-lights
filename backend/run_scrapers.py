@@ -183,16 +183,20 @@ async def main():
         from app.scrapers.ticketmaster import run as tm_run
         await tm_run()
 
-    # Clean up past shows (skip if running a single venue to avoid surprise deletes)
+    # Clean up past shows — but never delete shows that are on someone's watchlist
     if not args.venue:
         with Session(engine) as session:
             yesterday = (datetime.now().date() - __import__('datetime').timedelta(days=1))
             past = session.exec(select(Show).where(Show.date < yesterday)).all()
-            for show in past:
+            watchlisted_ids = {
+                wl.show_id for wl in session.exec(select(Watchlist)).all()
+            }
+            to_delete = [s for s in past if s.id not in watchlisted_ids]
+            for show in to_delete:
                 session.delete(show)
             session.commit()
-            if past:
-                print(f"\nCleaned up {len(past)} past shows")
+            skipped = len(past) - len(to_delete)
+            print(f"\nCleaned up {len(to_delete)} past shows" + (f" (kept {skipped} watchlisted)" if skipped else ""))
 
     with Session(engine) as session:
         total = session.exec(select(Show)).all()
