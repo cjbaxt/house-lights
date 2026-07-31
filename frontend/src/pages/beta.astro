@@ -1,0 +1,157 @@
+---
+import "../styles/global.css";
+import ClientRouter from "astro/components/ClientRouter.astro";
+
+// Redirect already-signed-in users to home
+if (Astro.locals.user) return Astro.redirect("/");
+
+import { createClient } from "@supabase/supabase-js";
+const BETA_CAP = parseInt(import.meta.env.BETA_CAP ?? "10", 10);
+const admin = createClient(
+  import.meta.env.SUPABASE_URL,
+  import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false } }
+);
+const { count } = await admin.from("profile").select("*", { count: "exact", head: true });
+const spotsLeft = Math.max(0, BETA_CAP - (count ?? 0));
+const isFull = spotsLeft === 0;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <ClientRouter />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Beta — house lights</title>
+    <meta name="description" content="house lights is an Amsterdam arts event tracker. Join the beta." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#f5f3ef] min-h-screen flex flex-col">
+    <header class="px-6 py-5">
+      <a href="/" class="font-sans font-black text-[13px] tracking-[0.1em] uppercase text-[#1a1a1a] hover:opacity-60 transition-opacity">
+        House Lights
+      </a>
+    </header>
+
+    <main class="flex-1 flex flex-col items-center justify-center px-6 pb-20">
+      <div class="w-full max-w-md">
+
+        <div class="mb-10">
+          <h1 class="font-sans font-black text-3xl uppercase tracking-tight text-[#1a1a1a] leading-tight mb-4">
+            Every show<br />in Amsterdam,<br />in one place.
+          </h1>
+          <p class="text-sm text-[#666] leading-relaxed max-w-sm">
+            house lights tracks theatre, dance, music and performance across Amsterdam's venues —
+            so you never miss something worth seeing.
+          </p>
+        </div>
+
+        {!isFull ? (
+          <div>
+            <div class="flex items-center gap-2 mb-6">
+              <span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
+              <span class="text-xs text-[#666]">
+                {spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} remaining in the beta
+              </span>
+            </div>
+            <a
+              href="/login?mode=register"
+              class="block w-full bg-[#1a1a1a] text-white text-xs font-bold uppercase tracking-widest py-4 text-center hover:bg-[#333] transition-colors"
+            >
+              Get early access
+            </a>
+            <p class="text-[10px] text-[#aaa] mt-3 text-center">
+              Free during beta. No credit card.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <div class="flex items-center gap-2 mb-6">
+              <span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span>
+              <span class="text-xs text-[#666]">Beta is full — join the waitlist</span>
+            </div>
+            <form id="waitlist-form" class="space-y-3">
+              <input
+                type="text"
+                name="name"
+                placeholder="Your name"
+                class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] placeholder-[#bbb] focus:outline-none focus:border-[#1a1a1a] transition-colors"
+              />
+              <input
+                type="email"
+                name="email"
+                required
+                placeholder="your@email.com"
+                class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] placeholder-[#bbb] focus:outline-none focus:border-[#1a1a1a] transition-colors"
+              />
+              <button
+                type="submit"
+                class="w-full bg-[#1a1a1a] text-white text-xs font-bold uppercase tracking-widest py-4 hover:bg-[#333] transition-colors"
+              >
+                Join waitlist
+              </button>
+            </form>
+            <div id="waitlist-success" class="hidden text-xs text-green-700 mt-4 text-center">
+              You're on the list. We'll be in touch when a spot opens up.
+            </div>
+            <div id="waitlist-error" class="hidden text-xs text-[#e85d2f] mt-4 text-center"></div>
+          </div>
+        )}
+
+        <div class="mt-12 pt-8 border-t border-[#ece7de]">
+          <div class="grid grid-cols-3 gap-6 text-center">
+            <div>
+              <div class="font-black text-lg text-[#1a1a1a]">25+</div>
+              <div class="text-[10px] uppercase tracking-widest text-[#aaa] mt-0.5">Venues tracked</div>
+            </div>
+            <div>
+              <div class="font-black text-lg text-[#1a1a1a]">Daily</div>
+              <div class="text-[10px] uppercase tracking-widest text-[#aaa] mt-0.5">Updates</div>
+            </div>
+            <div>
+              <div class="font-black text-lg text-[#1a1a1a]">Free</div>
+              <div class="text-[10px] uppercase tracking-widest text-[#aaa] mt-0.5">Always</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="mt-8 text-center text-xs text-[#aaa]">
+          Already have an account?
+          <a href="/login" class="underline hover:text-[#1a1a1a] transition-colors">Sign in</a>
+        </p>
+      </div>
+    </main>
+
+    <script>
+      const form = document.getElementById("waitlist-form") as HTMLFormElement | null;
+      const success = document.getElementById("waitlist-success");
+      const errorEl = document.getElementById("waitlist-error");
+
+      form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector("button[type=submit]") as HTMLButtonElement;
+        btn.disabled = true;
+        btn.textContent = "Joining…";
+
+        const res = await fetch("/api/beta/signup", { method: "POST", body: new FormData(form) });
+        const json = await res.json();
+
+        if (json.action === "register") {
+          window.location.href = "/login?mode=register";
+          return;
+        }
+        if (json.action === "waitlisted") {
+          form.classList.add("hidden");
+          success?.classList.remove("hidden");
+          return;
+        }
+        errorEl!.textContent = json.error ?? "Something went wrong.";
+        errorEl?.classList.remove("hidden");
+        btn.disabled = false;
+        btn.textContent = "Join waitlist";
+      });
+    </script>
+  </body>
+</html>
