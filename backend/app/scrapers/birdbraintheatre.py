@@ -7,6 +7,7 @@ Each block links to an external ticket URL (Eventbrite / weticket).
 import httpx, re, asyncio
 from bs4 import BeautifulSoup
 from datetime import date
+from urllib.parse import urlparse
 from .base import BaseScraper, ScrapedShow
 
 TICKETS_URL = "https://www.birdbraintheatre.nl/tickets.html"
@@ -66,7 +67,9 @@ class BirdbBrainTheatreScraper(BaseScraper):
             first_line = text.split("\n")[0].strip()
             if first_line.lower() in _NAV_TEXTS or not text:
                 continue
-            if "instagram.com" in href or "mailto:" in href:
+            parsed_href = urlparse(href)
+            host = (parsed_href.hostname or "").lower()
+            if host == "instagram.com" or host.endswith(".instagram.com"):
                 continue
 
             dates = _parse_dates(text, today)
