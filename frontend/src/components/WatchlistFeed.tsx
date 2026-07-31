@@ -144,9 +144,7 @@ export default function WatchlistFeed() {
   const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayView, setDisplayView] = useState<DisplayView>("list");
-  const [hideDuplicates, setHideDuplicates] = useState(() => {
-    try { return localStorage.getItem("watchlist_hideDuplicates") !== "false"; } catch { return true; }
-  });
+  const [hideDuplicates, setHideDuplicates] = useState(true);
   const [visibleCount, setVisibleCount] = useState(12);
 
   const load = useCallback(async () => {
@@ -160,8 +158,12 @@ export default function WatchlistFeed() {
       setCompanies(c);
 
       if (user) {
-        const wl = await api.getWatchlist();
+        const [wl, { data: prof }] = await Promise.all([
+          api.getWatchlist(),
+          supabase.from("profile").select("hide_duplicate_shows").eq("id", user.id).single(),
+        ]);
         setWatchlist(wl);
+        if (prof) setHideDuplicates(prof.hide_duplicate_shows ?? true);
       }
     } finally {
       setLoading(false);
@@ -260,10 +262,13 @@ export default function WatchlistFeed() {
       {displayView === "calendar" && (
         <div className="flex items-center gap-2 mb-3">
           <button
-            onClick={() => {
+            onClick={async () => {
               const next = !hideDuplicates;
               setHideDuplicates(next);
-              try { localStorage.setItem("watchlist_hideDuplicates", String(next)); } catch {}
+              if (currentUser) {
+                const supabase = createClient();
+                await supabase.from("profile").update({ hide_duplicate_shows: next }).eq("id", currentUser.id);
+              }
             }}
             className={`text-[10px] uppercase tracking-widest px-3 py-1 border transition-colors ${hideDuplicates ? "bg-[#1a1a1a] text-white border-[#1a1a1a]" : "border-[#ece7de] text-[#888] hover:border-[#1a1a1a]"}`}
           >
