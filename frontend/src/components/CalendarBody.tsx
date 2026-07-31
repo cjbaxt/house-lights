@@ -31,18 +31,19 @@ function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-function EventChip({ show, venueName, compact = false }: { show: Show; venueName?: string; compact?: boolean }) {
+function EventChip({ show, venueName, compact = false, hasTickets = false }: { show: Show; venueName?: string; compact?: boolean; hasTickets?: boolean }) {
   return (
     <a
       href={show.url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`flex items-center gap-1 border border-[#ece7de] hover:border-[#e85d2f] hover:bg-white transition-colors group ${compact ? "px-1.5 py-0.5" : "px-2 py-1"}`}
+      className={`flex items-center gap-1 border hover:bg-white transition-colors group ${hasTickets ? "border-[#e85d2f] bg-[#fff8f5]" : "border-[#ece7de] hover:border-[#e85d2f]"} ${compact ? "px-1.5 py-0.5" : "px-2 py-1"}`}
       title={`${show.title}${venueName ? ` — ${venueName}` : ""}`}
     >
-      <span className="text-[#e85d2f] flex-shrink-0">
-        <EventTypeIcon type={show.type} size={compact ? 10 : 12} />
-      </span>
+      {hasTickets
+        ? <span className="flex-shrink-0 text-[11px]">🎫</span>
+        : <span className="text-[#e85d2f] flex-shrink-0"><EventTypeIcon type={show.type} size={compact ? 10 : 12} /></span>
+      }
       <span className={`truncate text-[#1a1a1a] font-bold uppercase tracking-tight ${compact ? "text-[10px]" : "text-[11px]"}`}>
         {show.title}
       </span>
@@ -53,7 +54,7 @@ function EventChip({ show, venueName, compact = false }: { show: Show; venueName
   );
 }
 
-function MonthView({ anchor, showsByDate, venueMap }: { anchor: Date; showsByDate: Map<string, Show[]>; venueMap: Record<string, string> }) {
+function MonthView({ anchor, showsByDate, venueMap, showStatuses }: { anchor: Date; showsByDate: Map<string, Show[]>; venueMap: Record<string, string>; showStatuses: Record<string, string> }) {
   const year = anchor.getFullYear();
   const month = anchor.getMonth();
   const firstOfMonth = new Date(year, month, 1);
@@ -82,7 +83,7 @@ function MonthView({ anchor, showsByDate, venueMap }: { anchor: Date; showsByDat
                 {cell.getDate()}
               </div>
               <div className="flex flex-col gap-0.5">
-                {dayShows.slice(0, 3).map(show => <EventChip key={show.id} show={show} venueName={venueMap[show.venue_id ?? ""]} compact />)}
+                {dayShows.slice(0, 3).map(show => <EventChip key={show.id} show={show} venueName={venueMap[show.venue_id ?? ""]} compact hasTickets={showStatuses[show.id] === "tickets_bought"} />)}
                 {dayShows.length > 3 && <span className="text-[9px] text-[#aaa] pl-1">+{dayShows.length - 3} more</span>}
               </div>
             </div>
@@ -93,7 +94,7 @@ function MonthView({ anchor, showsByDate, venueMap }: { anchor: Date; showsByDat
   );
 }
 
-function WeekView({ anchor, showsByDate, venueMap }: { anchor: Date; showsByDate: Map<string, Show[]>; venueMap: Record<string, string> }) {
+function WeekView({ anchor, showsByDate, venueMap, showStatuses }: { anchor: Date; showsByDate: Map<string, Show[]>; venueMap: Record<string, string>; showStatuses: Record<string, string> }) {
   const monday = startOfWeek(anchor);
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   const today = new Date();
@@ -113,7 +114,7 @@ function WeekView({ anchor, showsByDate, venueMap }: { anchor: Date; showsByDate
               {dayShows.length === 0
                 ? <span className="text-[11px] text-[#d4c9b8]">—</span>
                 : <div className="flex flex-col gap-1 pt-0.5">
-                    {dayShows.map(show => <EventChip key={show.id} show={show} venueName={venueMap[show.venue_id ?? ""]} />)}
+                    {dayShows.map(show => <EventChip key={show.id} show={show} venueName={venueMap[show.venue_id ?? ""]} hasTickets={showStatuses[show.id] === "tickets_bought"} />)}
                   </div>
               }
             </div>
@@ -124,7 +125,7 @@ function WeekView({ anchor, showsByDate, venueMap }: { anchor: Date; showsByDate
   );
 }
 
-function DayView({ anchor, showsByDate, venueMap }: { anchor: Date; showsByDate: Map<string, Show[]>; venueMap: Record<string, string> }) {
+function DayView({ anchor, showsByDate, venueMap, showStatuses }: { anchor: Date; showsByDate: Map<string, Show[]>; venueMap: Record<string, string>; showStatuses: Record<string, string> }) {
   const dayShows = showsByDate.get(isoDate(anchor)) ?? [];
   if (!dayShows.length) return (
     <div className="flex items-center justify-center h-32 text-[#aaa] text-sm">No shows on this day.</div>
@@ -142,7 +143,7 @@ function DayView({ anchor, showsByDate, venueMap }: { anchor: Date; showsByDate:
           }
           <div className="w-px h-8 bg-[#ece7de] flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="font-sans text-sm font-black uppercase tracking-tight text-[#1a1a1a] truncate">{show.title}</div>
+            <div className="font-sans text-sm font-black uppercase tracking-tight text-[#1a1a1a] truncate">{showStatuses[show.id] === "tickets_bought" ? "🎫 " : ""}{show.title}</div>
             {show.subtitle && <div className="text-xs text-[#888] mt-0.5 truncate">{show.subtitle}</div>}
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[#e85d2f]"><EventTypeIcon type={show.type} size={11} /></span>
@@ -159,9 +160,10 @@ interface Props {
   shows: Show[];
   venueMap: Record<string, string>;
   defaultView?: ViewMode;
+  showStatuses?: Record<string, string>;
 }
 
-export default function CalendarBody({ shows, venueMap, defaultView = "month" }: Props) {
+export default function CalendarBody({ shows, venueMap, defaultView = "month", showStatuses = {} }: Props) {
   const [calView, setCalView] = useState<ViewMode>(defaultView);
   const [anchor, setAnchor] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
 
@@ -220,9 +222,9 @@ export default function CalendarBody({ shows, venueMap, defaultView = "month" }:
           ))}
         </div>
       </div>
-      {calView === "month" && <MonthView anchor={anchor} showsByDate={showsByDate} venueMap={venueMap} />}
-      {calView === "week" && <WeekView anchor={anchor} showsByDate={showsByDate} venueMap={venueMap} />}
-      {calView === "day" && <DayView anchor={anchor} showsByDate={showsByDate} venueMap={venueMap} />}
+      {calView === "month" && <MonthView anchor={anchor} showsByDate={showsByDate} venueMap={venueMap} showStatuses={showStatuses} />}
+      {calView === "week" && <WeekView anchor={anchor} showsByDate={showsByDate} venueMap={venueMap} showStatuses={showStatuses} />}
+      {calView === "day" && <DayView anchor={anchor} showsByDate={showsByDate} venueMap={venueMap} showStatuses={showStatuses} />}
     </div>
   );
 }
