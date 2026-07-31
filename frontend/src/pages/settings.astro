@@ -1,13 +1,14 @@
 ---
 import "../styles/global.css";
 import Nav from "../components/Nav";
+import AvatarUpload from "../components/AvatarUpload";
 import ClientRouter from "astro/components/ClientRouter.astro";
 
 if (!Astro.locals.user) return Astro.redirect("/login");
 
 const { data: profile } = await Astro.locals.supabase
   .from("profile")
-  .select("username, display_name")
+  .select("username, display_name, avatar_url")
   .eq("id", Astro.locals.user.id)
   .single();
 
@@ -70,6 +71,11 @@ const error = Astro.url.searchParams.get("error");
       <!-- Profile -->
       <section class="mb-12">
         <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-5">Profile</h2>
+        <AvatarUpload
+          currentUrl={profile?.avatar_url ?? null}
+          username={profile?.username ?? "?"}
+          client:load
+        />
         <form method="POST" action="/api/profile/update" class="space-y-5">
           <div>
             <label class="block text-xs uppercase tracking-widest text-[#888] mb-2">Username</label>
@@ -165,11 +171,50 @@ const error = Astro.url.searchParams.get("error");
       </section>
 
       <!-- Account -->
-      <section class="border-t border-[#ece7de] pt-8">
+      <section class="border-t border-[#ece7de] pt-8 mb-12">
         <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-4">Account</h2>
         <p class="text-xs text-[#888] mb-4">Signed in as {Astro.locals.user.email}</p>
         <a href="/api/auth/logout" class="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">Sign out</a>
       </section>
+
+      <!-- Data & privacy -->
+      <section class="border-t border-[#ece7de] pt-8">
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-2">Data & privacy</h2>
+        <p class="text-xs text-[#aaa] mb-6">Your data belongs to you.</p>
+        <div class="flex flex-col gap-3">
+          <div>
+            <a
+              href="/api/account/export"
+              class="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors"
+            >
+              Download my data
+            </a>
+            <p class="text-[10px] text-[#bbb] mt-1">Exports your watchlist and profile as JSON.</p>
+          </div>
+          <div>
+            <button
+              id="delete-account-btn"
+              type="button"
+              class="text-xs uppercase tracking-widest text-[#e85d2f] hover:text-[#c44020] transition-colors"
+            >
+              Delete account
+            </button>
+            <p class="text-[10px] text-[#bbb] mt-1">Permanently deletes your account and all data.</p>
+          </div>
+        </div>
+      </section>
+
+      <script>
+        document.getElementById("delete-account-btn")?.addEventListener("click", async () => {
+          if (!confirm("Are you sure? This permanently deletes your account and all your data. This cannot be undone.")) return;
+          const res = await fetch("/api/account/delete", { method: "POST" });
+          if (res.ok) {
+            window.location.href = "/login?message=" + encodeURIComponent("Your account has been deleted.");
+          } else {
+            alert("Something went wrong. Please try again.");
+          }
+        });
+      </script>
     </main>
   </body>
 </html>
