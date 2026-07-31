@@ -1,0 +1,166 @@
+---
+import "../../styles/global.css";
+import Nav from "../../components/Nav";
+import ClientRouter from "astro/components/ClientRouter.astro";
+
+const { username } = Astro.params;
+
+const { data: profile, error } = await Astro.locals.supabase
+  .from("profile")
+  .select("id, username, display_name, avatar_url, is_public, created_at")
+  .eq("username", username)
+  .single();
+
+if (error || !profile) return Astro.redirect("/404");
+if (!profile.is_public) {
+  // Private profile — only the owner can see it
+  if (!Astro.locals.user || Astro.locals.user.id !== profile.id) {
+    return Astro.redirect("/404");
+  }
+}
+
+const currentUserId = Astro.locals.user?.id ?? null;
+const isOwnProfile = currentUserId === profile.id;
+
+// Check if current user follows this profile
+let isFollowing = false;
+if (currentUserId && !isOwnProfile) {
+  const { data: friendship } = await Astro.locals.supabase
+    .from("friendship")
+    .select("user_id")
+    .eq("user_id", currentUserId)
+    .eq("friend_id", profile.id)
+    .maybeSingle();
+  isFollowing = !!friendship;
+}
+
+// Watchlist — only show public entries (tickets_bought items shown as "went")
+const { data: watchlistData } = await Astro.locals.supabase
+  .from("watchlist")
+  .select("status, added_at, show:show_id(title, date, time, type, url, venue:venue_id(name))")
+  .eq("user_id", profile.id)
+  .order("added_at", { ascending: false })
+  .limit(20);
+
+const watchlist = (watchlistData ?? []) as any[];
+
+const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).toUpperCase();
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <ClientRouter />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{profile.display_name ?? profile.username} — house lights</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#f5f3ef] min-h-screen">
+    <Nav current="" client:load transition:persist />
+    <main class="max-w-xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
+
+      <!-- Profile header -->
+      <div class="flex items-center gap-5 mb-10">
+        <div class="w-16 h-16 rounded-full overflow-hidden border border-[#ece7de] bg-[#f0ede8] flex items-center justify-center flex-shrink-0">
+          {profile.avatar_url
+            ? <img src={profile.avatar_url} alt={profile.username} class="w-full h-full object-cover" />
+            : <span class="text-sm font-bold text-[#888]">{initials}</span>
+          }
+        </div>
+        <div class="flex-1 min-w-0">
+          <h1 class="font-sans font-black text-xl text-[#1a1a1a] truncate">
+            {profile.display_name ?? profile.username}
+          </h1>
+          {profile.display_name && (
+            <p class="text-xs text-[#aaa] mt-0.5">@{profile.username}</p>
+          )}
+        </div>
+        {!isOwnProfile && currentUserId && (
+          <form method="POST" action="/api/users/follow" id="follow-form">
+            <input type="hidden" name="user_id" value={profile.id} />
+            <input type="hidden" name="action" value={isFollowing ? "unfollow" : "follow"} id="follow-action" />
+            <button
+              type="submit"
+              id="follow-btn"
+              class={`text-xs uppercase tracking-widest font-bold px-4 py-2 border transition-colors ${
+                isFollowing
+                  ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#333]"
+                  : "border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white"
+              }`}
+            >
+              {isFollowing ? "Following" : "Follow"}
+            </button>
+          </form>
+        )}
+        {isOwnProfile && (
+          <a href="/settings" class="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">
+            Edit
+          </a>
+        )}
+      </div>
+
+      <!-- Watchlist -->
+      <section>
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-5">Watchlist</h2>
+        {watchlist.length === 0 ? (
+          <p class="text-xs text-[#aaa]">Nothing here yet.</p>
+        ) : (
+          <ul class="space-y-4">
+            {watchlist.map((entry: any) => {
+              const show = entry.show;
+              if (!show) return null;
+              const date = show.date ? new Date(show.date).toLocaleDateString("en-NL", { day: "numeric", month: "short", year: "numeric" }) : null;
+              return (
+                <li class="border-b border-[#ece7de] pb-4 last:border-0">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="min-w-0">
+                      {show.url
+                        ? <a href={show.url} target="_blank" rel="noopener noreferrer" class="font-medium text-sm text-[#1a1a1a] hover:underline leading-tight block truncate">{show.title}</a>
+                        : <span class="font-medium text-sm text-[#1a1a1a] leading-tight block truncate">{show.title}</span>
+                      }
+                      <p class="text-xs text-[#888] mt-0.5">
+                        {show.venue?.name}
+                        {date && <span class="text-[#bbb] ml-2">{date}</span>}
+                      </p>
+                    </div>
+                    {entry.status === "tickets_bought" && (
+                      <span class="text-[10px] uppercase tracking-widest text-[#e85d2f] flex-shrink-0 mt-0.5">Ticketed</span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <script>
+        // Optimistic follow toggle
+        const form = document.getElementById("follow-form") as HTMLFormElement | null;
+        const btn = document.getElementById("follow-btn") as HTMLButtonElement | null;
+        const actionInput = document.getElementById("follow-action") as HTMLInputElement | null;
+
+        form?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          if (!btn || !actionInput) return;
+          const action = actionInput.value;
+          const res = await fetch("/api/users/follow", { method: "POST", body: new FormData(form) });
+          if (!res.ok) return;
+          if (action === "follow") {
+            btn.textContent = "Following";
+            btn.classList.add("bg-[#1a1a1a]", "text-white");
+            btn.classList.remove("text-[#1a1a1a]");
+            actionInput.value = "unfollow";
+          } else {
+            btn.textContent = "Follow";
+            btn.classList.remove("bg-[#1a1a1a]", "text-white");
+            btn.classList.add("text-[#1a1a1a]");
+            actionInput.value = "follow";
+          }
+        });
+      </script>
+    </main>
+  </body>
+</html>
