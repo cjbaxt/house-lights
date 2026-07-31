@@ -17,62 +17,98 @@ import ClientRouter from "astro/components/ClientRouter.astro";
   <body class="bg-[#f5f3ef] min-h-screen">
     <Nav current="/privacy" client:load transition:persist />
     <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 text-sm text-[#555] leading-relaxed">
-      <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a] mb-8">Privacy policy</h1>
+      <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a] mb-2">Privacy policy</h1>
+      <p class="text-xs text-[#aaa] mb-10">Last updated July 2026</p>
 
       <p class="mb-6">
-        house lights is a personal Amsterdam events tracker. This policy explains what data is collected and how it is used.
+        house lights is an arts events tracker. This policy explains what data we collect, why, how long we keep it, and what you can do with it. It is written in plain English, not legalese.
       </p>
 
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">What we collect</h2>
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Who is responsible for your data</h2>
+      <p class="mb-6">
+        Claire Baxter, operating house lights as a personal project. Contact: <a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a>.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">What we collect and why</h2>
+
+      <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Account data</p>
       <ul class="space-y-2 mb-6">
-        <li>— Your email address (used only to sign in)</li>
-        <li>— A username, optional display name, and optional profile photo you choose</li>
-        <li>— Your watchlist entries (shows you've marked as interested, attending, etc.)</li>
-        <li>— Your city preferences and venue rankings</li>
-        <li>— Who you follow (only visible to you and the people you follow)</li>
+        <li>— Your email address — to sign in and to contact you if needed</li>
+        <li>— A password (hashed, never stored in plain text)</li>
+        <li>— A username and optional display name — to identify you to other users</li>
+        <li>— An optional profile photo — shown on your profile</li>
+      </ul>
+      <p class="text-xs text-[#aaa] mb-8">Legal basis: contract — these are necessary to provide the service you've signed up for.</p>
+
+      <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Usage data</p>
+      <ul class="space-y-2 mb-6">
+        <li>— Your watchlist (shows you've bookmarked, ticket status)</li>
+        <li>— Your city and venue preferences (which cities and venues you've enabled or hidden)</li>
+        <li>— Who you follow (visible only to you and the people you follow)</li>
+      </ul>
+      <p class="text-xs text-[#aaa] mb-8">Legal basis: contract — this is the core functionality of the app.</p>
+
+      <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Anonymous activity data</p>
+      <ul class="space-y-2 mb-6">
+        <li>— Ticket link click-throughs (which show was clicked, whether you were signed in)</li>
+        <li>— Search queries (what you searched for — helps us identify missing venues)</li>
+      </ul>
+      <p class="text-xs text-[#aaa] mb-8">
+        Legal basis: legitimate interest — this data is used to improve the service (e.g. finding which venues to add scrapers for) and to understand whether venue partnerships are worthwhile. It is collected server-side with no cookies or third-party trackers. If you delete your account, your user ID is removed from this data but the anonymous aggregate record is retained for up to 24 months.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Cookies</h2>
+      <p class="mb-6">
+        We set one session cookie when you sign in. It contains an authentication token, not personal data. It expires when you sign out or after your session times out. We do not use advertising, tracking, or analytics cookies. No third-party cookies are set.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">How long we keep your data</h2>
+      <ul class="space-y-2 mb-6">
+        <li>— Account and watchlist data: until you delete your account</li>
+        <li>— Waitlist entries (if you signed up but never created an account): 12 months, then automatically deleted</li>
+        <li>— Anonymous activity data (clicks, searches): 24 months, then automatically deleted</li>
       </ul>
 
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Why</h2>
-      <p class="mb-6">
-        Solely to provide the watchlist feature. We do not use your data for advertising, analytics, or any purpose beyond the app itself.
-      </p>
-
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Where it's stored</h2>
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Where it's stored</h2>
       <p class="mb-3">
-        Data is stored on <a href="https://supabase.com" class="underline hover:text-[#1a1a1a]">Supabase</a>, hosted in Frankfurt, Germany (EU West). Supabase acts as a data processor under GDPR and we have a Data Processing Agreement in place with them.
+        All data is stored on <a href="https://supabase.com" class="underline hover:text-[#1a1a1a]">Supabase</a>, hosted in Frankfurt, Germany (AWS EU West). We have a Data Processing Agreement in place with Supabase. Supabase handles:
       </p>
-      <p class="mb-3">Supabase handles the following on our behalf:</p>
       <ul class="space-y-2 mb-6">
-        <li>— Passwords are hashed using bcrypt and never stored in plain text</li>
-        <li>— All data is encrypted at rest (AES-256) at the infrastructure level</li>
-        <li>— All connections are encrypted in transit via TLS</li>
-        <li>— Access is controlled by row-level security policies, so each user can only access their own data</li>
+        <li>— Password hashing (bcrypt)</li>
+        <li>— Encryption at rest (AES-256)</li>
+        <li>— Encryption in transit (TLS)</li>
+        <li>— Row-level security — each user can only access their own data</li>
       </ul>
       <p class="mb-6">
-        The site is hosted on <a href="https://vercel.com" class="underline hover:text-[#1a1a1a]">Vercel</a> (edge network, EU region where applicable). Vercel does not have access to your personal data.
+        The site is hosted on <a href="https://vercel.com" class="underline hover:text-[#1a1a1a]">Vercel</a>. Vercel serves the application but does not have access to your personal data.
       </p>
 
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">How long</h2>
-      <p class="mb-6">Until you delete your account. You can delete your account and all associated data at any time from <a href="/settings" class="underline hover:text-[#1a1a1a]">account settings</a>. If you joined the waitlist but never created an account, your email will be removed after 12 months.</p>
-
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Sub-processors</h2>
-      <p class="mb-3">We use two sub-processors, both covered by GDPR-compliant DPAs:</p>
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Sub-processors</h2>
       <ul class="space-y-2 mb-6">
-        <li>— <strong>Supabase</strong> (via AWS Frankfurt) — database, authentication, file storage</li>
-        <li>— <strong>Vercel</strong> — hosting and edge delivery</li>
+        <li>— <strong class="text-[#1a1a1a]">Supabase</strong> (via AWS Frankfurt) — database, authentication, file storage. GDPR-compliant DPA in place.</li>
+        <li>— <strong class="text-[#1a1a1a]">Vercel</strong> — hosting and edge delivery. GDPR-compliant DPA in place.</li>
       </ul>
-      <p class="mb-6">We do not use tracking cookies, analytics, or advertising. No data is shared with any other third party.</p>
+      <p class="mb-6">No data is shared with any other third party, including advertisers.</p>
 
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Your rights</h2>
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Your rights under GDPR</h2>
+      <p class="mb-4">You have the right to:</p>
+      <ul class="space-y-2 mb-6">
+        <li>— <strong class="text-[#1a1a1a]">Access</strong> — request a copy of the data we hold about you</li>
+        <li>— <strong class="text-[#1a1a1a]">Rectification</strong> — correct inaccurate data (username, display name, email)</li>
+        <li>— <strong class="text-[#1a1a1a]">Erasure</strong> — delete your account and all associated data</li>
+        <li>— <strong class="text-[#1a1a1a]">Portability</strong> — download your data in a machine-readable format</li>
+        <li>— <strong class="text-[#1a1a1a]">Object</strong> — object to processing based on legitimate interest (the anonymous activity data)</li>
+        <li>— <strong class="text-[#1a1a1a]">Restriction</strong> — ask us to pause processing while a dispute is resolved</li>
+      </ul>
       <p class="mb-6">
-        Under GDPR you have the right to access, correct, or erase your data. You can download a copy of all your data or delete your account entirely from <a href="/settings" class="underline hover:text-[#1a1a1a]">account settings</a>. You can also email
-        <a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a>.
+        You can exercise most of these rights directly from <a href="/settings" class="underline hover:text-[#1a1a1a]">Settings</a> — download your data or delete your account with one click. For anything else, email <a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a>. We aim to respond within 30 days.
+      </p>
+      <p class="mb-6">
+        You also have the right to lodge a complaint with the Dutch data protection authority: <a href="https://www.autoriteitpersoonsgegevens.nl" class="underline hover:text-[#1a1a1a]" target="_blank" rel="noopener noreferrer">Autoriteit Persoonsgegevens</a>.
       </p>
 
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Contact</h2>
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Contact</h2>
       <p><a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a></p>
-
-      <p class="mt-12 text-xs text-[#aaa]">Last updated July 2026</p>
     </main>
   </body>
 </html>

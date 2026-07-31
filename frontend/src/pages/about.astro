@@ -10,22 +10,25 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
 
 const { data: venuesData } = await Astro.locals.supabase
   .from("venue")
-  .select("id, name, priority, website_url")
+  .select("id, name, city_id, website_url, city:city_id(name)")
   .eq("active", true)
   .order("name");
 
+const { data: citiesData } = await Astro.locals.supabase
+  .from("city")
+  .select("id, name")
+  .eq("is_active", true)
+  .order("name");
+
 const venues = venuesData ?? [];
+const cities = citiesData ?? [];
 
-const PRIORITY_LABEL: Record<string, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
-const PRIORITY_ORDER = ["high", "medium", "low"];
+type VenueItem = { id: string; name: string; city_id: string; website_url?: string | null; city: { name: string } | null };
+type CityItem = { id: string; name: string };
 
-type VenueItem = { id: string; name: string; priority: string; website_url?: string | null };
-
-const grouped = PRIORITY_ORDER.map(p => ({
-  label: PRIORITY_LABEL[p],
-  items: venues
-    .filter((v: VenueItem) => v.priority === p)
-    .sort((a: VenueItem, b: VenueItem) => a.name.localeCompare(b.name)),
+const grouped = (cities as CityItem[]).map(c => ({
+  city: c,
+  items: (venues as VenueItem[]).filter(v => v.city_id === c.id),
 })).filter(g => g.items.length > 0);
 ---
 
@@ -63,10 +66,12 @@ const grouped = PRIORITY_ORDER.map(p => ({
       </div>
 
       <section class="mb-16">
-        <h2 class="font-sans font-black text-xs uppercase tracking-widest text-[#1a1a1a] mb-6">Venues & companies</h2>
+        <h2 class="font-sans font-black text-xs uppercase tracking-widest text-[#1a1a1a] mb-6">Venues tracked</h2>
         {grouped.map(group => (
           <div class="mb-6">
-            <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-2">{group.label}</div>
+            {grouped.length > 1 && (
+              <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-2">{group.city.name}</div>
+            )}
             <div class="flex flex-wrap gap-2">
               {group.items.map((item: VenueItem) => (
                 item.website_url
@@ -81,7 +86,7 @@ const grouped = PRIORITY_ORDER.map(p => ({
         ))}
         {Astro.locals.user && (
           <p class="text-xs text-[#aaa] mt-4">
-            Adjust rankings in <a href="/settings" class="underline hover:text-[#555]">Settings</a>.
+            Hide venues you never want to see in <a href="/settings" class="underline hover:text-[#555]">Settings</a>.
           </p>
         )}
       </section>
