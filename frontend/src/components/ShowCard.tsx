@@ -39,7 +39,7 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
   return (
     <div className={`relative w-full text-left flex items-stretch border-b border-[#ece7de] group transition-colors hover:bg-white ${isWatched ? "border-l-2 border-l-[#e85d2f] pl-0" : ""}`}>
       <a
-        href={show.url}
+        href={show.url ? `/api/out?show_id=${show.id}` : undefined}
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center gap-4 flex-1 min-w-0 px-4 py-3"

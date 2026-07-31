@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type React from "react";
-import { IconList, IconCalendar, IconLayoutGrid, IconAdjustmentsHorizontal, IconBookmark, IconBookmarkFilled, IconTicket, IconSearch, IconX } from "@tabler/icons-react";
+import { IconList, IconCalendar, IconLayoutGrid, IconBookmark, IconBookmarkFilled, IconTicket, IconSearch, IconX } from "@tabler/icons-react";
 import { api } from "../lib/api";
 import type { Show, Venue, City, WatchlistEntry, WatchStatus } from "../lib/api";
 import ShowCard from "./ShowCard";
@@ -14,11 +14,9 @@ const MONTH_NAMES = [
 ];
 
 type Timeframe = "today" | "week" | "month" | "all" | "custom";
-type Priority = "high" | "medium" | "low";
 type DisplayView = "programme" | "agenda" | "calendar";
 
 const ALL_TYPES = ["music", "classical", "theatre", "comedy", "ballet", "dance", "opera", "other"];
-const PRIORITY_LABELS: Record<Priority, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
 
 function localDateStr(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -77,7 +75,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
   return (
     <div className={`group border-b border-[#ece7de] hover:bg-white transition-colors ${anyWatched ? "border-l-2 border-l-[#e85d2f]" : ""}`}>
       <div className="flex items-start gap-0 px-4 pt-3 pb-2">
-        <a href={show.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 flex-1 min-w-0">
+        <a href={show.url ? `/api/out?show_id=${show.id}` : undefined} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 flex-1 min-w-0">
           {show.image_url && (
             <div className="w-16 flex-shrink-0 overflow-hidden" style={{ aspectRatio: "4/3" }}>
               <img src={show.image_url} alt="" className="w-full h-full object-cover" loading="lazy"
@@ -122,7 +120,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
             : "border-[#ece7de] text-[#888] hover:border-[#e85d2f] hover:text-[#e85d2f]";
           return (
             <div key={id} className="flex items-center gap-0.5">
-              <a href={show.url} target="_blank" rel="noopener noreferrer"
+              <a href={show.url ? `/api/out?show_id=${id}` : undefined} target="_blank" rel="noopener noreferrer"
                 className={`text-[10px] font-bold px-2 py-0.5 border transition-colors tracking-wide ${chipClass}`}
               >
                 {label}{time ? ` ${time.slice(0, 5)}` : ""}
@@ -153,48 +151,57 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
   );
 }
 
-function VenueFilterSection({ groups, activeVenues, toggleVenue, selectAllInGroup, deselectAllInGroup, onSelectAll }: {
-  groups: { priority: Priority; label: string; items: { id: string; name: string }[] }[];
+function VenuePickerDropdown({ venues, activeVenues, toggleVenue, venueSearch, setVenueSearch, onClear, onClose }: {
+  venues: { id: string; name: string }[];
   activeVenues: Set<string>;
   toggleVenue: (id: string) => void;
-  selectAllInGroup: (ids: string[]) => void;
-  deselectAllInGroup: (ids: string[]) => void;
-  onSelectAll: () => void;
+  venueSearch: string;
+  setVenueSearch: (s: string) => void;
+  onClear: () => void;
+  onClose: () => void;
 }) {
-  const noneActive = activeVenues.size === 0;
+  const filtered = venues.filter(v => v.name.toLowerCase().includes(venueSearch.toLowerCase()));
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [onClose]);
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-1.5">
-        <button onClick={onSelectAll}
-          className={`text-xs px-2.5 py-1 border transition-colors ${noneActive ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
-        >All</button>
+    <div ref={ref} className="absolute left-0 z-20 mt-1 w-72 bg-white border border-[#ece7de] shadow-lg">
+      <div className="p-2 border-b border-[#ece7de]">
+        <input
+          autoFocus
+          type="text"
+          placeholder="Search venues…"
+          value={venueSearch}
+          onChange={e => setVenueSearch(e.target.value)}
+          className="w-full text-xs border border-[#ece7de] px-2 py-1.5 focus:outline-none focus:border-[#1a1a1a] transition-colors"
+        />
       </div>
-      {groups.map(({ priority, label, items }) => {
-        const groupIds = items.map(i => i.id);
-        const allSelected = groupIds.every(id => activeVenues.has(id));
-        return (
-          <div key={priority}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[11px] text-neutral-500 font-medium">{label}</span>
-              <button
-                onClick={() => allSelected ? deselectAllInGroup(groupIds) : selectAllInGroup(groupIds)}
-                className="text-[10px] text-neutral-400 hover:text-neutral-600 transition-colors"
-              >
-                {allSelected ? "None" : "All"}
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {items.map(({ id, name }) => (
-                <button key={id} onClick={() => toggleVenue(id)}
-                  className={`text-xs px-2.5 py-1 border transition-colors ${activeVenues.has(id) ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      <div className="max-h-60 overflow-y-auto">
+        {filtered.length === 0
+          ? <div className="text-xs text-[#aaa] px-3 py-3">No venues found.</div>
+          : filtered.map(v => (
+            <button key={v.id} onClick={() => toggleVenue(v.id)}
+              className={`w-full text-left text-xs px-3 py-2 transition-colors border-b border-[#f5f3ef] last:border-0 ${activeVenues.has(v.id) ? "bg-[#1a1a1a] text-white" : "hover:bg-[#f5f3ef] text-[#555]"}`}
+            >
+              {v.name}
+            </button>
+          ))
+        }
+      </div>
+      {activeVenues.size > 0 && (
+        <div className="p-2 border-t border-[#ece7de]">
+          <button onClick={onClear} className="text-[10px] uppercase tracking-widest text-[#aaa] hover:text-[#555] transition-colors">
+            Clear selection
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -211,7 +218,9 @@ export default function ShowFeed() {
   const [fetching, setFetching] = useState(false);
   const [page, setPage] = useState(0);
   const [displayView, setDisplayView] = useState<DisplayView>("programme");
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isVenuePickerOpen, setIsVenuePickerOpen] = useState(false);
+  const [venueSearch, setVenueSearch] = useState("");
+  const [hiddenVenueIds, setHiddenVenueIds] = useState<Set<string>>(new Set());
 
   const [timeframe, setTimeframe] = useState<Timeframe>("month");
   const [dateFrom, setDateFrom] = useState("");
@@ -287,19 +296,21 @@ export default function ShowFeed() {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user ? { id: user.id } : null);
 
-      const [v, w, allCities, userCityIds] = await Promise.all([
+      const [v, w, allCities, userCityIds, hiddenIds] = await Promise.all([
         api.getVenues(),
         user ? api.getWatchlist() : Promise.resolve([]),
         api.getCities(),
         user ? api.getUserCities() : Promise.resolve([]),
+        user ? api.getHiddenVenueIds() : Promise.resolve([]),
       ]);
       setVenues(v);
       setWatchlist(w);
       setCities(allCities);
+      setHiddenVenueIds(new Set(hiddenIds));
 
       if (!defaultsInitialized.current) {
         defaultsInitialized.current = true;
-        setActiveVenues(new Set(v.filter(x => x.priority === "high").map(x => x.id)));
+        // Default: no venue filter (backend excludes hidden venues automatically)
         // Default to first user city, or first active city for logged-out
         const defaultCity = userCityIds.length > 0
           ? allCities.find(c => c.id === userCityIds[0])
@@ -323,6 +334,20 @@ export default function ShowFeed() {
     setPage(0);
   }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues, activeCityId, displayView, pageSize]);
 
+  // Log search queries after user stops typing (1.5s debounce, min 3 chars)
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 3) return;
+    const t = setTimeout(() => {
+      fetch("/api/events/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_type: "search", metadata: { query: q } }),
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
   const venueMap = useMemo(() => Object.fromEntries(venues.map((v) => [v.id, v])), [venues]);
   const venueNameMap = useMemo(() => Object.fromEntries(venues.map((v) => [v.id, v.name])), [venues]);
   const watchMap = useMemo(
@@ -330,17 +355,10 @@ export default function ShowFeed() {
     [watchlist]
   );
 
-  const venueGroups = useMemo(() => {
-    const order: Priority[] = ["high", "medium", "low"];
-    return order.map(p => ({
-      priority: p,
-      label: PRIORITY_LABELS[p],
-      items: venues
-        .filter(v => v.priority === p)
-        .map(v => ({ id: v.id, name: v.name }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    })).filter(g => g.items.length > 0);
-  }, [venues]);
+  const visibleVenues = useMemo(
+    () => venues.filter(v => !hiddenVenueIds.has(v.id)).sort((a, b) => a.name.localeCompare(b.name)),
+    [venues, hiddenVenueIds]
+  );
 
   // Local search filter over fetched shows
   const filtered = useMemo(() => {
@@ -400,17 +418,11 @@ export default function ShowFeed() {
   function toggleVenue(id: string) {
     setActiveVenues((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
-  function selectAllInGroup(ids: string[]) {
-    setActiveVenues((prev) => { const n = new Set(prev); ids.forEach(id => n.add(id)); return n; });
-  }
-  function deselectAllInGroup(ids: string[]) {
-    setActiveVenues((prev) => { const n = new Set(prev); ids.forEach(id => n.delete(id)); return n; });
-  }
-  function clearAll() {
+function clearAll() {
     setTimeframe("month");
     setDateFrom(""); setDateTo("");
     setActiveTypes(new Set());
-    setActiveVenues(new Set(venues.filter(x => x.priority === "high").map(x => x.id)));
+    setActiveVenues(new Set());
     setSearchQuery("");
     const defaultCity = cities.find(c => c.is_active);
     setActiveCityId(defaultCity?.id ?? null);
@@ -428,21 +440,15 @@ export default function ShowFeed() {
 
   return (
     <div>
-      {/* Top bar */}
+      {/* Top bar: view toggle */}
       <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setIsFilterOpen((o) => !o)}
-          className={`flex items-center gap-2 text-xs px-3 py-1.5 border transition-colors ${isFilterOpen ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
-        >
-          <IconAdjustmentsHorizontal size={13} />
-          Filter
-          {filterCount > 0 && (
-            <span className={`text-[10px] px-1.5 py-0.5 font-medium ${isFilterOpen ? "bg-white text-neutral-900" : "bg-[#1a1a1a] text-white"}`}>
-              {filterCount}
-            </span>
+        <div className="flex items-center gap-2">
+          {hasFilters && (
+            <button onClick={clearAll} className="text-[10px] uppercase tracking-widest text-[#aaa] hover:text-[#555] transition-colors">
+              Clear
+            </button>
           )}
-        </button>
-
+        </div>
         <div className="flex items-center border border-[#ece7de] overflow-hidden">
           {([
             { key: "programme", label: "Programme", icon: <IconLayoutGrid size={13} /> },
@@ -457,6 +463,96 @@ export default function ShowFeed() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* City chips — only when 2+ active cities */}
+      {activeCities.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <button
+            onClick={() => setActiveCityId(null)}
+            className={`text-xs px-2.5 py-1 border transition-colors ${activeCityId === null ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
+          >All</button>
+          {activeCities.map(city => (
+            <button key={city.id} onClick={() => setActiveCityId(city.id)}
+              className={`text-xs px-2.5 py-1 border transition-colors ${activeCityId === city.id ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
+            >{city.name}</button>
+          ))}
+        </div>
+      )}
+
+      {/* When row */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <div className="flex items-center border border-[#ece7de] overflow-hidden">
+          {(["today", "week", "month", "all"] as Timeframe[]).map((t) => (
+            <button key={t} onClick={() => setTimeframe(t)}
+              className={`text-xs px-3 py-1.5 transition-colors ${timeframe === t ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
+            >
+              {t === "today" ? "Today" : t === "week" ? "This week" : t === "month" ? "This month" : "All"}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setTimeframe("custom")}
+          className={`text-xs px-3 py-1.5 border transition-colors ${timeframe === "custom" ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : "border-[#ece7de] text-[#888] hover:bg-[#ece7de]"}`}
+        >
+          Custom range
+        </button>
+        {timeframe === "custom" && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+              className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+            <span className="text-[#aaa] text-xs">to</span>
+            <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)}
+              className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-[#aaa] hover:text-[#666] transition-colors">
+                <IconX size={12} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Type chips — horizontally scrollable */}
+      <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-none">
+        <button
+          onClick={() => setActiveTypes(new Set())}
+          className={`flex-shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1 border transition-colors ${activeTypes.size === 0 ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
+        >All</button>
+        {ALL_TYPES.map((type) => (
+          <button key={type} onClick={() => toggleType(type)}
+            className={`flex-shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1 border transition-colors ${activeTypes.has(type) ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
+          >
+            <EventTypeIcon type={type} size={11} />
+            <span className="capitalize">{type}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Venues button + picker */}
+      <div className="relative mb-4">
+        <button
+          onClick={() => { setIsVenuePickerOpen(o => !o); setVenueSearch(""); }}
+          className={`flex items-center gap-2 text-xs px-3 py-1.5 border transition-colors ${isVenuePickerOpen ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : activeVenues.size > 0 ? "border-[#e85d2f] text-[#1a1a1a]" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
+        >
+          Venues
+          {activeVenues.size > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.5 font-medium ${isVenuePickerOpen ? "bg-white text-[#1a1a1a]" : "bg-[#e85d2f] text-white"}`}>
+              {activeVenues.size}
+            </span>
+          )}
+        </button>
+        {isVenuePickerOpen && (
+          <VenuePickerDropdown
+            venues={visibleVenues}
+            activeVenues={activeVenues}
+            toggleVenue={toggleVenue}
+            venueSearch={venueSearch}
+            setVenueSearch={setVenueSearch}
+            onClear={() => setActiveVenues(new Set())}
+            onClose={() => setIsVenuePickerOpen(false)}
+          />
+        )}
       </div>
 
       {/* Search */}
@@ -478,100 +574,6 @@ export default function ShowFeed() {
           </button>
         )}
       </div>
-
-      {/* Filter panel */}
-      {isFilterOpen && (
-        <div className="border border-[#ece7de] p-4 mb-5 flex flex-col gap-5 bg-[#eceae4]">
-          {cities.filter(c => c.is_active).length > 1 && (
-            <div>
-              <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-2">City</div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  onClick={() => setActiveCityId(null)}
-                  className={`text-xs px-2.5 py-1 border transition-colors ${activeCityId === null ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
-                >All</button>
-                {cities.filter(c => c.is_active).map(city => (
-                  <button key={city.id} onClick={() => setActiveCityId(city.id)}
-                    className={`text-xs px-2.5 py-1 border transition-colors ${activeCityId === city.id ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
-                  >{city.name}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div>
-            <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-2">When</div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <div className="flex items-center border border-[#ece7de] overflow-hidden">
-                {(["today", "week", "month", "all"] as Timeframe[]).map((t) => (
-                  <button key={t} onClick={() => setTimeframe(t)}
-                    className={`text-xs px-3 py-1.5 transition-colors ${timeframe === t ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}
-                  >
-                    {t === "today" ? "Today" : t === "week" ? "This week" : t === "month" ? "This month" : "All"}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setTimeframe("custom")}
-                className={`text-xs px-3 py-1.5 border transition-colors ${timeframe === "custom" ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : "border-[#ece7de] text-[#888] hover:bg-[#ece7de]"}`}
-              >
-                Custom
-              </button>
-            </div>
-            {timeframe === "custom" && (
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                  className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
-                <span className="text-[#aaa] text-xs">to</span>
-                <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)}
-                  className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
-                {(dateFrom || dateTo) && (
-                  <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-[#aaa] hover:text-[#666] transition-colors">
-                    <IconX size={12} />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-2">Type</div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                onClick={() => setActiveTypes(new Set())}
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 border transition-colors ${activeTypes.size === 0 ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
-              >All</button>
-              {ALL_TYPES.map((type) => (
-                <button key={type} onClick={() => toggleType(type)}
-                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 border transition-colors ${activeTypes.has(type) ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
-                >
-                  <EventTypeIcon type={type} size={11} />
-                  <span className="capitalize">{type}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-3">Venues</div>
-            <VenueFilterSection
-              groups={venueGroups}
-              activeVenues={activeVenues}
-              toggleVenue={toggleVenue}
-              selectAllInGroup={selectAllInGroup}
-              deselectAllInGroup={deselectAllInGroup}
-              onSelectAll={() => setActiveVenues(new Set())}
-            />
-          </div>
-
-          {hasFilters && (
-            <div className="pt-1 border-t border-neutral-100">
-              <button onClick={clearAll} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
-                Clear all filters
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Results count + page size */}
       <div className="flex items-center justify-between mb-3">

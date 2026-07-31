@@ -94,6 +94,18 @@ export const api = {
     return (data ?? []) as City[];
   },
 
+  async getHiddenVenueIds(): Promise<string[]> {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+    const { data } = await supabase
+      .from("user_venue")
+      .select("venue_id")
+      .eq("user_id", user.id)
+      .eq("hidden", true);
+    return (data ?? []).map((r: { venue_id: string }) => r.venue_id);
+  },
+
   async getUserCities(): Promise<string[]> {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
