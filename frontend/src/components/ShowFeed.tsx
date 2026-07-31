@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type React from "react";
 import { IconList, IconCalendar, IconLayoutGrid, IconAdjustmentsHorizontal, IconBookmark, IconBookmarkFilled, IconTicket, IconSearch, IconX } from "@tabler/icons-react";
 import { api } from "../lib/api";
-import type { Show, Venue, WatchlistEntry, WatchStatus } from "../lib/api";
+import type { Show, Venue, City, WatchlistEntry, WatchStatus } from "../lib/api";
 import ShowCard from "./ShowCard";
 import CalendarBody from "./CalendarBody";
 import EventTypeIcon from "./EventTypeIcon";
@@ -203,6 +203,8 @@ export default function ShowFeed() {
   const [shows, setShows] = useState<Show[]>([]);
   const [total, setTotal] = useState(0);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [activeCityId, setActiveCityId] = useState<string | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -249,8 +251,9 @@ export default function ShowFeed() {
 
     if (activeTypes.size > 0) url.searchParams.set("types", [...activeTypes].join(","));
     if (activeVenues.size > 0) url.searchParams.set("venue_ids", [...activeVenues].join(","));
+    if (activeCityId) url.searchParams.set("city_id", activeCityId);
     return url;
-  }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues]);
+  }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues, activeCityId]);
 
   const fetchShows = useCallback(async (pg: number) => {
     if (fetchController.current) fetchController.current.abort();
@@ -284,16 +287,24 @@ export default function ShowFeed() {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user ? { id: user.id } : null);
 
-      const [v, w] = await Promise.all([
+      const [v, w, allCities, userCityIds] = await Promise.all([
         api.getVenues(),
         user ? api.getWatchlist() : Promise.resolve([]),
+        api.getCities(),
+        user ? api.getUserCities() : Promise.resolve([]),
       ]);
       setVenues(v);
       setWatchlist(w);
+      setCities(allCities);
 
       if (!defaultsInitialized.current) {
         defaultsInitialized.current = true;
         setActiveVenues(new Set(v.filter(x => x.priority === "high").map(x => x.id)));
+        // Default to first user city, or first active city for logged-out
+        const defaultCity = userCityIds.length > 0
+          ? allCities.find(c => c.id === userCityIds[0])
+          : allCities.find(c => c.is_active);
+        if (defaultCity) setActiveCityId(defaultCity.id);
       }
 
       setLoading(false);
@@ -310,7 +321,7 @@ export default function ShowFeed() {
   useEffect(() => {
     if (loading) return;
     setPage(0);
-  }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues, displayView, pageSize]);
+  }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues, activeCityId, displayView, pageSize]);
 
   const venueMap = useMemo(() => Object.fromEntries(venues.map((v) => [v.id, v])), [venues]);
   const venueNameMap = useMemo(() => Object.fromEntries(venues.map((v) => [v.id, v.name])), [venues]);
@@ -401,10 +412,13 @@ export default function ShowFeed() {
     setActiveTypes(new Set());
     setActiveVenues(new Set(venues.filter(x => x.priority === "high").map(x => x.id)));
     setSearchQuery("");
+    const defaultCity = cities.find(c => c.is_active);
+    setActiveCityId(defaultCity?.id ?? null);
   }
 
-  const hasFilters = timeframe !== "all" || activeTypes.size > 0 || activeVenues.size > 0 || !!searchQuery.trim();
-  const filterCount = (timeframe !== "all" ? 1 : 0) + (activeTypes.size > 0 ? 1 : 0) + (activeVenues.size > 0 ? 1 : 0);
+  const activeCities = cities.filter(c => c.is_active);
+  const hasFilters = timeframe !== "all" || activeTypes.size > 0 || activeVenues.size > 0 || !!searchQuery.trim() || (activeCities.length > 1 && activeCityId !== null);
+  const filterCount = (timeframe !== "all" ? 1 : 0) + (activeTypes.size > 0 ? 1 : 0) + (activeVenues.size > 0 ? 1 : 0) + (activeCities.length > 1 && activeCityId !== null ? 1 : 0);
 
   const displayCount = displayView === "programme" ? programmeGroups.length : filtered.length;
 
@@ -468,6 +482,22 @@ export default function ShowFeed() {
       {/* Filter panel */}
       {isFilterOpen && (
         <div className="border border-[#ece7de] p-4 mb-5 flex flex-col gap-5 bg-[#eceae4]">
+          {cities.filter(c => c.is_active).length > 1 && (
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-2">City</div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  onClick={() => setActiveCityId(null)}
+                  className={`text-xs px-2.5 py-1 border transition-colors ${activeCityId === null ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
+                >All</button>
+                {cities.filter(c => c.is_active).map(city => (
+                  <button key={city.id} onClick={() => setActiveCityId(city.id)}
+                    className={`text-xs px-2.5 py-1 border transition-colors ${activeCityId === city.id ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
+                  >{city.name}</button>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-2">When</div>
             <div className="flex flex-wrap items-center gap-1.5">

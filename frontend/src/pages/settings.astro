@@ -19,10 +19,25 @@ const { data: venuesData } = await Astro.locals.supabase
 
 const venues = venuesData ?? [];
 
+const { data: citiesData } = await Astro.locals.supabase
+  .from("city")
+  .select("id, name, country, is_active")
+  .order("name");
+
+const cities = citiesData ?? [];
+
+const { data: userCitiesData } = await Astro.locals.supabase
+  .from("user_city")
+  .select("city_id")
+  .eq("user_id", Astro.locals.user.id);
+
+const enabledCityIds = new Set((userCitiesData ?? []).map((r: { city_id: string }) => r.city_id));
+
 const PRIORITY_ORDER = ["high", "medium", "low"];
 const PRIORITY_LABEL: Record<string, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
 
 type Item = { id: string; name: string; priority: string };
+type CityItem = { id: string; name: string; country: string; is_active: boolean };
 
 const grouped = PRIORITY_ORDER.map(p => ({
   label: PRIORITY_LABEL[p],
@@ -82,6 +97,39 @@ const error = Astro.url.searchParams.get("error");
             Save profile
           </button>
         </form>
+      </section>
+
+      <!-- Cities -->
+      <section class="mb-12 border-t border-[#ece7de] pt-10">
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-2">Cities</h2>
+        <p class="text-xs text-[#aaa] mb-6">Choose which cities to include in your browse feed.</p>
+        <div class="flex flex-wrap gap-2">
+          {cities.map((city: CityItem) => {
+            const isEnabled = enabledCityIds.has(city.id);
+            if (city.is_active) {
+              return (
+                <form method="POST" action="/api/user/cities" class="inline">
+                  <input type="hidden" name="city_id" value={city.id} />
+                  <input type="hidden" name="enabled" value={isEnabled ? "false" : "true"} />
+                  <button
+                    type="submit"
+                    class={`text-xs px-3 py-1.5 border transition-colors ${isEnabled ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : "border-[#ece7de] text-[#555] hover:border-[#1a1a1a]"}`}
+                  >
+                    {city.name}
+                    {city.country !== "NL" && <span class="ml-1 opacity-50">{city.country}</span>}
+                  </button>
+                </form>
+              );
+            } else {
+              return (
+                <span class="text-xs px-3 py-1.5 border border-dashed border-[#ddd8cf] text-[#bbb] cursor-default" title="Coming soon">
+                  {city.name}
+                  {city.country !== "NL" && <span class="ml-1 opacity-40">{city.country}</span>}
+                </span>
+              );
+            }
+          })}
+        </div>
       </section>
 
       <!-- Venue rankings -->

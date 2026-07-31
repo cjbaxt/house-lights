@@ -94,6 +94,28 @@ export const api = {
     return (data ?? []) as City[];
   },
 
+  async getUserCities(): Promise<string[]> {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+    const { data } = await supabase
+      .from("user_city")
+      .select("city_id")
+      .eq("user_id", user.id);
+    return (data ?? []).map((r: { city_id: string }) => r.city_id);
+  },
+
+  async toggleUserCity(cityId: string, enabled: boolean) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (enabled) {
+      await supabase.from("user_city").upsert({ user_id: user.id, city_id: cityId });
+    } else {
+      await supabase.from("user_city").delete().eq("user_id", user.id).eq("city_id", cityId);
+    }
+  },
+
   async getUserPreferences(): Promise<{ hide_duplicate_shows: boolean; default_city_id?: string } | null> {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
