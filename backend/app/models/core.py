@@ -12,7 +12,7 @@ class Venue(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
-    city: str = "Amsterdam"
+    city_id: Optional[uuid.UUID] = Field(default=None, foreign_key="city.id")
     website_url: Optional[str] = None
     scrape_url: Optional[str] = None
     scraper_key: Optional[str] = None
@@ -43,6 +43,17 @@ class Company(SQLModel, table=True):
     image_url: Optional[str] = None
 
 
+class City(SQLModel, table=True):
+    __tablename__ = "city"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str
+    slug: str
+    country: str = "NL"
+    timezone: str = "Europe/Amsterdam"
+    is_active: bool = True
+
+
 class Show(SQLModel, table=True):
     __tablename__ = "show"
 
@@ -51,6 +62,7 @@ class Show(SQLModel, table=True):
     subtitle: Optional[str] = None
     venue_id: Optional[uuid.UUID] = Field(default=None, foreign_key="venue.id")
     company_id: Optional[uuid.UUID] = Field(default=None, foreign_key="company.id")
+    city_id: Optional[uuid.UUID] = Field(default=None, foreign_key="city.id")
     date: date
     time: Optional[time_type] = Field(default=None, sa_column=Column(Time, nullable=True))
     end_time: Optional[time_type] = Field(default=None, sa_column=Column(Time, nullable=True))

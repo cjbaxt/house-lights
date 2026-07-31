@@ -158,12 +158,12 @@ export default function WatchlistFeed() {
       setCompanies(c);
 
       if (user) {
-        const [wl, { data: prof }] = await Promise.all([
+        const [wl, prefs] = await Promise.all([
           api.getWatchlist(),
-          supabase.from("profile").select("hide_duplicate_shows").eq("id", user.id).single(),
+          api.getUserPreferences(),
         ]);
         setWatchlist(wl);
-        if (prof) setHideDuplicates(prof.hide_duplicate_shows ?? true);
+        if (prefs) setHideDuplicates(prefs.hide_duplicate_shows ?? true);
       }
     } finally {
       setLoading(false);
@@ -266,8 +266,7 @@ export default function WatchlistFeed() {
               const next = !hideDuplicates;
               setHideDuplicates(next);
               if (currentUser) {
-                const supabase = createClient();
-                await supabase.from("profile").update({ hide_duplicate_shows: next }).eq("id", currentUser.id);
+                await api.updateUserPreferences({ hide_duplicate_shows: next });
               }
             }}
             className={`text-[10px] uppercase tracking-widest px-3 py-1 border transition-colors ${hideDuplicates ? "bg-[#1a1a1a] text-white border-[#1a1a1a]" : "border-[#ece7de] text-[#888] hover:border-[#1a1a1a]"}`}

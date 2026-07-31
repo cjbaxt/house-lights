@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from sqlmodel import Session, select
 load_dotenv()
 from app.db import engine
-from app.models.core import Show, Venue, Company, Watchlist
+from app.models.core import Show, Venue, Company, Watchlist, City
 from app.venue_matcher import get_or_create_venue
 from app.scrapers.melkweg import MelkwegScraper
 from app.scrapers.bimhuis import BimhuisScraper
@@ -128,9 +128,15 @@ async def run_scraper(scraper_key: str, venue_id=None, company_id=None):
                 resolved_venue_id = venue_id
                 if s.venue_name and venue_id is not None:
                     resolved_venue_id = get_or_create_venue(session, s.venue_name)
+                city_id = None
+                if resolved_venue_id:
+                    v = session.get(Venue, resolved_venue_id)
+                    if v:
+                        city_id = v.city_id
                 session.add(Show(
                     title=s.title, subtitle=s.subtitle,
                     venue_id=resolved_venue_id, company_id=company_id,
+                    city_id=city_id,
                     date=s.date, time=s.time,
                     type=s.type, url=s.url,
                     ticket_status=s.ticket_status,
