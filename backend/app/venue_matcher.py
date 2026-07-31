@@ -7,42 +7,40 @@ Used by the Ticketmaster scraper (and any future multi-venue sources).
 import re
 import uuid
 from sqlmodel import Session, select
-from app.models.core import Venue
+from app.models.core import Venue, City
 
 
-# Normalise a name for fuzzy matching: lowercase, strip punctuation, collapse spaces
 def _norm(name: str) -> str:
     name = name.lower()
-    name = re.sub(r"[''`]", "", name)           # smart quotes
-    name = re.sub(r"[^a-z0-9\s]", " ", name)   # punctuation → space
+    name = re.sub(r"[''`]", "", name)
+    name = re.sub(r"[^a-z0-9\s]", " ", name)
     name = re.sub(r"\s+", " ", name).strip()
-    # strip common noise words that vary between sources
     for noise in ("theater", "theatre", "the ", "amsterdam"):
         name = name.replace(noise, "").strip()
     return name
 
 
-def get_or_create_venue(session: Session, name: str, city: str = "Amsterdam") -> uuid.UUID:
+def get_or_create_venue(session: Session, name: str, city_slug: str = "amsterdam") -> uuid.UUID:
     """
     Return the venue_id for `name`, creating a minimal Venue record if needed.
-    Matching is case-insensitive and strips common noise words so that
-    "Johan Cruijff ArenA" and "Johan Cruijff Arena" both resolve to the same row.
+    Matching is case-insensitive and strips common noise words.
     """
-    target = _norm(name)
+    city = session.exec(select(City).where(City.slug == city_slug)).first()
+    if city is None:
+        raise ValueError(f"City with slug '{city_slug}' not found in DB")
 
-    venues = session.exec(select(Venue).where(Venue.city == city)).all()
+    target = _norm(name)
+    venues = session.exec(select(Venue).where(Venue.city_id == city.id)).all()
     for v in venues:
         if _norm(v.name) == target:
             return v.id
 
-    # Not found — create a minimal record. Enrichment (image, description,
-    # address, neighbourhood) can be added later via enrich_venues.py or manually.
     new_venue = Venue(
         name=name.strip(),
-        city=city,
-        priority="low",   # new/unknown venues start at Exploring
+        city_id=city.id,
+        priority="low",
         active=True,
     )
     session.add(new_venue)
-    session.flush()  # populate id without committing
+    session.flush()
     return new_venue.id
