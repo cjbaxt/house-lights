@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type React from "react";
 import { IconList, IconCalendar, IconLayoutGrid, IconAdjustmentsHorizontal, IconBookmark, IconBookmarkFilled, IconTicket, IconSearch, IconX } from "@tabler/icons-react";
 import { api } from "../lib/api";
-import type { Show, Venue, Company, WatchlistEntry, WatchStatus } from "../lib/api";
+import type { Show, Venue, WatchlistEntry, WatchStatus } from "../lib/api";
 import ShowCard from "./ShowCard";
 import CalendarBody from "./CalendarBody";
 import EventTypeIcon from "./EventTypeIcon";
@@ -24,21 +24,20 @@ function localDateStr(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function endOfWeek(): Date {
+function endOfWeek(): string {
   const d = new Date();
   d.setDate(d.getDate() + (7 - d.getDay()));
-  d.setHours(23, 59, 59, 999);
-  return d;
+  return localDateStr(d);
 }
 
-function endOfMonth(): Date {
+function endOfMonth(): string {
   const d = new Date();
   d.setMonth(d.getMonth() + 1, 0);
-  d.setHours(23, 59, 59, 999);
-  return d;
+  return localDateStr(d);
 }
 
 const CHIP_LIMIT = 5;
+const PROGRAMME_FETCH_SIZE = 150;
 
 type DateEntry = { id: string; date: string; status: string; time?: string };
 
@@ -71,11 +70,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
     e.stopPropagation();
     if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign in or create an account to add things to your watchlist."); return; }
     const current = watchMap[showId];
-    if (current === "tickets_bought") {
-      await api.upsertWatch(showId, "interested");
-    } else {
-      await api.upsertWatch(showId, "tickets_bought");
-    }
+    await api.upsertWatch(showId, current === "tickets_bought" ? "interested" : "tickets_bought");
     onWatchChange();
   }
 
@@ -122,10 +117,8 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
           const isBought = chipStatus === "tickets_bought";
           const chipClass = isBought
             ? "bg-[#1a1a1a] border-[#1a1a1a] text-white"
-            : status === "sold_out"
-            ? "border-[#ece7de] text-[#ccc] line-through"
-            : status === "few_left"
-            ? "border-amber-300 text-amber-700"
+            : status === "sold_out" ? "border-[#ece7de] text-[#ccc] line-through"
+            : status === "few_left" ? "border-amber-300 text-amber-700"
             : "border-[#ece7de] text-[#888] hover:border-[#e85d2f] hover:text-[#e85d2f]";
           return (
             <div key={id} className="flex items-center gap-0.5">
@@ -169,17 +162,12 @@ function VenueFilterSection({ groups, activeVenues, toggleVenue, selectAllInGrou
   onSelectAll: () => void;
 }) {
   const noneActive = activeVenues.size === 0;
-
   return (
     <div className="flex flex-col gap-4">
-      {/* All chip */}
       <div className="flex flex-wrap gap-1.5">
-        <button
-          onClick={onSelectAll}
+        <button onClick={onSelectAll}
           className={`text-xs px-2.5 py-1 border transition-colors ${noneActive ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
-        >
-          All
-        </button>
+        >All</button>
       </div>
       {groups.map(({ priority, label, items }) => {
         const groupIds = items.map(i => i.id);
@@ -213,11 +201,12 @@ function VenueFilterSection({ groups, activeVenues, toggleVenue, selectAllInGrou
 
 export default function ShowFeed() {
   const [shows, setShows] = useState<Show[]>([]);
+  const [total, setTotal] = useState(0);
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const [page, setPage] = useState(0);
   const [displayView, setDisplayView] = useState<DisplayView>("programme");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -229,41 +218,106 @@ export default function ShowFeed() {
   const [activeVenues, setActiveVenues] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [pageSize, setPageSize] = useState(20);
+
   const searchRef = useRef<HTMLInputElement>(null);
   const defaultsInitialized = useRef(false);
+  const fetchController = useRef<AbortController | null>(null);
 
-  const load = async () => {
-    const supabase = (await import("../lib/supabase/client")).createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    setCurrentUser(user ? { id: user.id } : null);
-    const [s, v, c, w] = await Promise.all([
-      api.getUpcoming(2000, 0), api.getVenues(), api.getCompanies(),
-      user ? api.getWatchlist() : Promise.resolve([]),
-    ]);
-    setShows(s); setVenues(v); setCompanies(c); setWatchlist(w); setLoading(false);
-    if (!defaultsInitialized.current) {
-      defaultsInitialized.current = true;
-      setActiveVenues(new Set([
-        ...v.filter(x => x.priority === "high").map(x => x.id),
-        ...c.filter(x => x.priority === "high").map(x => x.id),
-      ]));
+  // Build URL params for the /api/shows endpoint
+  const buildShowsUrl = useCallback((pg: number, limit: number) => {
+    const url = new URL("/api/shows", window.location.origin);
+    url.searchParams.set("page", String(pg));
+    url.searchParams.set("limit", String(limit));
+
+    const today = localDateStr();
+    if (timeframe === "today") {
+      url.searchParams.set("from_date", today);
+      url.searchParams.set("to_date", today);
+    } else if (timeframe === "week") {
+      url.searchParams.set("from_date", today);
+      url.searchParams.set("to_date", endOfWeek());
+    } else if (timeframe === "month") {
+      url.searchParams.set("from_date", today);
+      url.searchParams.set("to_date", endOfMonth());
+    } else if (timeframe === "custom") {
+      if (dateFrom) url.searchParams.set("from_date", dateFrom);
+      if (dateTo) url.searchParams.set("to_date", dateTo);
+    } else {
+      // "all" — just set from today
+      url.searchParams.set("from_date", today);
     }
-  };
 
-  useEffect(() => { load(); }, []);
+    if (activeTypes.size > 0) url.searchParams.set("types", [...activeTypes].join(","));
+    if (activeVenues.size > 0) url.searchParams.set("venue_ids", [...activeVenues].join(","));
+    return url;
+  }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues]);
+
+  const fetchShows = useCallback(async (pg: number) => {
+    if (fetchController.current) fetchController.current.abort();
+    fetchController.current = new AbortController();
+
+    const limit = displayView === "programme" ? PROGRAMME_FETCH_SIZE : pageSize;
+    const url = buildShowsUrl(pg, limit);
+
+    try {
+      setFetching(true);
+      const resp = await fetch(url, { signal: fetchController.current.signal });
+      const data = await resp.json();
+      setShows(data.shows ?? []);
+      setTotal(data.total ?? 0);
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name !== "AbortError") console.error(e);
+    } finally {
+      setFetching(false);
+    }
+  }, [buildShowsUrl, displayView, pageSize]);
+
+  const loadWatchlist = useCallback(async () => {
+    const wl = await api.getWatchlist();
+    setWatchlist(wl);
+  }, []);
+
+  // Initial load: user, venues, watchlist, then shows
+  useEffect(() => {
+    (async () => {
+      const supabase = (await import("../lib/supabase/client")).createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user ? { id: user.id } : null);
+
+      const [v, w] = await Promise.all([
+        api.getVenues(),
+        user ? api.getWatchlist() : Promise.resolve([]),
+      ]);
+      setVenues(v);
+      setWatchlist(w);
+
+      if (!defaultsInitialized.current) {
+        defaultsInitialized.current = true;
+        setActiveVenues(new Set(v.filter(x => x.priority === "high").map(x => x.id)));
+      }
+
+      setLoading(false);
+    })();
+  }, []);
+
+  // Re-fetch shows when filters, page, or view changes (but not on initial load)
+  useEffect(() => {
+    if (loading) return;
+    fetchShows(page);
+  }, [loading, fetchShows, page]);
+
+  // Reset to page 0 when filters change
+  useEffect(() => {
+    if (loading) return;
+    setPage(0);
+  }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues, displayView, pageSize]);
 
   const venueMap = useMemo(() => Object.fromEntries(venues.map((v) => [v.id, v])), [venues]);
-  const companyMap = useMemo(() => Object.fromEntries(companies.map((c) => [c.id, c])), [companies]);
   const venueNameMap = useMemo(() => Object.fromEntries(venues.map((v) => [v.id, v.name])), [venues]);
   const watchMap = useMemo(
     () => Object.fromEntries(watchlist.map((w) => [w.show.id, w.watchlist.status as WatchStatus])),
     [watchlist]
   );
-
-  const presentTypes = useMemo(() => {
-    const s = new Set(shows.map((s) => s.type).filter(Boolean) as string[]);
-    return ALL_TYPES.filter((t) => s.has(t));
-  }, [shows]);
 
   const venueGroups = useMemo(() => {
     const order: Priority[] = ["high", "medium", "low"];
@@ -277,125 +331,25 @@ export default function ShowFeed() {
     })).filter(g => g.items.length > 0);
   }, [venues]);
 
-  useEffect(() => { setPage(0); }, [timeframe, dateFrom, dateTo, activeTypes, activeVenues, searchQuery, pageSize]);
-
+  // Local search filter over fetched shows
   const filtered = useMemo(() => {
-    const now = new Date();
-    const todayStr = localDateStr(now);
-    const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-    let result = shows.filter((s) => {
-      if (s.date > todayStr) return true;
-      if (s.date < todayStr) return false;
-      if (s.time) return s.time.slice(0, 5) > currentTime;
-      return true;
-    });
-
-    if (timeframe === "today") {
-      result = result.filter((s) => s.date === todayStr);
-    } else if (timeframe === "week") {
-      const end = endOfWeek();
-      result = result.filter((s) => new Date(s.date + "T00:00:00") <= end);
-    } else if (timeframe === "month") {
-      const end = endOfMonth();
-      result = result.filter((s) => new Date(s.date + "T00:00:00") <= end);
-    } else if (timeframe === "custom") {
-      if (dateFrom) result = result.filter((s) => s.date >= dateFrom);
-      if (dateTo) result = result.filter((s) => s.date <= dateTo);
-    }
-
-    if (activeTypes.size > 0) {
-      result = result.filter((s) => s.type && activeTypes.has(s.type));
-    }
-
-    if (activeVenues.size > 0) {
-      result = result.filter((s) =>
-        (s.venue_id && activeVenues.has(s.venue_id)) ||
-        (s.company_id && activeVenues.has(s.company_id))
+    if (!searchQuery.trim()) return shows;
+    const q = searchQuery.toLowerCase().trim();
+    return shows.filter((s) => {
+      const venueName = s.venue_id ? (venueMap[s.venue_id]?.name ?? "") : "";
+      return (
+        s.title.toLowerCase().includes(q) ||
+        (s.summary ?? "").toLowerCase().includes(q) ||
+        venueName.toLowerCase().includes(q)
       );
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter((s) => {
-        const venueName = (s.venue_id ? venueMap[s.venue_id]?.name : s.company_id ? companyMap[s.company_id]?.name : "") ?? "";
-        return (
-          s.title.toLowerCase().includes(q) ||
-          (s.summary ?? "").toLowerCase().includes(q) ||
-          venueName.toLowerCase().includes(q)
-        );
-      });
-    }
-
-    return result;
-  }, [shows, timeframe, dateFrom, dateTo, activeTypes, activeVenues, searchQuery, venueMap, companyMap]);
-
-  function toggleType(type: string) {
-    setActiveTypes((prev) => {
-      const next = new Set(prev);
-      next.has(type) ? next.delete(type) : next.add(type);
-      return next;
     });
-  }
+  }, [shows, searchQuery, venueMap]);
 
-  function toggleVenue(id: string) {
-    setActiveVenues((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
-
-  function selectAllInGroup(ids: string[]) {
-    setActiveVenues((prev) => {
-      const next = new Set(prev);
-      ids.forEach(id => next.add(id));
-      return next;
-    });
-  }
-
-  function deselectAllInGroup(ids: string[]) {
-    setActiveVenues((prev) => {
-      const next = new Set(prev);
-      ids.forEach(id => next.delete(id));
-      return next;
-    });
-  }
-
-  function clearAll() {
-    setTimeframe("week");
-    setDateFrom("");
-    setDateTo("");
-    setActiveTypes(new Set());
-    setActiveVenues(new Set([
-      ...venues.filter(x => x.priority === "high").map(x => x.id),
-      ...companies.filter(x => x.priority === "high").map(x => x.id),
-    ]));
-    setSearchQuery("");
-  }
-
-  const hasFilters = timeframe !== "all" || activeTypes.size > 0 || activeVenues.size > 0 || !!searchQuery.trim();
-  const filterCount = (timeframe !== "all" ? 1 : 0) + (activeTypes.size > 0 ? 1 : 0) + (activeVenues.size > 0 ? 1 : 0);
-
-  // Total unique productions across all upcoming shows (unfiltered)
-  const totalProgrammeCount = useMemo(() => {
-    const now = new Date();
-    const todayStr = localDateStr(now);
-    const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    const upcoming = shows.filter((s) => {
-      if (s.date > todayStr) return true;
-      if (s.date < todayStr) return false;
-      return s.time ? s.time.slice(0, 5) > currentTime : true;
-    });
-    const keys = new Set(upcoming.map(s => `${s.title.toLowerCase().trim()}||${s.venue_id ?? s.company_id ?? ""}`));
-    return keys.size;
-  }, [shows]);
-
-  // Programme view: group all shows by title+venue, keeping all dates
+  // Programme view: group by title+venue
   const programmeGroups = useMemo(() => {
     const map = new Map<string, { show: Show; allDates: DateEntry[] }>();
     for (const show of filtered) {
-      const key = `${show.title.toLowerCase().trim()}||${show.venue_id ?? show.company_id ?? ""}`;
+      const key = `${show.title.toLowerCase().trim()}||${show.venue_id ?? ""}`;
       const entry: DateEntry = { id: show.id, date: show.date, status: show.ticket_status ?? "available", time: show.time ?? undefined };
       if (!map.has(key)) {
         map.set(key, { show, allDates: [entry] });
@@ -408,15 +362,16 @@ export default function ShowFeed() {
 
   const pagedProgramme = useMemo(
     () => programmeGroups.slice(page * pageSize, (page + 1) * pageSize),
-    [programmeGroups, page]
+    [programmeGroups, page, pageSize]
   );
   const pagedAgenda = useMemo(
     () => filtered.slice(page * pageSize, (page + 1) * pageSize),
-    [filtered, page]
+    [filtered, page, pageSize]
   );
-  const totalPages = Math.ceil(
-    (displayView === "programme" ? programmeGroups.length : filtered.length) / pageSize
-  );
+
+  const totalPages = displayView === "programme"
+    ? Math.ceil(programmeGroups.length / pageSize)
+    : Math.ceil(total / pageSize);
 
   const groups = pagedAgenda.reduce<Record<string, Record<string, Show[]>>>((acc, show) => {
     const d = new Date(show.date + "T00:00:00");
@@ -428,13 +383,38 @@ export default function ShowFeed() {
     return acc;
   }, {});
 
+  function toggleType(type: string) {
+    setActiveTypes((prev) => { const n = new Set(prev); n.has(type) ? n.delete(type) : n.add(type); return n; });
+  }
+  function toggleVenue(id: string) {
+    setActiveVenues((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function selectAllInGroup(ids: string[]) {
+    setActiveVenues((prev) => { const n = new Set(prev); ids.forEach(id => n.add(id)); return n; });
+  }
+  function deselectAllInGroup(ids: string[]) {
+    setActiveVenues((prev) => { const n = new Set(prev); ids.forEach(id => n.delete(id)); return n; });
+  }
+  function clearAll() {
+    setTimeframe("month");
+    setDateFrom(""); setDateTo("");
+    setActiveTypes(new Set());
+    setActiveVenues(new Set(venues.filter(x => x.priority === "high").map(x => x.id)));
+    setSearchQuery("");
+  }
+
+  const hasFilters = timeframe !== "all" || activeTypes.size > 0 || activeVenues.size > 0 || !!searchQuery.trim();
+  const filterCount = (timeframe !== "all" ? 1 : 0) + (activeTypes.size > 0 ? 1 : 0) + (activeVenues.size > 0 ? 1 : 0);
+
+  const displayCount = displayView === "programme" ? programmeGroups.length : filtered.length;
+
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-neutral-300 text-sm tracking-widest uppercase">Loading…</div>;
   }
 
   return (
     <div>
-      {/* Top bar: Filter button + view toggle */}
+      {/* Top bar */}
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setIsFilterOpen((o) => !o)}
@@ -465,7 +445,7 @@ export default function ShowFeed() {
         </div>
       </div>
 
-      {/* Search bar */}
+      {/* Search */}
       <div className="relative mb-4">
         <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#e85d2f] pointer-events-none" />
         <input
@@ -477,8 +457,7 @@ export default function ShowFeed() {
           className="w-full pl-8 pr-8 py-2 text-sm border border-[#d4c9b8] bg-[#eceae4] placeholder-[#aaa] text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
         />
         {searchQuery && (
-          <button
-            onClick={() => { setSearchQuery(""); searchRef.current?.focus(); }}
+          <button onClick={() => { setSearchQuery(""); searchRef.current?.focus(); }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
           >
             <IconX size={13} />
@@ -489,8 +468,6 @@ export default function ShowFeed() {
       {/* Filter panel */}
       {isFilterOpen && (
         <div className="border border-[#ece7de] p-4 mb-5 flex flex-col gap-5 bg-[#eceae4]">
-
-          {/* When */}
           <div>
             <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-2">When</div>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -512,25 +489,13 @@ export default function ShowFeed() {
             </div>
             {timeframe === "custom" && (
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
-                />
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                  className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
                 <span className="text-[#aaa] text-xs">to</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  min={dateFrom || undefined}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
-                />
+                <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)}
+                  className="text-xs border border-[#d4c9b8] bg-white px-2 py-1.5 text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
                 {(dateFrom || dateTo) && (
-                  <button
-                    onClick={() => { setDateFrom(""); setDateTo(""); }}
-                    className="text-[#aaa] hover:text-[#666] transition-colors"
-                  >
+                  <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-[#aaa] hover:text-[#666] transition-colors">
                     <IconX size={12} />
                   </button>
                 )}
@@ -538,17 +503,14 @@ export default function ShowFeed() {
             )}
           </div>
 
-          {/* Type */}
           <div>
             <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-2">Type</div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => setActiveTypes(new Set())}
                 className={`flex items-center gap-1.5 text-xs px-2.5 py-1 border transition-colors ${activeTypes.size === 0 ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
-              >
-                All
-              </button>
-              {presentTypes.map((type) => (
+              >All</button>
+              {ALL_TYPES.map((type) => (
                 <button key={type} onClick={() => toggleType(type)}
                   className={`flex items-center gap-1.5 text-xs px-2.5 py-1 border transition-colors ${activeTypes.has(type) ? "bg-[#1a1a1a] border-[#e85d2f] text-white" : "border-[#ece7de] text-[#888] hover:border-[#d4c9b8]"}`}
                 >
@@ -559,7 +521,6 @@ export default function ShowFeed() {
             </div>
           </div>
 
-          {/* Venues */}
           <div>
             <div className="text-[10px] uppercase tracking-widest text-neutral-400 mb-3">Venues</div>
             <VenueFilterSection
@@ -572,7 +533,6 @@ export default function ShowFeed() {
             />
           </div>
 
-          {/* Clear */}
           {hasFilters && (
             <div className="pt-1 border-t border-neutral-100">
               <button onClick={clearAll} className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">
@@ -585,16 +545,10 @@ export default function ShowFeed() {
 
       {/* Results count + page size */}
       <div className="flex items-center justify-between mb-3">
-        <div className="text-[11px] uppercase tracking-widest text-neutral-400">
-          {displayView === "programme" ? (
-            <>
-              {programmeGroups.length} show{programmeGroups.length !== 1 ? "s" : ""}
-              {programmeGroups.length < totalProgrammeCount && (
-                <span className="text-neutral-300"> (out of {totalProgrammeCount})</span>
-              )}
-            </>
-          ) : (
-            <>{filtered.length} show{filtered.length !== 1 ? "s" : ""}</>
+        <div className={`text-[11px] uppercase tracking-widest transition-opacity ${fetching ? "opacity-40" : "opacity-100"} text-neutral-400`}>
+          {displayCount} show{displayCount !== 1 ? "s" : ""}
+          {total > shows.length && displayView !== "programme" && (
+            <span className="text-neutral-300"> of {total}</span>
           )}
         </div>
         {displayView !== "calendar" && (
@@ -613,7 +567,7 @@ export default function ShowFeed() {
         )}
       </div>
 
-      {/* Calendar view */}
+      {/* Calendar */}
       {displayView === "calendar" ? (
         <CalendarBody shows={filtered} venueMap={venueNameMap} />
       ) : displayView === "programme" ? (
@@ -622,15 +576,15 @@ export default function ShowFeed() {
         ) : (
           <div className="flex flex-col gap-3">
             {pagedProgramme.map(({ show, allDates }) => {
-              const location = show.venue_id ? venueMap[show.venue_id]?.name : show.company_id ? companyMap[show.company_id]?.name : "";
+              const location = show.venue_id ? venueMap[show.venue_id]?.name : "";
               return (
                 <ProgrammeCard
-                  key={`${show.title}||${show.venue_id ?? show.company_id}`}
+                  key={`${show.title}||${show.venue_id ?? ""}`}
                   show={show}
                   allDates={allDates}
                   location={location ?? ""}
                   watchMap={watchMap}
-                  onWatchChange={load}
+                  onWatchChange={loadWatchlist}
                   currentUser={currentUser}
                 />
               );
@@ -673,9 +627,8 @@ export default function ShowFeed() {
                             key={show.id}
                             show={show}
                             venueName={show.venue_id ? venueMap[show.venue_id]?.name : undefined}
-                            companyName={show.company_id ? companyMap[show.company_id]?.name : undefined}
                             watchStatus={watchMap[show.id]}
-                            onWatchChange={load}
+                            onWatchChange={loadWatchlist}
                             currentUser={currentUser}
                           />
                         ))}
@@ -691,13 +644,10 @@ export default function ShowFeed() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-1 pt-6 pb-2">
-          <button
-            onClick={() => { setPage((p) => p - 1); window.scrollTo(0, 0); }}
+          <button onClick={() => { setPage((p) => p - 1); window.scrollTo(0, 0); }}
             disabled={page === 0}
             className="text-xs px-2.5 py-1.5 border border-[#ece7de] text-[#888] hover:bg-[#ece7de] transition-colors disabled:opacity-30"
-          >
-            ←
-          </button>
+          >←</button>
           {Array.from({ length: totalPages }, (_, i) => i).map((i) => {
             const near = Math.abs(i - page) <= 2 || i === 0 || i === totalPages - 1;
             const ellipsisBefore = i === page - 3 && page > 3;
@@ -712,13 +662,10 @@ export default function ShowFeed() {
               </button>
             );
           })}
-          <button
-            onClick={() => { setPage((p) => p + 1); window.scrollTo(0, 0); }}
+          <button onClick={() => { setPage((p) => p + 1); window.scrollTo(0, 0); }}
             disabled={page >= totalPages - 1}
             className="text-xs px-2.5 py-1.5 border border-[#ece7de] text-[#888] hover:bg-[#ece7de] transition-colors disabled:opacity-30"
-          >
-            →
-          </button>
+          >→</button>
         </div>
       )}
     </div>
