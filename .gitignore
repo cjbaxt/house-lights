@@ -10,3 +10,5 @@ dist
 frontend/.env.local
 .claude/worktrees/
 frontend/.vercel/
+backend/house_lights.db
+backend/import_watchlist.py
