@@ -38,15 +38,30 @@ import ClientRouter from "astro/components/ClientRouter.astro";
       </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Where it's stored</h2>
+      <p class="mb-3">
+        Data is stored on <a href="https://supabase.com" class="underline hover:text-[#1a1a1a]">Supabase</a>, hosted in Frankfurt, Germany (EU West). Supabase acts as a data processor under GDPR and we have a Data Processing Agreement in place with them.
+      </p>
+      <p class="mb-3">Supabase handles the following on our behalf:</p>
+      <ul class="space-y-2 mb-6">
+        <li>— Passwords are hashed using bcrypt and never stored in plain text</li>
+        <li>— All data is encrypted at rest (AES-256) at the infrastructure level</li>
+        <li>— All connections are encrypted in transit via TLS</li>
+        <li>— Access is controlled by row-level security policies, so each user can only access their own data</li>
+      </ul>
       <p class="mb-6">
-        Data is stored on <a href="https://supabase.com" class="underline hover:text-[#1a1a1a]">Supabase</a>, hosted in Frankfurt, Germany (EU West). Supabase acts as a data processor under GDPR.
+        The site is hosted on <a href="https://vercel.com" class="underline hover:text-[#1a1a1a]">Vercel</a> (edge network, EU region where applicable). Vercel does not have access to your personal data.
       </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">How long</h2>
-      <p class="mb-6">Until you delete your account. You can delete your account and all data at any time from account settings.</p>
+      <p class="mb-6">Until you delete your account. You can delete your account and all associated data at any time from <a href="/settings" class="underline hover:text-[#1a1a1a]">account settings</a>. If you joined the waitlist but never created an account, your email will be removed after 12 months.</p>
 
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Third parties</h2>
-      <p class="mb-6">None. We do not share your data with any third party, use tracking cookies, or run analytics.</p>
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Sub-processors</h2>
+      <p class="mb-3">We use two sub-processors, both covered by GDPR-compliant DPAs:</p>
+      <ul class="space-y-2 mb-6">
+        <li>— <strong>Supabase</strong> (via AWS Frankfurt) — database, authentication, file storage</li>
+        <li>— <strong>Vercel</strong> — hosting and edge delivery</li>
+      </ul>
+      <p class="mb-6">We do not use tracking cookies, analytics, or advertising. No data is shared with any other third party.</p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-8">Your rights</h2>
       <p class="mb-6">
