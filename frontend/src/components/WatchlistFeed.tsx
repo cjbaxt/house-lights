@@ -1,19 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { localDateStr } from "../lib/api";
 import type React from "react";
-import { IconCalendarDown, IconBookmark, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconUsers } from "@tabler/icons-react";
+import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar } from "@tabler/icons-react";
 import { createClient } from "../lib/supabase/client";
 import { api } from "../lib/api";
-import type { WatchlistEntry, Venue, Company, Show, WatchStatus, Profile } from "../lib/api";
-import EventTypeIcon from "./EventTypeIcon";
+import type { WatchlistEntry, Venue, Company, Show, WatchStatus } from "../lib/api";
 import WatchMenu from "./WatchMenu";
 import CalendarBody from "./CalendarBody";
 
 type DisplayView = "list" | "calendar";
-// whoView: "mine" = logged-in user's own watchlist, username = viewing someone else's
-type WhoView = "mine" | string;
-
-const CLAIRE_USERNAME = "claireheaded";
 
 function groupKey(show: Show): string {
   return `${show.title.toLowerCase()}|${show.venue_id ?? show.company_id ?? ""}`;
@@ -32,19 +27,11 @@ function GroupedCard({
   venueMap,
   companyMap,
   onWatchChange,
-  readOnly = false,
-  claireToo = false,
-  inMyWatchlist = false,
-  onAddToMine,
 }: {
   group: ShowGroup;
   venueMap: Record<string, string>;
   companyMap: Record<string, string>;
   onWatchChange: () => void;
-  readOnly?: boolean;
-  claireToo?: boolean;
-  inMyWatchlist?: boolean;
-  onAddToMine?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
@@ -65,24 +52,6 @@ function GroupedCard({
     onWatchChange();
   }
 
-  const watchMenu = (
-    <WatchMenu
-      showId={group.entries[0].show.id}
-      current={repStatus}
-      onSelect={async (status) => {
-        await Promise.all(
-          group.entries.map(async (entry) => {
-            if (status === null) await api.removeWatch(entry.show.id);
-            else await api.upsertWatch(entry.show.id, status);
-          })
-        );
-        setMenuOpen(false);
-        onWatchChange();
-      }}
-      onClose={() => setMenuOpen(false)}
-    />
-  );
-
   return (
     <div className={`group border-b border-[#ece7de] hover:bg-white transition-colors ${anyBought ? "border-l-2 border-l-[#e85d2f]" : ""}`}>
       <div className="flex items-start gap-4 px-4 pt-3 pb-2">
@@ -98,44 +67,36 @@ function GroupedCard({
               <span className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase">
                 {show.type ?? "other"}{location ? ` · ${location}` : ""}
               </span>
-              {readOnly && anyBought && (
-                <span className="flex items-center gap-0.5 text-[8px] font-bold tracking-widest uppercase px-1.5 py-0.5 bg-[#e85d2f] text-white">
-                  <IconTicket size={9} />
-                  has tickets
-                </span>
-              )}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-sans font-black text-sm uppercase tracking-tight text-[#1a1a1a] leading-tight truncate">
-                {show.title}
-              </span>
-              {claireToo && <IconUsers size={12} className="flex-shrink-0 text-[#e85d2f]" />}
+            <div className="font-sans font-black text-sm uppercase tracking-tight text-[#1a1a1a] leading-tight truncate">
+              {show.title}
             </div>
             {show.subtitle && <div className="text-xs text-[#888] mt-0.5 line-clamp-2">{show.subtitle}</div>}
           </div>
         </a>
-        {readOnly ? (
-          <div className="relative flex-shrink-0">
-            <button
-              onClick={(e) => { e.stopPropagation(); onAddToMine?.(); }}
-              className="p-1 hover:bg-[#ece7de] transition-colors mt-0.5"
-              title={inMyWatchlist ? "Remove from your watchlist" : "Add to your watchlist"}
-            >
-              {inMyWatchlist
-                ? <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
-                : <IconBookmark size={15} className="text-[#d4c9b8] hover:text-[#888] transition-colors" />
-              }
-            </button>
-          </div>
-        ) : (
-          <div className="relative flex-shrink-0">
-            <button onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
-              className="p-1 hover:bg-[#ece7de] transition-colors mt-0.5">
-              <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
-            </button>
-            {menuOpen && watchMenu}
-          </div>
-        )}
+        <div className="relative flex-shrink-0">
+          <button onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
+            className="p-1 hover:bg-[#ece7de] transition-colors mt-0.5">
+            <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
+          </button>
+          {menuOpen && (
+            <WatchMenu
+              showId={group.entries[0].show.id}
+              current={repStatus}
+              onSelect={async (status) => {
+                await Promise.all(
+                  group.entries.map(async (entry) => {
+                    if (status === null) await api.removeWatch(entry.show.id);
+                    else await api.upsertWatch(entry.show.id, status);
+                  })
+                );
+                setMenuOpen(false);
+                onWatchChange();
+              }}
+              onClose={() => setMenuOpen(false)}
+            />
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-1 px-4 pb-3">
         {(showAllDates ? group.entries : group.entries.slice(0, DATE_CHIPS_LIMIT)).map((entry) => {
@@ -158,12 +119,10 @@ function GroupedCard({
                 className={`text-[10px] font-bold px-2 py-0.5 border transition-colors tracking-wide ${chipClass}`}>
                 {label}{entry.show.time ? ` ${entry.show.time.slice(0, 5)}` : ""}
               </a>
-              {!readOnly && (
-                <button onClick={(e) => handleMarkBought(e, entry)}
-                  className={`p-0.5 transition-colors ${isBought ? "text-[#e85d2f]" : "text-[#d4c9b8] hover:text-[#888]"}`}>
-                  <IconTicket size={11} />
-                </button>
-              )}
+              <button onClick={(e) => handleMarkBought(e, entry)}
+                className={`p-0.5 transition-colors ${isBought ? "text-[#e85d2f]" : "text-[#d4c9b8] hover:text-[#888]"}`}>
+                <IconTicket size={11} />
+              </button>
             </div>
           );
         })}
@@ -179,14 +138,12 @@ function GroupedCard({
 }
 
 export default function WatchlistFeed() {
-  const [myWatchlist, setMyWatchlist] = useState<WatchlistEntry[]>([]);
-  const [viewedWatchlist, setViewedWatchlist] = useState<WatchlistEntry[]>([]);
+  const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayView, setDisplayView] = useState<DisplayView>("list");
-  const [whoView, setWhoView] = useState<WhoView>(CLAIRE_USERNAME);
   const [visibleCount, setVisibleCount] = useState(12);
 
   const load = useCallback(async () => {
@@ -199,30 +156,16 @@ export default function WatchlistFeed() {
       setVenues(v);
       setCompanies(c);
 
-      // Always load Claire's watchlist for the default view
-      const claireProfile = await api.getProfile(CLAIRE_USERNAME);
-      if (claireProfile) {
-        const cw = await api.getUserWatchlist(claireProfile.id);
-        setViewedWatchlist(cw);
-      }
-
-      // Load own watchlist if logged in
       if (user) {
-        const mw = await api.getWatchlist();
-        setMyWatchlist(mw);
+        const wl = await api.getWatchlist();
+        setWatchlist(wl);
       }
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const reloadMine = useCallback(async () => {
-    const mw = await api.getWatchlist();
-    setMyWatchlist(mw);
-  }, []);
-
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setVisibleCount(12); }, [whoView]);
 
   const venueMap = Object.fromEntries(venues.map((v) => [v.id, v.name]));
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
@@ -235,10 +178,16 @@ export default function WatchlistFeed() {
     );
   }
 
-  const isViewingOwn = whoView === "mine";
-  const isViewingClaire = whoView === CLAIRE_USERNAME;
-  const watchlist = isViewingOwn ? myWatchlist : viewedWatchlist;
-  const myGroupKeys = new Set(myWatchlist.map((e) => groupKey(e.show)));
+  if (!currentUser) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+        <p className="text-sm text-[#888]">Sign in to build your watchlist.</p>
+        <a href="/login" className="text-xs uppercase tracking-widest font-bold text-[#1a1a1a] border border-[#1a1a1a] px-4 py-2 hover:bg-[#1a1a1a] hover:text-white transition-colors">
+          Sign in
+        </a>
+      </div>
+    );
+  }
 
   const groupMap = new Map<string, ShowGroup>();
   for (const entry of watchlist) {
@@ -261,22 +210,13 @@ export default function WatchlistFeed() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center border border-[#ece7de] overflow-hidden">
-          <button onClick={() => setWhoView(CLAIRE_USERNAME)}
-            className={`text-xs px-3 py-1.5 transition-colors ${isViewingClaire ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}>
-            Claire's
-          </button>
-          {currentUser && (
-            <button onClick={() => setWhoView("mine")}
-              className={`text-xs px-3 py-1.5 transition-colors ${isViewingOwn ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:bg-[#ece7de]"}`}>
-              Yours
-            </button>
-          )}
+        <div className="text-[11px] uppercase tracking-widest text-neutral-400">
+          {sortedGroups.length} show{sortedGroups.length !== 1 ? "s" : ""}
         </div>
 
         <div className="flex items-center gap-3">
           <a
-            href={api.calendarUrl(isViewingOwn && currentUser ? undefined : CLAIRE_USERNAME)}
+            href={api.calendarUrl()}
             className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
           >
             <IconCalendarDown size={13} />
@@ -296,19 +236,9 @@ export default function WatchlistFeed() {
         </div>
       </div>
 
-      <div className="text-[11px] uppercase tracking-widest text-neutral-400 mb-4">
-        {sortedGroups.length} show{sortedGroups.length !== 1 ? "s" : ""}
-      </div>
-
-      {!currentUser && isViewingOwn === false && (
-        <p className="text-xs text-neutral-400 mb-4">
-          <a href="/login" className="underline hover:text-neutral-700">Sign in</a> to build your own watchlist.
-        </p>
-      )}
-
       {watchlist.length === 0 && (
         <div className="flex items-center justify-center h-64 text-neutral-400 text-sm">
-          {isViewingOwn ? "Nothing on your watchlist yet." : "Nothing on this watchlist yet."}
+          Nothing on your watchlist yet — browse shows and bookmark anything you want to see.
         </div>
       )}
 
@@ -322,17 +252,7 @@ export default function WatchlistFeed() {
               group={group}
               venueMap={venueMap}
               companyMap={companyMap}
-              onWatchChange={isViewingOwn ? reloadMine : load}
-              readOnly={!isViewingOwn}
-              claireToo={isViewingOwn && myGroupKeys.has(group.key)}
-              inMyWatchlist={!isViewingOwn ? myGroupKeys.has(group.key) : undefined}
-              onAddToMine={!isViewingOwn && currentUser ? async () => {
-                const isIn = myGroupKeys.has(group.key);
-                await Promise.all(group.entries.map((e) =>
-                  isIn ? api.removeWatch(e.show.id) : api.upsertWatch(e.show.id, "interested")
-                ));
-                reloadMine();
-              } : undefined}
+              onWatchChange={load}
             />
           ))}
           {visibleCount < sortedGroups.length && (
