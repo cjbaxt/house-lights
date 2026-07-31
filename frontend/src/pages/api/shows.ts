@@ -24,8 +24,20 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
   if (cityId)           query = query.eq("city_id", cityId);
   if (types.length)     query = query.in("type", types);
-  if (venueIds.length)  query = query.in("venue_id", venueIds);
   if (toDate)           query = query.lte("date", toDate);
+
+  // Exclude venues the user has hidden — only when no explicit venue filter is active
+  if (!venueIds.length && locals.user) {
+    const { data: hiddenVenues } = await locals.supabase
+      .from("user_venue")
+      .select("venue_id")
+      .eq("user_id", locals.user.id)
+      .eq("hidden", true);
+    const hiddenIds = (hiddenVenues ?? []).map((r: { venue_id: string }) => r.venue_id);
+    if (hiddenIds.length) query = query.not("venue_id", "in", `(${hiddenIds.join(",")})`);
+  }
+
+  if (venueIds.length)  query = query.in("venue_id", venueIds);
 
   const { data, error, count } = await query;
 
