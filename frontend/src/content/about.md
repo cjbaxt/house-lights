@@ -2,7 +2,7 @@ House Lights is an Amsterdam events tracker covering theatre, comedy, dance, mus
 
 - **Browse** — everything coming up, filtered by type, timeframe, or specific venue.
 - **Watchlist** — bookmark shows you're interested in or have bought tickets for, and subscribe to your calendar via webcal. Sign in to build your own.
-- **Discover** — describe what you're in the mood for and it'll suggest something from the listings.
+- **Friends** — follow other people and see what they're watching. A good way to find out about things you might have missed.
 
 The scrapers run weekly via GitHub Actions and write to a Supabase database, so listings stay reasonably fresh. It's curated in the sense that I've hand-picked which venues to track and how to rank them — Regular, Occasional, or Exploring. If you're signed in, you can adjust those rankings yourself in Settings.
 
