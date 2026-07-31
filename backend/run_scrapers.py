@@ -53,6 +53,7 @@ from app.scrapers.birdbraintheatre import BirdbBrainTheatreScraper
 from app.scrapers.carre import CarreScraper
 from app.scrapers.ziggodome import ZiggoDomeScraper
 from app.scrapers.mezrab import MezrabScraper
+from app.scrapers.garagenoord import GarageNoordScraper
 
 # Paradiso needs Playwright — imported lazily
 def _paradiso():
@@ -86,6 +87,7 @@ SCRAPERS = {
     "carre": CarreScraper,
     "ziggodome": ZiggoDomeScraper,
     "mezrab": MezrabScraper,
+    "garagenoord": GarageNoordScraper,
     "paradiso": _paradiso,
 }
 
