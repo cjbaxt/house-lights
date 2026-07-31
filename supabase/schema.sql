@@ -73,6 +73,7 @@ create table profile (
   id            uuid primary key references auth.users on delete cascade,
   username      text unique not null,
   display_name  text,
+  hide_duplicate_shows boolean not null default true,
   is_public     boolean not null default true,
   created_at    timestamptz not null default now()
 );
