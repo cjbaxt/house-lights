@@ -86,7 +86,7 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
       {/* Bookmark */}
       <div className="relative flex-shrink-0 flex items-center pr-3">
         <button
-          onClick={(e) => { e.stopPropagation(); if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign in or create an account to add things to your watchlist."); return; } setMenuOpen((o) => !o); }}
+          onClick={(e) => { e.stopPropagation(); if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign up or log in to add things to your watchlist."); return; } setMenuOpen((o) => !o); }}
           className="p-1 hover:bg-[#ece7de] transition-colors"
         >
           {isWatched

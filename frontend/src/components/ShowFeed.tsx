@@ -56,7 +56,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
 
   async function handleBookmark(e: React.MouseEvent) {
     e.preventDefault();
-    if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign in or create an account to add things to your watchlist."); return; }
+    if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign up or log in to add things to your watchlist."); return; }
     if (anyWatched) {
       await Promise.all(allDates.map(d => api.removeWatch(d.id)));
     } else {
@@ -68,7 +68,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
   async function handleMarkBought(e: React.MouseEvent, showId: string) {
     e.preventDefault();
     e.stopPropagation();
-    if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign in or create an account to add things to your watchlist."); return; }
+    if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign up or log in to add things to your watchlist."); return; }
     const current = watchMap[showId];
     await api.upsertWatch(showId, current === "tickets_bought" ? "interested" : "tickets_bought");
     onWatchChange();

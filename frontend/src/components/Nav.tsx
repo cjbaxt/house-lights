@@ -72,9 +72,14 @@ export default function Nav({ current }: { current: string }) {
           </a>
         )}
         {isLoggedIn === false && (
-          <a href={href("/login")} className="text-sm pb-0.5 text-[#f5f3ef]/40 hover:text-[#f5f3ef] transition-colors">
-            Sign in
-          </a>
+          <div className="flex items-center gap-3">
+            <a href={href("/login")} className="text-xs pb-0.5 text-[#f5f3ef]/40 hover:text-[#f5f3ef] transition-colors">
+              Log in
+            </a>
+            <a href={href("/login?mode=signup")} className="text-xs font-bold uppercase tracking-widest px-3 py-1.5 border border-[#f5f3ef]/30 text-[#f5f3ef]/70 hover:border-[#f5f3ef] hover:text-[#f5f3ef] transition-colors">
+              Sign up
+            </a>
+          </div>
         )}
       </header>
 
