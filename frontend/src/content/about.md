@@ -9,3 +9,5 @@ The scrapers run weekly via GitHub Actions and write to a Supabase database, so 
 If you know of a venue I'm missing, notice a scraper issue, or have any other ideas, I'd love to hear about it.
 
 You probably know how to find me.
+
+I built this for fun, so please don't feel any obligation to support it — honestly, it's a hobby project and I'm happy for it to just exist. That said, it does cost a little bit to run (hosting, database, that kind of thing), and if it ever grows those costs might start to add up. So if you're getting genuine use out of it and feel like buying me a coffee, that's very kind of you and I'd appreciate it. Entirely optional though.
