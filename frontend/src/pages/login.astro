@@ -4,7 +4,7 @@ import ClientRouter from "astro/components/ClientRouter.astro";
 
 if (Astro.locals.user) return Astro.redirect("/");
 
-const mode = Astro.url.searchParams.get("mode") ?? "login"; // "login" | "signup"
+const mode = Astro.url.searchParams.get("mode") ?? "login";
 const error = Astro.url.searchParams.get("error");
 const message = Astro.url.searchParams.get("message");
 const isSignup = mode === "signup";
@@ -15,7 +15,7 @@ const isSignup = mode === "signup";
     <meta charset="utf-8" />
     <ClientRouter />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{isSignup ? "Sign up" : "Log in"} — house lights</title>
+    <title>Log in — house lights</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
@@ -27,88 +27,85 @@ const isSignup = mode === "signup";
       </h1>
       <p class="text-sm text-[#888] mb-8">Amsterdam events</p>
 
+      {message && <p class="text-sm text-[#1a1a1a] mb-6">{decodeURIComponent(message)}</p>}
+
       <!-- Tab switcher -->
       <div class="flex border border-[#ece7de] mb-6">
-        <a
-          href="/login"
-          class={`flex-1 text-center text-xs font-bold uppercase tracking-widest py-2.5 transition-colors ${!isSignup ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:text-[#1a1a1a]"}`}
+        <button id="tab-login" type="button"
+          class="flex-1 text-center text-xs font-bold uppercase tracking-widest py-2.5 transition-colors"
         >
           Log in
-        </a>
-        <a
-          href="/login?mode=signup"
-          class={`flex-1 text-center text-xs font-bold uppercase tracking-widest py-2.5 transition-colors ${isSignup ? "bg-[#1a1a1a] text-white" : "text-[#888] hover:text-[#1a1a1a]"}`}
+        </button>
+        <button id="tab-signup" type="button"
+          class="flex-1 text-center text-xs font-bold uppercase tracking-widest py-2.5 transition-colors"
         >
           Sign up
-        </a>
+        </button>
       </div>
 
-      {message && <p class="text-sm text-[#1a1a1a] mb-6 -mt-2">{decodeURIComponent(message)}</p>}
+      {error && <p class="text-xs text-[#e85d2f] mb-4">{decodeURIComponent(error)}</p>}
 
-      {!isSignup ? (
+      <!-- Log in form -->
+      <div id="panel-login">
         <form method="POST" action="/api/auth/login" class="space-y-4">
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            required
-            autocomplete="email"
-            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            required
-            autocomplete="current-password"
-            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
-          />
-          {error && <p class="text-xs text-[#e85d2f]">{decodeURIComponent(error)}</p>}
-          <button
-            type="submit"
-            class="w-full bg-[#1a1a1a] text-white text-sm py-3 hover:bg-[#333] transition-colors uppercase tracking-widest font-bold"
-          >
+          <input type="email" name="email" placeholder="Email" required autocomplete="email"
+            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+          <input type="password" name="password" placeholder="Password" required autocomplete="current-password"
+            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+          <button type="submit"
+            class="w-full bg-[#1a1a1a] text-white text-sm py-3 hover:bg-[#333] transition-colors uppercase tracking-widest font-bold">
             Log in
           </button>
         </form>
         <p class="text-xs text-center mt-6">
           <a href="/forgot-password" class="text-[#888] hover:text-[#1a1a1a] transition-colors">Forgot password?</a>
         </p>
-      ) : (
+      </div>
+
+      <!-- Sign up form -->
+      <div id="panel-signup">
         <form method="POST" action="/api/auth/register" class="space-y-4">
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            required
-            autocomplete="email"
-            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password (8+ characters)"
-            required
-            minlength="8"
-            autocomplete="new-password"
-            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
-          />
-          {error && <p class="text-xs text-[#e85d2f]">{decodeURIComponent(error)}</p>}
-          <button
-            type="submit"
-            class="w-full bg-[#1a1a1a] text-white text-sm py-3 hover:bg-[#333] transition-colors uppercase tracking-widest font-bold"
-          >
+          <input type="email" name="email" placeholder="Email" required autocomplete="email"
+            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+          <input type="password" name="password" placeholder="Password (8+ characters)" required minlength="8" autocomplete="new-password"
+            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+          <button type="submit"
+            class="w-full bg-[#1a1a1a] text-white text-sm py-3 hover:bg-[#333] transition-colors uppercase tracking-widest font-bold">
             Sign up
           </button>
         </form>
         <p class="text-[10px] text-[#bbb] text-center mt-4 leading-relaxed">
           By signing up you agree to our <a href="/privacy" class="underline hover:text-[#888]">privacy policy</a>.
         </p>
-      )}
+      </div>
 
       <p class="text-xs text-[#bbb] text-center mt-6">
         <a href="/" class="hover:text-[#888] transition-colors">← Back</a>
       </p>
     </div>
+
+    <script define:vars={{ isSignup }}>
+      const tabLogin  = document.getElementById("tab-login");
+      const tabSignup = document.getElementById("tab-signup");
+      const panelLogin  = document.getElementById("panel-login");
+      const panelSignup = document.getElementById("panel-signup");
+
+      function activate(signup) {
+        tabLogin.classList.toggle("bg-[#1a1a1a]", !signup);
+        tabLogin.classList.toggle("text-white", !signup);
+        tabLogin.classList.toggle("text-[#888]", signup);
+        tabSignup.classList.toggle("bg-[#1a1a1a]", signup);
+        tabSignup.classList.toggle("text-white", signup);
+        tabSignup.classList.toggle("text-[#888]", !signup);
+        panelLogin.style.display  = signup ? "none" : "";
+        panelSignup.style.display = signup ? "" : "none";
+        history.replaceState(null, "", signup ? "/login?mode=signup" : "/login");
+      }
+
+      tabLogin.addEventListener("click",  () => activate(false));
+      tabSignup.addEventListener("click", () => activate(true));
+
+      activate(isSignup);
+    </script>
   </body>
 </html>
