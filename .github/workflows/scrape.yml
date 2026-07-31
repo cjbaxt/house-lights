@@ -5,6 +5,9 @@ on:
     - cron: '0 6 * * 1'   # 6am UTC every Monday
   workflow_dispatch:        # manual trigger from GitHub Actions tab
 
+permissions:
+  contents: read
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
