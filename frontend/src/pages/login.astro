@@ -4,6 +4,7 @@ import ClientRouter from "astro/components/ClientRouter.astro";
 
 if (Astro.locals.user) return Astro.redirect("/");
 const error = Astro.url.searchParams.get("error");
+const message = Astro.url.searchParams.get("message");
 ---
 
 <html lang="en">
@@ -22,6 +23,8 @@ const error = Astro.url.searchParams.get("error");
         house lights
       </h1>
       <p class="text-sm text-[#888] mb-8">Amsterdam events</p>
+
+      {message && <p class="text-sm text-[#1a1a1a] mb-6 -mt-2">{decodeURIComponent(message)}</p>}
 
       <form method="POST" action="/api/auth/login" class="space-y-4">
         <input
