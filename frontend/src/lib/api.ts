@@ -147,9 +147,9 @@ export const api = {
     const today = localDateStr();
     const { data, error } = await supabase
       .from("watchlist")
-      .select("id, show_id, status, notes, show:show_id(*)")
+      .select(`id, show_id, status, notes, show:show_id!inner(*)`)
       .gte("show.date", today)
-      .order("show.date", { referencedTable: "show", ascending: true });
+      .order("date", { referencedTable: "show", ascending: true });
     if (error) { console.error(error); return []; }
     return (data ?? []).filter(r => r.show).map(r => ({
       watchlist: { id: r.id, show_id: r.show_id, status: r.status as WatchStatus, notes: r.notes ?? undefined },
@@ -162,7 +162,7 @@ export const api = {
     const today = localDateStr();
     const { data, error } = await supabase
       .from("watchlist")
-      .select("id, show_id, status, notes, show:show_id(*)")
+      .select(`id, show_id, status, notes, show:show_id!inner(*)`)
       .eq("user_id", userId)
       .gte("show.date", today);
     if (error) { console.error(error); return []; }
