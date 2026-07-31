@@ -11,6 +11,21 @@ from sqlmodel import Session, select
 load_dotenv()
 from app.db import engine
 from app.models.core import Show, Venue, Company, Watchlist, City
+import re
+
+def _norm_title(title: str) -> str:
+    t = title.lower()
+    t = re.sub(r"[''`\"]", "", t)
+    t = re.sub(r"[^a-z0-9\s]", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+def find_duplicate_show(session, title: str, venue_id, date) -> "Show | None":
+    """Find an existing show with same normalised title + venue + date (cross-scraper dedup)."""
+    if venue_id is None:
+        return None
+    norm = _norm_title(title)
+    candidates = session.exec(select(Show).where(Show.venue_id == venue_id, Show.date == date)).all()
+    return next((c for c in candidates if _norm_title(c.title) == norm), None)
 from app.venue_matcher import get_or_create_venue
 from app.scrapers.melkweg import MelkwegScraper
 from app.scrapers.bimhuis import BimhuisScraper
@@ -100,11 +115,9 @@ async def run_scraper(scraper_key: str, venue_id=None, company_id=None):
             old = session.exec(select(Show).where(Show.company_id == company_id)).all()
         for show in old:
             if show.source_id not in new_source_ids:
-                # Remove watchlist entries first to avoid FK constraint
-                wl_entries = session.exec(select(Watchlist).where(Watchlist.show_id == show.id)).all()
-                for wl in wl_entries:
-                    session.delete(wl)
-                session.flush()
+                # Keep shows that are on someone's watchlist
+                if session.exec(select(Watchlist).where(Watchlist.show_id == show.id)).first():
+                    continue
                 session.delete(show)
                 removed += 1
 
@@ -133,19 +146,31 @@ async def run_scraper(scraper_key: str, venue_id=None, company_id=None):
                     v = session.get(Venue, resolved_venue_id)
                     if v:
                         city_id = v.city_id
-                session.add(Show(
-                    title=s.title, subtitle=s.subtitle,
-                    venue_id=resolved_venue_id, company_id=company_id,
-                    city_id=city_id,
-                    date=s.date, time=s.time,
-                    type=s.type, url=s.url,
-                    ticket_status=s.ticket_status,
-                    price_from=s.price_from,
-                    description=s.description,
-                    image_url=s.image_url,
-                    source_id=s.source_id,
-                ))
-                inserted += 1
+
+                # Cross-scraper dedup: merge into existing show with same title+venue+date
+                dup = find_duplicate_show(session, s.title, resolved_venue_id, s.date)
+                if dup:
+                    if s.url and not dup.url: dup.url = s.url
+                    if s.ticket_status: dup.ticket_status = s.ticket_status
+                    if s.price_from and not dup.price_from: dup.price_from = s.price_from
+                    if s.image_url and not dup.image_url: dup.image_url = s.image_url
+                    if s.description and not dup.description: dup.description = s.description
+                    session.add(dup)
+                    updated += 1
+                else:
+                    session.add(Show(
+                        title=s.title, subtitle=s.subtitle,
+                        venue_id=resolved_venue_id, company_id=company_id,
+                        city_id=city_id,
+                        date=s.date, time=s.time,
+                        type=s.type, url=s.url,
+                        ticket_status=s.ticket_status,
+                        price_from=s.price_from,
+                        description=s.description,
+                        image_url=s.image_url,
+                        source_id=s.source_id,
+                    ))
+                    inserted += 1
         session.commit()
 
     print(f"  inserted {inserted} new, updated {updated}, removed {removed}")

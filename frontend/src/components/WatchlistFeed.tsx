@@ -4,7 +4,7 @@ import type React from "react";
 import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar } from "@tabler/icons-react";
 import { createClient } from "../lib/supabase/client";
 import { api } from "../lib/api";
-import type { WatchlistEntry, Venue, Company, Show, WatchStatus } from "../lib/api";
+import type { WatchlistEntry, Venue, Show, WatchStatus } from "../lib/api";
 import WatchMenu from "./WatchMenu";
 import CalendarBody from "./CalendarBody";
 
@@ -140,12 +140,12 @@ function GroupedCard({
 export default function WatchlistFeed() {
   const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayView, setDisplayView] = useState<DisplayView>("list");
   const [hideDuplicates, setHideDuplicates] = useState(true);
   const [visibleCount, setVisibleCount] = useState(12);
+  const [calendarToken, setCalendarToken] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -153,17 +153,18 @@ export default function WatchlistFeed() {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
 
-      const [v, c] = await Promise.all([api.getVenues(), api.getCompanies()]);
+      const v = await api.getVenues();
       setVenues(v);
-      setCompanies(c);
 
       if (user) {
-        const [wl, prefs] = await Promise.all([
+        const [wl, prefs, tokenRes] = await Promise.all([
           api.getWatchlist(),
           api.getUserPreferences(),
+          fetch("/api/calendar/token").then(r => r.json()).catch(() => null),
         ]);
         setWatchlist(wl);
         if (prefs) setHideDuplicates(prefs.hide_duplicate_shows ?? true);
+        if (tokenRes?.token) setCalendarToken(tokenRes.token);
       }
     } finally {
       setLoading(false);
@@ -173,7 +174,7 @@ export default function WatchlistFeed() {
   useEffect(() => { load(); }, [load]);
 
   const venueMap = Object.fromEntries(venues.map((v) => [v.id, v.name]));
-  const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
+  const companyMap: Record<string, string> = {};
 
   if (loading) {
     return (
@@ -232,13 +233,16 @@ export default function WatchlistFeed() {
         </div>
 
         <div className="flex items-center gap-3">
-          <a
-            href={api.calendarUrl()}
-            className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
-          >
-            <IconCalendarDown size={13} />
-            Subscribe
-          </a>
+          {calendarToken && (
+            <a
+              href={`webcal://${window.location.host}/api/calendar/${calendarToken}.ics`}
+              className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
+              title="Subscribe in your calendar app"
+            >
+              <IconCalendarDown size={13} />
+              Subscribe
+            </a>
+          )}
           <div className="flex items-center border border-[#ece7de] overflow-hidden">
             {([
               { key: "calendar", icon: <IconCalendar size={13} /> },
