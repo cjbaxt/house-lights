@@ -46,7 +46,6 @@ const isSignup = mode === "signup";
       {message && <p class="text-sm text-[#1a1a1a] mb-6 -mt-2">{decodeURIComponent(message)}</p>}
 
       {!isSignup ? (
-        <!-- Log in form -->
         <form method="POST" action="/api/auth/login" class="space-y-4">
           <input
             type="email"
@@ -76,7 +75,6 @@ const isSignup = mode === "signup";
           <a href="/forgot-password" class="text-[#888] hover:text-[#1a1a1a] transition-colors">Forgot password?</a>
         </p>
       ) : (
-        <!-- Sign up form -->
         <form method="POST" action="/api/auth/register" class="space-y-4">
           <input
             type="email"

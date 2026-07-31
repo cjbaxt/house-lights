@@ -79,13 +79,11 @@ function timeAgo(dateStr: string): string {
         </div>
       </div>
 
-      <!-- Search results (hidden by default) -->
       <div id="search-results" class="hidden mb-8">
         <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-3">Results</div>
         <ul id="search-list" class="space-y-3"></ul>
       </div>
 
-      <!-- Following -->
       {friends.length > 0 && (
         <section class="mb-12">
           <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-3">Following</div>
@@ -108,7 +106,6 @@ function timeAgo(dateStr: string): string {
         </section>
       )}
 
-      <!-- Activity feed -->
       <section>
         <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-3">Activity</div>
         {activityFeed.length === 0 ? (
@@ -161,7 +158,7 @@ function timeAgo(dateStr: string): string {
           </ul>
         )}
       </section>
-      )} <!-- end isLoggedIn -->
+      )}
 
       <script>
         const searchInput = document.getElementById("search-input") as HTMLInputElement;
