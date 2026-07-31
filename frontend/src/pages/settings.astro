@@ -14,15 +14,10 @@ const { data: profile } = await Astro.locals.supabase
 const { data: venuesData } = await Astro.locals.supabase
   .from("venue")
   .select("id, name, priority")
-  .order("name");
-
-const { data: companiesData } = await Astro.locals.supabase
-  .from("company")
-  .select("id, name, priority")
+  .eq("active", true)
   .order("name");
 
 const venues = venuesData ?? [];
-const companies = companiesData ?? [];
 
 const PRIORITY_ORDER = ["high", "medium", "low"];
 const PRIORITY_LABEL: Record<string, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
@@ -33,7 +28,6 @@ const grouped = PRIORITY_ORDER.map(p => ({
   label: PRIORITY_LABEL[p],
   priority: p,
   venues: venues.filter((v: Item) => v.priority === p),
-  companies: companies.filter((c: Item) => c.priority === p),
 }));
 
 const updated = Astro.url.searchParams.get("updated");
@@ -99,10 +93,10 @@ const error = Astro.url.searchParams.get("error");
           <div class="mb-8">
             <div class="text-[10px] uppercase tracking-widest text-[#aaa] mb-3">{group.label}</div>
             <div class="flex flex-wrap gap-2">
-              {[...group.venues.map((v: Item) => ({ ...v, kind: "venue" })), ...group.companies.map((c: Item) => ({ ...c, kind: "company" }))].sort((a, b) => a.name.localeCompare(b.name)).map((item) => (
+              {group.venues.sort((a: Item, b: Item) => a.name.localeCompare(b.name)).map((item: Item) => (
                 <form method="POST" action="/api/venue/priority" class="inline">
                   <input type="hidden" name="id" value={item.id} />
-                  <input type="hidden" name="kind" value={item.kind} />
+                  <input type="hidden" name="kind" value="venue" />
                   <div class="flex items-center gap-0 border border-[#ece7de] bg-white text-xs text-[#555]">
                     <span class="px-3 py-1.5">{item.name}</span>
                     <select

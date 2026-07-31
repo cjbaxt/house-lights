@@ -11,15 +11,10 @@ const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
 const { data: venuesData } = await Astro.locals.supabase
   .from("venue")
   .select("id, name, priority, website_url")
-  .order("name");
-
-const { data: companiesData } = await Astro.locals.supabase
-  .from("company")
-  .select("id, name, priority, website_url")
+  .eq("active", true)
   .order("name");
 
 const venues = venuesData ?? [];
-const companies = companiesData ?? [];
 
 const PRIORITY_LABEL: Record<string, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
 const PRIORITY_ORDER = ["high", "medium", "low"];
@@ -28,10 +23,9 @@ type VenueItem = { id: string; name: string; priority: string; website_url?: str
 
 const grouped = PRIORITY_ORDER.map(p => ({
   label: PRIORITY_LABEL[p],
-  items: [
-    ...venues.filter((v: VenueItem) => v.priority === p),
-    ...companies.filter((c: VenueItem) => c.priority === p),
-  ].sort((a: VenueItem, b: VenueItem) => a.name.localeCompare(b.name)),
+  items: venues
+    .filter((v: VenueItem) => v.priority === p)
+    .sort((a: VenueItem, b: VenueItem) => a.name.localeCompare(b.name)),
 })).filter(g => g.items.length > 0);
 ---
 

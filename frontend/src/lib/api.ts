@@ -24,7 +24,7 @@ export interface Show {
 export interface Venue {
   id: string;
   name: string;
-  city: string;
+  city_id?: string;
   website_url?: string;
   priority: "high" | "medium" | "low";
   address?: string;
@@ -35,12 +35,13 @@ export interface Venue {
   image_url?: string;
 }
 
-export interface Company {
+export interface City {
   id: string;
   name: string;
-  website_url?: string;
-  priority: "high" | "medium" | "low";
-  description?: string;
+  slug: string;
+  country: string;
+  timezone: string;
+  is_active: boolean;
 }
 
 export interface WatchlistEntry {
@@ -78,20 +79,41 @@ export const api = {
     const supabase = createClient();
     const { data } = await supabase
       .from("venue")
-      .select("*")
+      .select("id,name,city_id,website_url,priority,address,neighbourhood,venue_type,capacity,description,image_url")
       .eq("active", true)
       .order("name");
     return (data ?? []) as Venue[];
   },
 
-  async getCompanies(): Promise<Company[]> {
+  async getCities(): Promise<City[]> {
     const supabase = createClient();
     const { data } = await supabase
-      .from("company")
+      .from("city")
       .select("*")
-      .eq("active", true)
       .order("name");
-    return (data ?? []) as Company[];
+    return (data ?? []) as City[];
+  },
+
+  async getUserPreferences(): Promise<{ hide_duplicate_shows: boolean; default_city_id?: string } | null> {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase
+      .from("user_preferences")
+      .select("hide_duplicate_shows, default_city_id")
+      .eq("user_id", user.id)
+      .single();
+    return data ?? null;
+  },
+
+  async updateUserPreferences(prefs: Partial<{ hide_duplicate_shows: boolean; default_city_id: string }>) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase
+      .from("user_preferences")
+      .update(prefs)
+      .eq("user_id", user.id);
   },
 
   // ----------------------------------------------------------------
