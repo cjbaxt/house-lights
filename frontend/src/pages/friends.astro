@@ -3,13 +3,13 @@ import "../styles/global.css";
 import Nav from "../components/Nav";
 import ClientRouter from "astro/components/ClientRouter.astro";
 
-if (!Astro.locals.user) return Astro.redirect("/login");
+const isLoggedIn = !!Astro.locals.user;
 
 // Get friends (people this user follows)
-const { data: friendships } = await Astro.locals.supabase
+const { data: friendships } = isLoggedIn ? await Astro.locals.supabase
   .from("friendship")
   .select("friend_id, profile:friend_id(id, username, display_name, avatar_url)")
-  .eq("user_id", Astro.locals.user.id);
+  .eq("user_id", Astro.locals.user!.id) : { data: null };
 
 const friends = (friendships ?? []).map((f: any) => f.profile).filter(Boolean);
 
@@ -51,6 +51,22 @@ function timeAgo(dateStr: string): string {
   <body class="bg-[#f5f3ef] min-h-screen">
     <Nav current="/friends" client:load transition:persist />
     <main class="max-w-xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
+
+      {!isLoggedIn && (
+        <div class="flex flex-col items-center justify-center h-64 gap-4 text-center">
+          <p class="text-sm text-[#888]">Sign up to follow friends and see their watchlist activity.</p>
+          <div class="flex items-center gap-3">
+            <a href="/login?mode=signup" class="text-xs uppercase tracking-widest font-bold text-white bg-[#1a1a1a] border border-[#1a1a1a] px-4 py-2 hover:bg-[#333] transition-colors">
+              Sign up
+            </a>
+            <a href="/login" class="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">
+              Log in
+            </a>
+          </div>
+        </div>
+      )}
+
+      {isLoggedIn && (
       <div class="flex items-center justify-between mb-8">
         <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a]">Friends</h1>
         <div class="flex items-center gap-4">
@@ -145,6 +161,7 @@ function timeAgo(dateStr: string): string {
           </ul>
         )}
       </section>
+      )} <!-- end isLoggedIn -->
 
       <script>
         const searchInput = document.getElementById("search-input") as HTMLInputElement;

@@ -187,10 +187,15 @@ export default function WatchlistFeed() {
   if (!currentUser) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
-        <p className="text-sm text-[#888]">Sign in to build your watchlist.</p>
-        <a href="/login" className="text-xs uppercase tracking-widest font-bold text-[#1a1a1a] border border-[#1a1a1a] px-4 py-2 hover:bg-[#1a1a1a] hover:text-white transition-colors">
-          Sign in
-        </a>
+        <p className="text-sm text-[#888]">Build a watchlist of shows you want to see.</p>
+        <div className="flex items-center gap-3">
+          <a href="/login?mode=signup" className="text-xs uppercase tracking-widest font-bold text-white bg-[#1a1a1a] border border-[#1a1a1a] px-4 py-2 hover:bg-[#333] transition-colors">
+            Sign up
+          </a>
+          <a href="/login" className="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">
+            Log in
+          </a>
+        </div>
       </div>
     );
   }
