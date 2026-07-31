@@ -12,7 +12,7 @@ import httpx
 import asyncio
 from html.parser import HTMLParser
 from datetime import date, datetime
-from .base import BaseScraper, ScrapedShow
+from .base import BaseScraper, ScrapedShow, infer_type
 
 BASE_URL = "https://carre.nl"
 API_BASE = "https://carre.nl/api/render"
@@ -101,7 +101,7 @@ def _extract_shows(data: dict, slug: str, today: date) -> list[ScrapedShow]:
                 time=dt.time() if dt.time().hour != 0 or dt.time().minute != 0 else None,
                 url=url,
                 source_id=f"carre:{slug}:{d.isoformat()}",
-                type="theatre",
+                type=infer_type(title, description or ""),
                 ticket_status=_ticket_status(event),
                 image_url=image_url,
                 description=description,

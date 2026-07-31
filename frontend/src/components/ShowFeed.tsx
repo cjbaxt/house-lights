@@ -16,7 +16,7 @@ const MONTH_NAMES = [
 type Timeframe = "today" | "week" | "month" | "all" | "custom";
 type DisplayView = "programme" | "agenda" | "calendar";
 
-const ALL_TYPES = ["music", "classical", "theatre", "comedy", "ballet", "dance", "opera", "other"];
+const ALL_TYPES = ["music", "classical", "theatre", "comedy", "ballet", "dance", "opera", "cabaret", "circus", "spoken_word", "talk", "other"];
 
 function localDateStr(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
