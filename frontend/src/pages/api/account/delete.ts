@@ -21,11 +21,14 @@ export const POST: APIRoute = async ({ locals }) => {
     }
 
     const { error } = await admin.auth.admin.deleteUser(locals.user.id);
-    if (error) return new Response(error.message, { status: 500 });
+    if (error) {
+      console.error("delete account deleteUser error:", error);
+      return new Response("Internal server error", { status: 500 });
+    }
 
     return new Response("OK");
   } catch (e) {
     console.error("delete account error:", e);
-    return new Response(String(e), { status: 500 });
+    return new Response("Internal server error", { status: 500 });
   }
 };
