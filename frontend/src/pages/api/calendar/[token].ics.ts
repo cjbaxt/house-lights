@@ -12,11 +12,12 @@ function escapeIcs(str: string): string {
 }
 
 export const GET: APIRoute = async ({ params }) => {
+  try {
   const { token } = params;
-  const secret = import.meta.env.CALENDAR_SECRET ?? import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = import.meta.env.CALENDAR_SECRET ?? import.meta.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) return new Response("Server misconfiguration", { status: 500 });
 
-  // Derive user_id by checking all users — instead, encode userId in token URL as userId.token
-  // Token URL format: /api/calendar/{userId}-{token}.ics
+  // Token URL format: /api/calendar/{userId}-{hmac}.ics
   const match = (token ?? "").match(/^([0-9a-f-]{36})-([0-9a-f]{64})$/);
   if (!match) return new Response("Invalid token", { status: 400 });
 
@@ -77,4 +78,8 @@ export const GET: APIRoute = async ({ params }) => {
       "Cache-Control": "no-cache",
     },
   });
+  } catch (e) {
+    console.error("ICS error:", e);
+    return new Response(String(e), { status: 500 });
+  }
 };
