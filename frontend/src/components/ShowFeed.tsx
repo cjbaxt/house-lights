@@ -662,6 +662,7 @@ function clearAll() {
                             watchStatus={watchMap[show.id]}
                             onWatchChange={loadWatchlist}
                             currentUser={currentUser}
+                            hideDate
                           />
                         ))}
                       </div>
