@@ -101,7 +101,7 @@ export const GET: APIRoute = async ({ params }) => {
       "VERSION:2.0",
       "PRODID:-//house-lights//EN",
       `X-WR-CALNAME:${calName}`,
-      "X-WR-CALDESC:Amsterdam events watchlist from houselights.claireheaded.com",
+      "X-WR-CALDESC:Arts events watchlist from houselights.claireheaded.com",
       "REFRESH-INTERVAL;VALUE=DURATION:P1D",
       "X-PUBLISHED-TTL:P1D",
     ];

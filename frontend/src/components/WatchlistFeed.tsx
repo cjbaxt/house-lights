@@ -22,16 +22,57 @@ interface ShowGroup {
 
 const DATE_CHIPS_LIMIT = 5;
 
+interface FriendWatch {
+  profile: { id: string; username: string; display_name?: string | null; avatar_url?: string | null };
+  status: string;
+}
+
+function FriendAvatars({ friends }: { friends: FriendWatch[] }) {
+  if (friends.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {friends.map(({ profile, status }) => {
+        const name = profile.display_name ?? profile.username;
+        const initials = name.slice(0, 2).toUpperCase();
+        const label = status === "tickets_bought" ? `${name} — got tickets` : `${name} — interested`;
+        return (
+          <a
+            key={profile.id}
+            href={`/u/${profile.username}`}
+            title={label}
+            className="group/avatar relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-5 h-5 rounded-full overflow-hidden bg-[#f0ede8] flex items-center justify-center ring-1 ring-white">
+              {profile.avatar_url
+                ? <img src={profile.avatar_url} alt={name} className="w-full h-full object-cover" />
+                : <span className="text-[7px] font-bold text-[#888]">{initials}</span>
+              }
+            </div>
+            {status === "tickets_bought" && (
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#e85d2f] rounded-full border border-white flex items-center justify-center">
+                <span className="text-[5px] text-white font-bold">✓</span>
+              </span>
+            )}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 function GroupedCard({
   group,
   venueMap,
   companyMap,
   onWatchChange,
+  friendWatches,
 }: {
   group: ShowGroup;
   venueMap: Record<string, string>;
   companyMap: Record<string, string>;
   onWatchChange: () => void;
+  friendWatches: FriendWatch[];
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
@@ -72,6 +113,11 @@ function GroupedCard({
               {show.title}
             </div>
             {show.subtitle && <div className="text-xs text-[#888] mt-0.5 line-clamp-2">{show.subtitle}</div>}
+            {friendWatches.length > 0 && (
+              <div className="mt-1.5">
+                <FriendAvatars friends={friendWatches} />
+              </div>
+            )}
           </div>
         </a>
         <div className="relative flex-shrink-0">
@@ -146,6 +192,7 @@ export default function WatchlistFeed() {
   const [hideDuplicates, setHideDuplicates] = useState(true);
   const [visibleCount, setVisibleCount] = useState(12);
   const [calendarToken, setCalendarToken] = useState<string | null>(null);
+  const [friendWatchMap, setFriendWatchMap] = useState<Record<string, FriendWatch[]>>({});
 
   const load = useCallback(async () => {
     try {
@@ -165,6 +212,15 @@ export default function WatchlistFeed() {
         setWatchlist(wl);
         if (prefs) setHideDuplicates(prefs.hide_duplicate_shows ?? true);
         if (tokenRes?.token) setCalendarToken(tokenRes.token);
+
+        // Fetch friend watches for all show IDs in the watchlist
+        if (wl.length > 0) {
+          const showIds = [...new Set(wl.map((e) => e.show.id))].join(",");
+          const fw = await fetch(`/api/watchlist/friend-watches?show_ids=${showIds}`)
+            .then((r) => r.json())
+            .catch(() => ({}));
+          setFriendWatchMap(fw);
+        }
       }
     } finally {
       setLoading(false);
@@ -295,6 +351,7 @@ export default function WatchlistFeed() {
               venueMap={venueMap}
               companyMap={companyMap}
               onWatchChange={load}
+              friendWatches={group.entries.flatMap((e) => friendWatchMap[e.show.id] ?? [])}
             />
           ))}
           {visibleCount < sortedGroups.length && (
