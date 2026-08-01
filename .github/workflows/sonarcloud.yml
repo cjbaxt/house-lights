@@ -1,0 +1,38 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# Setup:
+# 1. Sign up at sonarcloud.io with your GitHub account
+# 2. Import this repo as a new project
+# 3. Copy the Project Key and Organization Key (Information > bottom-left)
+# 4. Add SONAR_TOKEN as a GitHub Actions secret
+# 5. Fill in projectKey and organization below
+
+name: SonarCloud analysis
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read
+
+jobs:
+  Analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Analyze with SonarCloud
+        uses: SonarSource/sonarcloud-github-action@4006f663ecaf1f8093e8e4abb9227f6041f52216 # v3.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args:
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+          projectBaseDir: .

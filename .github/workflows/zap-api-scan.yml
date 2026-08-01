@@ -1,0 +1,49 @@
+# OWASP ZAP API security scan — replacement for EthicalCheck (action deleted upstream)
+# ZAP tests the backend API for OWASP API Top 10 vulnerabilities using the OpenAPI spec.
+#
+# Setup:
+# 1. Add ZAP_API_URL as a GitHub Actions secret pointing to your deployed API base URL
+#    e.g. https://your-backend.vercel.app
+# 2. Ensure /openapi.json (or /docs) is publicly accessible on that URL
+
+name: ZAP API Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '42 1 * * 5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap-api-scan:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: ZAP API Scan
+        uses: zaproxy/action-api-scan@5158fe4d9d8fcc75ea204db81317cce7f9e5453d # v0.10.0
+        with:
+          target: ${{ secrets.ZAP_API_URL }}/openapi.json
+          format: openapi
+          fail_action: false
+          cmd_options: '-a'
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@a2983b8bed1923f44751c5c43237f479442827b3 # v3
+        with:
+          sarif_file: zap.sarif
+        if: always()
