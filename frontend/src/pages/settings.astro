@@ -87,16 +87,22 @@ const error = Astro.url.searchParams.get("error");
         <form method="POST" action="/api/profile/update" class="space-y-5">
           <div>
             <label class="block text-xs uppercase tracking-widest text-[#888] mb-2">Username</label>
-            <input
-              type="text"
-              name="username"
-              value={profile?.username ?? ""}
-              required
-              pattern="[a-z0-9_-]+"
-              title="Lowercase letters, numbers, hyphens and underscores only"
-              class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
-            />
-            <p class="text-xs text-[#aaa] mt-1">Lowercase letters, numbers, - and _ only</p>
+            <div class="relative">
+              <input
+                id="settings-username"
+                type="text"
+                name="username"
+                value={profile?.username ?? ""}
+                required
+                minlength="2"
+                maxlength="30"
+                pattern="[a-z0-9_-]+"
+                title="Lowercase letters, numbers, hyphens and underscores only"
+                class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors pr-8"
+              />
+              <span id="settings-username-status" class="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold"></span>
+            </div>
+            <p id="settings-username-hint" class="text-xs text-[#aaa] mt-1">Lowercase letters, numbers, - and _ only</p>
           </div>
           <div>
             <label class="block text-xs uppercase tracking-widest text-[#888] mb-2">Display name</label>
@@ -214,6 +220,50 @@ const error = Astro.url.searchParams.get("error");
           </div>
         </div>
       </section>
+
+      <script>
+        // Real-time username availability check
+        const usernameInput = document.getElementById("settings-username") as HTMLInputElement;
+        const usernameStatus = document.getElementById("settings-username-status") as HTMLSpanElement;
+        const usernameHint = document.getElementById("settings-username-hint") as HTMLParagraphElement;
+        let uDebounce: ReturnType<typeof setTimeout>;
+        const originalUsername = usernameInput?.value ?? "";
+
+        usernameInput?.addEventListener("input", () => {
+          clearTimeout(uDebounce);
+          const val = usernameInput.value.trim().toLowerCase();
+          if (!val || val === originalUsername) {
+            usernameStatus.textContent = "";
+            usernameHint.textContent = "Lowercase letters, numbers, - and _ only";
+            usernameHint.className = "text-xs text-[#aaa] mt-1";
+            return;
+          }
+          if (!/^[a-z0-9_-]+$/.test(val) || val.length < 2 || val.length > 30) {
+            usernameStatus.textContent = "✗";
+            usernameStatus.className = "absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#e85d2f]";
+            usernameHint.textContent = "2–30 characters: letters, numbers, - and _ only";
+            usernameHint.className = "text-xs text-[#e85d2f] mt-1";
+            return;
+          }
+          usernameStatus.textContent = "…";
+          usernameStatus.className = "absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#aaa]";
+          uDebounce = setTimeout(async () => {
+            const res = await fetch(`/api/users/check-username?username=${encodeURIComponent(val)}`);
+            const { available } = await res.json();
+            if (available) {
+              usernameStatus.textContent = "✓";
+              usernameStatus.className = "absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-green-600";
+              usernameHint.textContent = "Lowercase letters, numbers, - and _ only";
+              usernameHint.className = "text-xs text-[#aaa] mt-1";
+            } else {
+              usernameStatus.textContent = "✗";
+              usernameStatus.className = "absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#e85d2f]";
+              usernameHint.textContent = "That username is already taken";
+              usernameHint.className = "text-xs text-[#e85d2f] mt-1";
+            }
+          }, 400);
+        });
+      </script>
 
       <script>
         document.getElementById("delete-account-btn")?.addEventListener("click", async () => {

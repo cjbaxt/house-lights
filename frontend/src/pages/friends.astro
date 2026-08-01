@@ -108,7 +108,10 @@ function timeAgo(dateStr: string): string {
                       : <span class="text-[9px] font-bold text-[#888]">{initials}</span>
                     }
                   </div>
-                  <span class="text-xs text-[#1a1a1a]">{f.display_name ?? f.username}</span>
+                  <div>
+                    <div class="text-xs text-[#1a1a1a]">{f.display_name ?? f.username}</div>
+                    {f.display_name && <div class="text-[10px] text-[#aaa]">@{f.username}</div>}
+                  </div>
                 </a>
               );
             })}

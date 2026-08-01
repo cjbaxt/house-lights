@@ -87,12 +87,13 @@ create index venue_city_id_idx  on venue(city_id);
 -- ============================================================
 
 create table profile (
-  id           uuid primary key references auth.users on delete cascade,
-  username     text unique not null,
-  display_name text,
-  avatar_url   text,
-  is_public    boolean not null default true,
-  created_at   timestamptz not null default now()
+  id                 uuid primary key references auth.users on delete cascade,
+  username           text unique not null,
+  display_name       text,
+  avatar_url         text,
+  is_public          boolean not null default true,
+  username_confirmed boolean not null default false,
+  created_at         timestamptz not null default now()
 );
 
 create table user_preferences (
@@ -215,12 +216,8 @@ declare
 begin
   select id into amsterdam_id from city where slug = 'amsterdam';
 
-  insert into public.profile (id, username, display_name)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
-    coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1))
-  );
+  insert into public.profile (id, username, display_name, username_confirmed)
+  values (new.id, new.id::text, null, false);
 
   insert into public.user_preferences (user_id)
   values (new.id);
