@@ -18,7 +18,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await locals.supabase.from("friendship").upsert({
       user_id: locals.user.id,
       friend_id: targetId,
-      status: "accepted",
     });
   } else {
     await locals.supabase
