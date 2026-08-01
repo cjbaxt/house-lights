@@ -11,6 +11,9 @@
 # https://pypi.org/project/bandit/ is Apache v2.0 licensed, by PyCQA
 
 name: Bandit
+
+permissions: read-all
+
 on:
   push:
     branches: [ "main" ]
