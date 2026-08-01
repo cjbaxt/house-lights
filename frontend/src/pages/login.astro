@@ -46,7 +46,7 @@ const isSignup = mode === "signup";
       {error && <p class="text-xs text-[#e85d2f] mb-4">{decodeURIComponent(error)}</p>}
 
       <!-- Log in form -->
-      <div id="panel-login">
+      <div id="panel-login" style={isSignup ? "display:none" : ""}>
         <form method="POST" action="/api/auth/login" class="space-y-4">
           <input type="email" name="email" placeholder="Email" required autocomplete="email"
             class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
@@ -63,7 +63,7 @@ const isSignup = mode === "signup";
       </div>
 
       <!-- Sign up form -->
-      <div id="panel-signup">
+      <div id="panel-signup" style={!isSignup ? "display:none" : ""}>
         <form method="POST" action="/api/auth/register" class="space-y-4">
           <input type="email" name="email" placeholder="Email" required autocomplete="email"
             class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
