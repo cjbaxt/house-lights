@@ -5,6 +5,7 @@ import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalenda
 import { createClient } from "../lib/supabase/client";
 import { api } from "../lib/api";
 import type { WatchlistEntry, Venue, Show, WatchStatus } from "../lib/api";
+import type { GuestWatchEntry } from "../lib/guest-watchlist";
 import WatchMenu from "./WatchMenu";
 import CalendarBody from "./CalendarBody";
 
@@ -185,6 +186,7 @@ function GroupedCard({
 
 export default function WatchlistFeed() {
   const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
+  const [guestWatchlist, setGuestWatchlist] = useState<GuestWatchEntry[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -204,6 +206,10 @@ export default function WatchlistFeed() {
       setVenues(v);
 
       if (user) {
+        // Merge any guest items accumulated before login
+        await api.mergeGuestWatchlist().catch(() => {});
+        setGuestWatchlist([]);
+
         const [wl, prefs, tokenRes] = await Promise.all([
           api.getWatchlist(),
           api.getUserPreferences(),
@@ -213,7 +219,6 @@ export default function WatchlistFeed() {
         if (prefs) setHideDuplicates(prefs.hide_duplicate_shows ?? true);
         if (tokenRes?.token) setCalendarToken(tokenRes.token);
 
-        // Fetch friend watches for all show IDs in the watchlist
         if (wl.length > 0) {
           const showIds = [...new Set(wl.map((e) => e.show.id))].join(",");
           const fw = await fetch(`/api/watchlist/friend-watches?show_ids=${showIds}`)
@@ -221,6 +226,9 @@ export default function WatchlistFeed() {
             .catch(() => ({}));
           setFriendWatchMap(fw);
         }
+      } else {
+        const { getGuestWatchlist } = await import("../lib/guest-watchlist");
+        setGuestWatchlist(getGuestWatchlist());
       }
     } finally {
       setLoading(false);
@@ -242,16 +250,69 @@ export default function WatchlistFeed() {
 
   if (!currentUser) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
-        <p className="text-sm text-[#888]">Build a watchlist of shows you want to see.</p>
-        <div className="flex items-center gap-3">
-          <a href="/login?mode=signup" className="text-xs uppercase tracking-widest font-bold text-white bg-[#1a1a1a] border border-[#1a1a1a] px-4 py-2 hover:bg-[#333] transition-colors">
-            Sign up
-          </a>
-          <a href="/login" className="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">
-            Log in
-          </a>
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[11px] uppercase tracking-widest text-neutral-400">
+            {guestWatchlist.length} show{guestWatchlist.length !== 1 ? "s" : ""}
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="/login?mode=signup" className="text-xs uppercase tracking-widest font-bold text-white bg-[#1a1a1a] border border-[#1a1a1a] px-3 py-1.5 hover:bg-[#333] transition-colors">
+              Sign up to save
+            </a>
+            <a href="/login" className="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">
+              Log in
+            </a>
+          </div>
         </div>
+        {guestWatchlist.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
+            <p className="text-sm text-[#888]">Browse shows and bookmark anything you want to see.</p>
+            <p className="text-xs text-[#aaa]">Your watchlist is saved locally — sign up to keep it across devices.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {guestWatchlist
+              .slice()
+              .sort((a, b) => a.snapshot.date.localeCompare(b.snapshot.date))
+              .map((entry) => {
+                const d = new Date(entry.snapshot.date + "T00:00:00");
+                return (
+                  <div key={entry.show_id} className="flex items-center gap-4 px-4 py-3 border-b border-[#ece7de] hover:bg-white transition-colors group border-l-2 border-l-[#e85d2f]">
+                    <div className="flex-shrink-0 w-10 text-center">
+                      <div className="text-xl font-black leading-none text-[#e85d2f]">{d.getDate()}</div>
+                      <div className="text-[9px] font-bold tracking-widest text-[#bbb] mt-0.5">
+                        {d.toLocaleString("en-GB", { month: "short" }).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="w-px h-10 bg-[#ece7de] flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-0.5">
+                        {entry.snapshot.type ?? "other"}{entry.snapshot.venue_name ? ` · ${entry.snapshot.venue_name}` : ""}
+                        {entry.snapshot.time && <span className="text-[#bbb] font-normal normal-case tracking-normal ml-2">{entry.snapshot.time.slice(0, 5)}</span>}
+                      </div>
+                      <div className="font-sans font-bold text-sm text-[#1a1a1a] uppercase tracking-tight leading-tight truncate">
+                        {entry.snapshot.title || entry.show_id}
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const { removeGuestWatch, getGuestWatchlist } = await import("../lib/guest-watchlist");
+                        removeGuestWatch(entry.show_id);
+                        setGuestWatchlist(getGuestWatchlist());
+                      }}
+                      className="flex-shrink-0 p-1 hover:bg-[#ece7de] transition-colors"
+                      title="Remove from watchlist"
+                    >
+                      <IconBookmarkFilled size={15} className="text-[#e85d2f]" />
+                    </button>
+                  </div>
+                );
+              })}
+            <p className="text-[10px] text-[#aaa] mt-4 text-center">
+              Sign up to sync across devices and see what your friends are watching.
+            </p>
+          </div>
+        )}
       </div>
     );
   }

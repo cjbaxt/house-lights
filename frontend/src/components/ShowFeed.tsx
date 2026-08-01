@@ -54,21 +54,23 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
 
   async function handleBookmark(e: React.MouseEvent) {
     e.preventDefault();
-    if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign up or log in to add things to your watchlist."); return; }
     if (anyWatched) {
       await Promise.all(allDates.map(d => api.removeWatch(d.id)));
     } else {
-      await Promise.all(allDates.map(d => api.upsertWatch(d.id, "interested")));
+      await Promise.all(allDates.map(d => api.upsertWatch(d.id, "interested", {
+        snapshot: { title: show.title, date: d.date, type: show.type ?? undefined, venue_name: location || undefined, url: show.url ?? undefined, time: d.time ?? undefined },
+      })));
     }
     onWatchChange();
   }
 
-  async function handleMarkBought(e: React.MouseEvent, showId: string) {
+  async function handleMarkBought(e: React.MouseEvent, showId: string, date: string, time?: string) {
     e.preventDefault();
     e.stopPropagation();
-    if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign up or log in to add things to your watchlist."); return; }
     const current = watchMap[showId];
-    await api.upsertWatch(showId, current === "tickets_bought" ? "interested" : "tickets_bought");
+    await api.upsertWatch(showId, current === "tickets_bought" ? "interested" : "tickets_bought", {
+      snapshot: { title: show.title, date, type: show.type ?? undefined, venue_name: location || undefined, url: show.url ?? undefined, time: time ?? undefined },
+    });
     onWatchChange();
   }
 
@@ -126,7 +128,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
                 {label}{time ? ` ${time.slice(0, 5)}` : ""}
               </a>
               {anyWatched && (
-                <button onClick={(e) => handleMarkBought(e, id)}
+                <button onClick={(e) => handleMarkBought(e, id, date, time ?? undefined)}
                   title={isBought ? "Unmark as bought" : "Mark tickets bought"}
                   className={`p-0.5 transition-colors ${isBought ? "text-[#e85d2f]" : "text-[#d4c9b8] hover:text-[#888]"}`}
                 >
@@ -213,6 +215,7 @@ export default function ShowFeed() {
   const [cities, setCities] = useState<City[]>([]);
   const [activeCityId, setActiveCityId] = useState<string | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
+  const [guestWatchMap, setGuestWatchMap] = useState<Record<string, WatchStatus>>({});
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
@@ -285,9 +288,17 @@ export default function ShowFeed() {
   }, [buildShowsUrl, displayView, pageSize]);
 
   const loadWatchlist = useCallback(async () => {
-    const wl = await api.getWatchlist();
-    setWatchlist(wl);
-  }, []);
+    if (currentUser) {
+      const wl = await api.getWatchlist();
+      setWatchlist(wl);
+    } else {
+      const { getGuestWatchlist } = await import("../lib/guest-watchlist");
+      const guest = getGuestWatchlist();
+      const map: Record<string, WatchStatus> = {};
+      for (const e of guest) map[e.show_id] = e.status;
+      setGuestWatchMap(map);
+    }
+  }, [currentUser]);
 
   // Initial load: user, venues, watchlist, then shows
   useEffect(() => {
@@ -305,6 +316,17 @@ export default function ShowFeed() {
       ]);
       setVenues(v);
       setWatchlist(w);
+      if (!user) {
+        const { getGuestWatchlist } = await import("../lib/guest-watchlist");
+        const guest = getGuestWatchlist();
+        const gm: Record<string, WatchStatus> = {};
+        for (const e of guest) gm[e.show_id] = e.status;
+        setGuestWatchMap(gm);
+      } else {
+        // Merge any localStorage items accumulated before login
+        api.mergeGuestWatchlist().catch(() => {});
+        setGuestWatchMap({});
+      }
       setCities(allCities);
       setHiddenVenueIds(new Set(hiddenIds));
 
@@ -351,8 +373,11 @@ export default function ShowFeed() {
   const venueMap = useMemo(() => Object.fromEntries(venues.map((v) => [v.id, v])), [venues]);
   const venueNameMap = useMemo(() => Object.fromEntries(venues.map((v) => [v.id, v.name])), [venues]);
   const watchMap = useMemo(
-    () => Object.fromEntries(watchlist.map((w) => [w.show.id, w.watchlist.status as WatchStatus])),
-    [watchlist]
+    () => ({
+      ...guestWatchMap,
+      ...Object.fromEntries(watchlist.map((w) => [w.show.id, w.watchlist.status as WatchStatus])),
+    }),
+    [watchlist, guestWatchMap]
   );
 
   const visibleVenues = useMemo(

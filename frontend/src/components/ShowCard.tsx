@@ -92,7 +92,7 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
       {/* Bookmark */}
       <div className="relative flex-shrink-0 flex items-center pr-3">
         <button
-          onClick={(e) => { e.stopPropagation(); if (!currentUser) { window.location.href = "/login?message=" + encodeURIComponent("Sign up or log in to add things to your watchlist."); return; } setMenuOpen((o) => !o); }}
+          onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
           className="p-1 hover:bg-[#ece7de] transition-colors"
         >
           {isWatched
@@ -106,7 +106,16 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
             current={watchStatus}
             onSelect={async (status) => {
               if (status === null) await api.removeWatch(show.id);
-              else await api.upsertWatch(show.id, status);
+              else await api.upsertWatch(show.id, status, {
+                snapshot: {
+                  title: show.title,
+                  date: show.date,
+                  type: show.type ?? undefined,
+                  venue_name: venueName ?? companyName,
+                  url: show.url ?? undefined,
+                  time: show.time ?? undefined,
+                },
+              });
               setMenuOpen(false);
               onWatchChange?.();
             }}
