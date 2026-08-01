@@ -5,7 +5,7 @@ export const POST: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response("Unauthorized", { status: 401 });
 
   const admin = createClient(
-    import.meta.env.SUPABASE_URL,
+    import.meta.env.SUPABASE_URL ?? import.meta.env.PUBLIC_SUPABASE_URL,
     import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } }
   );

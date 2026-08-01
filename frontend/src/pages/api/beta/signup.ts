@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const admin = createClient(
-    import.meta.env.SUPABASE_URL,
+    import.meta.env.SUPABASE_URL ?? import.meta.env.PUBLIC_SUPABASE_URL,
     import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } }
   );
@@ -50,7 +50,7 @@ export const POST: APIRoute = async ({ request }) => {
 
 export const GET: APIRoute = async () => {
   const admin = createClient(
-    import.meta.env.SUPABASE_URL,
+    import.meta.env.SUPABASE_URL ?? import.meta.env.PUBLIC_SUPABASE_URL,
     import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } }
   );
