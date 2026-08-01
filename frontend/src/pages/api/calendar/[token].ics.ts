@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ params }) => {
   if (sig !== expected) return new Response("Invalid token", { status: 401 });
 
   const supabase = createClient(
-    import.meta.env.SUPABASE_URL,
+    import.meta.env.SUPABASE_URL ?? import.meta.env.PUBLIC_SUPABASE_URL,
     import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } }
   );
