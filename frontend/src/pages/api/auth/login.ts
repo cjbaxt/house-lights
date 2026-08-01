@@ -8,7 +8,10 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   const { error } = await locals.supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return redirect(`/login?error=${encodeURIComponent("Invalid email or password")}`);
+    const msg = error.message?.toLowerCase().includes("email")
+      ? "Please confirm your email address before logging in. Check your inbox."
+      : "Invalid email or password";
+    return redirect(`/login?error=${encodeURIComponent(msg)}`);
   }
 
   return redirect("/");
