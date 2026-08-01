@@ -1,0 +1,38 @@
+---
+import "../styles/global.css";
+
+// If already confirmed and logged in, no need to be here
+if (Astro.locals.user) return Astro.redirect("/");
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Check your email — house lights</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#f5f0e8] min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-xs px-6 text-center">
+      <h1 class="font-sans font-black text-2xl uppercase tracking-tight text-[#1a1a1a] mb-1">
+        house lights
+      </h1>
+      <p class="text-sm text-[#888] mb-10">Amsterdam events</p>
+
+      <div class="mb-8">
+        <div class="text-4xl mb-4">✉️</div>
+        <h2 class="font-bold text-base text-[#1a1a1a] mb-3">Check your inbox</h2>
+        <p class="text-sm text-[#555] leading-relaxed">
+          We've sent you a confirmation link. Click it to activate your account, then come back to choose your username.
+        </p>
+      </div>
+
+      <p class="text-xs text-[#bbb]">
+        Already confirmed?{" "}
+        <a href="/login" class="text-[#888] hover:text-[#1a1a1a] transition-colors underline">Log in</a>
+      </p>
+    </div>
+  </body>
+</html>
