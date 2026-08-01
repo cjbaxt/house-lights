@@ -18,96 +18,149 @@ import ClientRouter from "astro/components/ClientRouter.astro";
     <Nav current="/privacy" client:load transition:persist />
     <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 text-sm text-[#555] leading-relaxed">
       <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a] mb-2">Privacy policy</h1>
-      <p class="text-xs text-[#aaa] mb-10">Last updated July 2026</p>
+      <p class="text-xs text-[#aaa] mb-10">Last updated August 2026</p>
 
       <p class="mb-6">
-        house lights is an arts events tracker. This policy explains what data we collect, why, how long we keep it, and what you can do with it. It is written in plain English, not legalese.
+        house lights is an arts events tracker for Amsterdam and beyond. This policy explains what data we collect, why we collect it, how long we keep it, and what rights you have over it. It is written in plain English.
       </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Who is responsible for your data</h2>
+      <p class="mb-2">
+        The data controller is <strong class="text-[#1a1a1a]">Claire Baxter</strong>, operating house lights as a personal project based in the Netherlands.
+      </p>
       <p class="mb-6">
-        Claire Baxter, operating house lights as a personal project. Contact: <a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a>.
+        Contact: <a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a>
       </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">What we collect and why</h2>
 
       <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Account data</p>
-      <ul class="space-y-2 mb-6">
+      <ul class="space-y-2 mb-4">
         <li>— Your email address — to sign in and to contact you if needed</li>
-        <li>— A password (hashed, never stored in plain text)</li>
+        <li>— A password (hashed by Supabase using bcrypt, never stored or seen in plain text)</li>
         <li>— A username and optional display name — to identify you to other users</li>
-        <li>— An optional profile photo — shown on your profile</li>
+        <li>— An optional profile photo — shown on your public profile</li>
       </ul>
-      <p class="text-xs text-[#aaa] mb-8">Legal basis: contract — these are necessary to provide the service you've signed up for.</p>
+      <p class="text-xs text-[#aaa] mb-8">Legal basis: contract (Article 6(1)(b) GDPR) — these are necessary to provide the service you've signed up for.</p>
 
       <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Usage data</p>
-      <ul class="space-y-2 mb-6">
-        <li>— Your watchlist (shows you've bookmarked, ticket status)</li>
-        <li>— Your city and venue preferences (which cities and venues you've enabled or hidden)</li>
-        <li>— Who you follow (visible only to you and the people you follow)</li>
+      <ul class="space-y-2 mb-4">
+        <li>— Your watchlist: shows you've bookmarked, ticket status, notes</li>
+        <li>— Your city and venue preferences — which cities and venues appear in your feed</li>
+        <li>— Who you follow — visible only to you and the people you follow</li>
+        <li>— Your privacy settings — e.g. whether to show friends when you've bought tickets</li>
       </ul>
-      <p class="text-xs text-[#aaa] mb-8">Legal basis: contract — this is the core functionality of the app.</p>
+      <p class="text-xs text-[#aaa] mb-8">Legal basis: contract (Article 6(1)(b) GDPR) — this is the core functionality of the service.</p>
 
       <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Anonymous activity data</p>
-      <ul class="space-y-2 mb-6">
-        <li>— Ticket link click-throughs (which show was clicked, whether you were signed in)</li>
-        <li>— Search queries (what you searched for — helps us identify missing venues)</li>
+      <ul class="space-y-2 mb-4">
+        <li>— Ticket link click-throughs (which show was clicked, whether you were signed in at the time)</li>
+        <li>— Search queries (what you searched for — used to identify missing venues and improve results)</li>
       </ul>
       <p class="text-xs text-[#aaa] mb-8">
-        Legal basis: legitimate interest — this data is used to improve the service (e.g. finding which venues to add scrapers for) and to understand whether venue partnerships are worthwhile. It is collected server-side with no cookies or third-party trackers. If you delete your account, your user ID is removed from this data but the anonymous aggregate record is retained for up to 24 months.
+        Legal basis: legitimate interest (Article 6(1)(f) GDPR) — used to improve the service and evaluate whether venue partnerships are worthwhile. Collected server-side with no advertising or analytics trackers. If you delete your account, your user ID is removed from this data; anonymous aggregate records are retained for up to 24 months. You can object to this processing at any time by emailing us.
       </p>
 
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Cookies</h2>
+      <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Security and infrastructure data</p>
+      <ul class="space-y-2 mb-4">
+        <li>— IP addresses and request metadata — processed by Cloudflare to detect and block malicious bots, DDoS attempts, and credential-stuffing attacks</li>
+        <li>— Browser and connection characteristics — used by Cloudflare's Bot Fight Mode to classify traffic</li>
+      </ul>
+      <p class="text-xs text-[#aaa] mb-8">
+        Legal basis: legitimate interest (Article 6(1)(f) GDPR) — necessary to protect the security and availability of the service. This data is processed transiently by Cloudflare and is not stored by us. See Cloudflare's privacy policy for details of their own retention practices.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Cookies and local storage</h2>
+      <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Session cookie</p>
       <p class="mb-6">
-        We set one session cookie when you sign in. It contains an authentication token, not personal data. It expires when you sign out or after your session times out. We do not use advertising, tracking, or analytics cookies. No third-party cookies are set.
+        We set one session cookie when you sign in. It contains an authentication token, not personal data. It expires when you sign out or after your session times out.
+      </p>
+      <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Cloudflare security cookies</p>
+      <p class="mb-6">
+        Cloudflare may set short-lived cookies (such as <code class="text-xs bg-[#ece7de] px-1 py-0.5">__cf_bm</code>) to support its bot-detection features. These are strictly functional and contain no personally identifying information. They are not used for advertising or tracking.
+      </p>
+      <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Guest watchlist (local storage)</p>
+      <p class="mb-6">
+        If you bookmark shows before creating an account, those bookmarks are stored in your browser's local storage — they never leave your device. When you sign up or log in, they are transferred to your account and the local copy is deleted. You can clear them at any time by clearing your browser's site data for house-lights.nl.
+      </p>
+      <p class="mb-6">
+        We do not use advertising, tracking, or analytics cookies.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Profile visibility</h2>
+      <p class="mb-6">
+        By default, your profile (username, display name, and watchlist) is public — other house lights users can see what you're watching. You can make your profile private in Settings, which hides your watchlist from everyone except people you've approved as friends. Your email address is never visible to other users.
       </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">How long we keep your data</h2>
       <ul class="space-y-2 mb-6">
-        <li>— Account and watchlist data: until you delete your account</li>
-        <li>— Waitlist entries (if you signed up but never created an account): 12 months, then automatically deleted</li>
-        <li>— Anonymous activity data (clicks, searches): 24 months, then automatically deleted</li>
+        <li>— Account and watchlist data: kept until you delete your account</li>
+        <li>— Unverified sign-up attempts (email never confirmed): 30 days, then automatically deleted by Supabase</li>
+        <li>— Anonymous activity data (clicks, searches): 24 months, then deleted</li>
+        <li>— Cloudflare security logs: retained by Cloudflare per their own policy (typically 24–72 hours for transient data)</li>
       </ul>
+      <p class="text-xs text-[#aaa] mb-8">When you delete your account, all personal data — profile, watchlist, preferences, avatar — is permanently deleted within 24 hours. Anonymised aggregate records (e.g. total click counts with no user ID) may be retained.</p>
 
-      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Where it's stored</h2>
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Where your data is stored and transferred</h2>
       <p class="mb-3">
-        All data is stored on <a href="https://supabase.com" class="underline hover:text-[#1a1a1a]">Supabase</a>, hosted in Frankfurt, Germany (AWS EU West). We have a Data Processing Agreement in place with Supabase. Supabase handles:
+        Personal data is stored on <a href="https://supabase.com" class="underline hover:text-[#1a1a1a]">Supabase</a> in Frankfurt, Germany (AWS eu-central-1) — within the European Economic Area. Supabase handles password hashing (bcrypt), encryption at rest (AES-256), encryption in transit (TLS), and row-level security (each user can only access their own data).
       </p>
-      <ul class="space-y-2 mb-6">
-        <li>— Password hashing (bcrypt)</li>
-        <li>— Encryption at rest (AES-256)</li>
-        <li>— Encryption in transit (TLS)</li>
-        <li>— Row-level security — each user can only access their own data</li>
-      </ul>
+      <p class="mb-3">
+        The site is served by <a href="https://vercel.com" class="underline hover:text-[#1a1a1a]">Vercel</a>, which may route requests through edge nodes outside the EEA. Vercel processes request metadata (IP, headers) transiently for routing purposes but does not store your personal data.
+      </p>
       <p class="mb-6">
-        The site is hosted on <a href="https://vercel.com" class="underline hover:text-[#1a1a1a]">Vercel</a>. Vercel serves the application but does not have access to your personal data.
+        Traffic passes through <a href="https://www.cloudflare.com" class="underline hover:text-[#1a1a1a]">Cloudflare</a>'s global network, including nodes that may be outside the EEA. Cloudflare processes IP addresses and request metadata solely for security purposes under Standard Contractual Clauses (SCCs) as the lawful transfer mechanism for any non-EEA processing.
       </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Sub-processors</h2>
       <ul class="space-y-2 mb-6">
-        <li>— <a href="https://supabase.com/privacy" class="font-bold text-[#1a1a1a] underline hover:text-[#555]">Supabase</a> (via AWS Frankfurt) — database, authentication, file storage. <a href="https://supabase.com/dpa" class="underline hover:text-[#1a1a1a]">GDPR-compliant DPA in place.</a></li>
+        <li>— <a href="https://supabase.com/privacy" class="font-bold text-[#1a1a1a] underline hover:text-[#555]">Supabase</a> (AWS Frankfurt) — database, authentication, file storage. <a href="https://supabase.com/dpa" class="underline hover:text-[#1a1a1a]">GDPR-compliant DPA in place.</a></li>
         <li>— <a href="https://vercel.com/legal/privacy-policy" class="font-bold text-[#1a1a1a] underline hover:text-[#555]">Vercel</a> — hosting and edge delivery. <a href="https://vercel.com/legal/dpa" class="underline hover:text-[#1a1a1a]">GDPR-compliant DPA in place.</a></li>
+        <li>— <a href="https://www.cloudflare.com/privacypolicy/" class="font-bold text-[#1a1a1a] underline hover:text-[#555]">Cloudflare</a> — DDoS protection, bot mitigation, security. <a href="https://www.cloudflare.com/gdpr/introduction/" class="underline hover:text-[#1a1a1a]">GDPR-compliant DPA in place.</a></li>
       </ul>
-      <p class="mb-6">No data is shared with any other third party, including advertisers.</p>
+      <p class="mb-6">No data is shared with any other third party. We do not sell data, run advertising, or use analytics services.</p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Minimum age</h2>
+      <p class="mb-6">
+        house lights is not directed at children. You must be at least 16 years old to create an account, in line with the Dutch implementation of GDPR (UAVG Article 8). If we become aware that a user is under 16, we will delete their account.
+      </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Your rights under GDPR</h2>
-      <p class="mb-4">You have the right to:</p>
+      <p class="mb-4">As a data subject under GDPR, you have the right to:</p>
       <ul class="space-y-2 mb-6">
-        <li>— <strong class="text-[#1a1a1a]">Access</strong> — request a copy of the data we hold about you</li>
-        <li>— <strong class="text-[#1a1a1a]">Rectification</strong> — correct inaccurate data (username, display name, email)</li>
-        <li>— <strong class="text-[#1a1a1a]">Erasure</strong> — delete your account and all associated data</li>
-        <li>— <strong class="text-[#1a1a1a]">Portability</strong> — download your data in a machine-readable format</li>
-        <li>— <strong class="text-[#1a1a1a]">Object</strong> — object to processing based on legitimate interest (the anonymous activity data)</li>
-        <li>— <strong class="text-[#1a1a1a]">Restriction</strong> — ask us to pause processing while a dispute is resolved</li>
+        <li>— <strong class="text-[#1a1a1a]">Access</strong> — request a copy of the data we hold about you (Article 15)</li>
+        <li>— <strong class="text-[#1a1a1a]">Rectification</strong> — correct inaccurate data such as your username or display name (Article 16)</li>
+        <li>— <strong class="text-[#1a1a1a]">Erasure</strong> — delete your account and all associated personal data (Article 17)</li>
+        <li>— <strong class="text-[#1a1a1a]">Portability</strong> — receive your data in a structured, machine-readable format (Article 20)</li>
+        <li>— <strong class="text-[#1a1a1a]">Object</strong> — object to processing based on legitimate interest (Article 21) — e.g. the anonymous activity data</li>
+        <li>— <strong class="text-[#1a1a1a]">Restriction</strong> — ask us to pause processing while a dispute is being resolved (Article 18)</li>
+        <li>— <strong class="text-[#1a1a1a]">Withdraw consent</strong> — where processing is based on consent, you can withdraw it at any time without affecting prior processing</li>
       </ul>
-      <p class="mb-6">
-        You can exercise most of these rights directly from <a href="/settings" class="underline hover:text-[#1a1a1a]">Settings</a> — download your data or delete your account with one click. For anything else, email <a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a>. We aim to respond within 30 days.
+      <p class="mb-4">
+        You can exercise most of these rights directly from <a href="/settings" class="underline hover:text-[#1a1a1a]">Settings</a> — download your data or delete your account with one click. For any other request, email <a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a>. We will respond within 30 days.
       </p>
       <p class="mb-6">
-        You also have the right to lodge a complaint with the Dutch data protection authority: <a href="https://www.autoriteitpersoonsgegevens.nl" class="underline hover:text-[#1a1a1a]" target="_blank" rel="noopener noreferrer">Autoriteit Persoonsgegevens</a>.
+        You also have the right to lodge a complaint with the Dutch supervisory authority:<br />
+        <a href="https://www.autoriteitpersoonsgegevens.nl" class="underline hover:text-[#1a1a1a]" target="_blank" rel="noopener noreferrer">Autoriteit Persoonsgegevens</a> — autoriteitpersoonsgegevens.nl
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Automated access and AI crawlers</h2>
+      <p class="mb-6">
+        house lights blocks known AI training crawlers (such as GPTBot, CCBot, and similar) from accessing its pages via Cloudflare's managed bot rules and a robots.txt Content Signals Policy. The scraped event data displayed on the site originates from publicly accessible venue websites; we do not grant permission for it to be used to train machine learning models.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Security</h2>
+      <p class="mb-6">
+        We take reasonable technical and organisational measures to protect your data: all data is encrypted at rest and in transit; passwords are hashed and never readable by us; row-level security policies ensure users can only access their own data; Cloudflare's security layer protects against common network-level attacks. No system is perfectly secure — if you believe your account has been compromised, contact us immediately.
+      </p>
+
+      <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Changes to this policy</h2>
+      <p class="mb-6">
+        If we make material changes to how we process personal data, we will update this page and change the "last updated" date above. For significant changes, we will notify users by email where we are able to. Continued use of house lights after a policy update constitutes acceptance of the revised policy.
       </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Contact</h2>
+      <p class="mb-2">For any privacy-related question or request:</p>
       <p><a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a></p>
     </main>
   </body>
