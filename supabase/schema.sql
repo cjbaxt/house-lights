@@ -98,6 +98,7 @@ create table profile (
 
 create table user_preferences (
   user_id              uuid primary key references profile(id) on delete cascade,
+  share_ticket_status  boolean not null default true,
   default_city_id      uuid references city(id),
   hide_duplicate_shows boolean not null default true,
   created_at           timestamptz not null default now()

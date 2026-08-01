@@ -128,19 +128,19 @@ export const api = {
     }
   },
 
-  async getUserPreferences(): Promise<{ hide_duplicate_shows: boolean; default_city_id?: string } | null> {
+  async getUserPreferences(): Promise<{ hide_duplicate_shows: boolean; default_city_id?: string; share_ticket_status?: boolean } | null> {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
     const { data } = await supabase
       .from("user_preferences")
-      .select("hide_duplicate_shows, default_city_id")
+      .select("hide_duplicate_shows, default_city_id, share_ticket_status")
       .eq("user_id", user.id)
       .single();
     return data ?? null;
   },
 
-  async updateUserPreferences(prefs: Partial<{ hide_duplicate_shows: boolean; default_city_id: string }>) {
+  async updateUserPreferences(prefs: Partial<{ hide_duplicate_shows: boolean; default_city_id: string; share_ticket_status: boolean }>) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
