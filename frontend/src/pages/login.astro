@@ -47,7 +47,7 @@ const isSignup = mode === "signup";
 
       <!-- Log in form -->
       <div id="panel-login" style={isSignup ? "display:none" : ""}>
-        <form method="POST" action="/api/auth/login" class="space-y-4">
+        <form method="POST" action="/api/auth/login" class="space-y-4" data-astro-reload>
           <input type="email" name="email" placeholder="Email" required autocomplete="email"
             class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
           <input type="password" name="password" placeholder="Password" required autocomplete="current-password"
@@ -64,7 +64,7 @@ const isSignup = mode === "signup";
 
       <!-- Sign up form -->
       <div id="panel-signup" style={!isSignup ? "display:none" : ""}>
-        <form method="POST" action="/api/auth/register" class="space-y-4">
+        <form method="POST" action="/api/auth/register" class="space-y-4" data-astro-reload>
           <input type="email" name="email" placeholder="Email" required autocomplete="email"
             class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors" />
           <input type="password" name="password" placeholder="Password (8+ characters)" required minlength="8" autocomplete="new-password"
