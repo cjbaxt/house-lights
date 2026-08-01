@@ -187,15 +187,19 @@ export const api = {
     }));
   },
 
-  async upsertWatch(showId: string, status: WatchStatus, notes?: string) {
+  async upsertWatch(showId: string, status: WatchStatus, opts?: { notes?: string; snapshot?: { title: string; date: string; type?: string; venue_name?: string; url?: string; time?: string } }) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    if (!user) {
+      const { setGuestWatch } = await import("./guest-watchlist");
+      setGuestWatch(showId, status, opts?.snapshot ?? { title: "", date: "" });
+      return;
+    }
     const { error } = await supabase.from("watchlist").upsert({
       user_id: user.id,
       show_id: showId,
       status,
-      notes: notes ?? null,
+      notes: opts?.notes ?? null,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id,show_id" });
     if (error) throw error;
@@ -204,12 +208,34 @@ export const api = {
   async removeWatch(showId: string) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    if (!user) {
+      const { removeGuestWatch } = await import("./guest-watchlist");
+      removeGuestWatch(showId);
+      return;
+    }
     const { error } = await supabase
       .from("watchlist")
       .delete()
       .match({ user_id: user.id, show_id: showId });
     if (error) throw error;
+  },
+
+  async mergeGuestWatchlist() {
+    const { getGuestWatchlist, clearGuestWatchlist } = await import("./guest-watchlist");
+    const entries = getGuestWatchlist();
+    if (entries.length === 0) return;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await Promise.all(entries.map(e =>
+      supabase.from("watchlist").upsert({
+        user_id: user.id,
+        show_id: e.show_id,
+        status: e.status,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id,show_id" })
+    ));
+    clearGuestWatchlist();
   },
 
   // ----------------------------------------------------------------
