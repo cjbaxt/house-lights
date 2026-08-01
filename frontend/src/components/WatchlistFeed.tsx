@@ -271,6 +271,14 @@ export default function WatchlistFeed() {
           </div>
         ) : (
           <div className="flex flex-col">
+            <div className="mb-4 px-4 py-3 bg-[#fff8f0] border border-[#f0d9b5] text-xs text-[#7a5c2e] leading-relaxed">
+              <strong className="font-bold">Your watchlist is only saved in this browser.</strong>{" "}
+              It will be lost if you clear your browser data or switch devices.{" "}
+              <a href="/login?mode=signup" className="font-bold underline hover:text-[#1a1a1a] transition-colors">
+                Sign up free
+              </a>{" "}
+              to save it permanently and see what friends are watching.
+            </div>
             {guestWatchlist
               .slice()
               .sort((a, b) => a.snapshot.date.localeCompare(b.snapshot.date))
@@ -412,7 +420,14 @@ export default function WatchlistFeed() {
               venueMap={venueMap}
               companyMap={companyMap}
               onWatchChange={load}
-              friendWatches={group.entries.flatMap((e) => friendWatchMap[e.show.id] ?? [])}
+              friendWatches={(() => {
+                const seen = new Map<string, FriendWatch>();
+                for (const fw of group.entries.flatMap((e) => friendWatchMap[e.show.id] ?? [])) {
+                  const existing = seen.get(fw.profile.id);
+                  if (!existing || fw.status === "tickets_bought") seen.set(fw.profile.id, fw);
+                }
+                return Array.from(seen.values());
+              })()}
             />
           ))}
           {visibleCount < sortedGroups.length && (

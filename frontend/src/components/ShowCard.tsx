@@ -45,8 +45,8 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
         rel="noopener noreferrer"
         className="flex items-center gap-4 flex-1 min-w-0 px-4 py-3"
       >
-        {/* Date block — hidden in agenda view where day header already shows the date */}
-        {!hideDate && (
+        {/* Date block (programme view) or time block (agenda view) */}
+        {!hideDate ? (
           <>
             <div className="flex-shrink-0 w-10 text-center">
               <div className="text-xl font-black leading-none text-[#e85d2f]">{day}</div>
@@ -54,15 +54,19 @@ export default function ShowCard({ show, venueName, companyName, watchStatus, on
             </div>
             <div className="w-px h-10 bg-[#ece7de] flex-shrink-0" />
           </>
-        )}
+        ) : show.time ? (
+          <>
+            <div className="flex-shrink-0 w-10 text-center">
+              <div className="text-xs font-bold text-[#1a1a1a] leading-tight">{show.time.slice(0, 5)}</div>
+            </div>
+            <div className="w-px h-10 bg-[#ece7de] flex-shrink-0" />
+          </>
+        ) : null}
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-0.5">
             {show.type ?? "other"}{location ? ` · ${location}` : ""}
-            {hideDate && show.time && (
-              <span className="text-[#bbb] font-normal normal-case tracking-normal ml-2">{show.time.slice(0, 5)}</span>
-            )}
           </div>
           <div className="font-sans font-bold text-sm text-[#1a1a1a] uppercase tracking-tight leading-tight md:truncate line-clamp-2 md:line-clamp-none">
             {show.title}
