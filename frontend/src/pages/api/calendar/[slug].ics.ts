@@ -138,6 +138,6 @@ export const GET: APIRoute = async ({ params }) => {
     });
   } catch (e) {
     console.error("ICS error:", e);
-    return new Response(String(e), { status: 500 });
+    return new Response("Internal Server Error", { status: 500 });
   }
 };
