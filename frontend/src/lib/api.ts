@@ -157,9 +157,12 @@ export const api = {
   async getWatchlist(): Promise<WatchlistEntry[]> {
     const supabase = createClient();
     const today = localDateStr();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
     const { data, error } = await supabase
       .from("watchlist")
       .select(`id, show_id, status, notes, show:show_id!inner(*)`)
+      .eq("user_id", user.id)
       .gte("show.date", today)
       .order("date", { referencedTable: "show", ascending: true });
     if (error) { console.error(error); return []; }
