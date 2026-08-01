@@ -6,25 +6,35 @@ import ClientRouter from "astro/components/ClientRouter.astro";
 const isLoggedIn = !!Astro.locals.user;
 
 // Get friends (people this user follows)
-const { data: friendships } = isLoggedIn ? await Astro.locals.supabase
+// friendship.friend_id → auth.users; profile.id → auth.users (no direct FK between them)
+// so we do two queries rather than a PostgREST embedded join that silently returns nothing
+const { data: friendshipRows } = isLoggedIn ? await Astro.locals.supabase
   .from("friendship")
-  .select("friend_id, profile:friend_id(id, username, display_name, avatar_url)")
+  .select("friend_id")
   .eq("user_id", Astro.locals.user!.id) : { data: null };
 
-const friends = (friendships ?? []).map((f: any) => f.profile).filter(Boolean);
+const friendIds = (friendshipRows ?? []).map((f: any) => f.friend_id as string);
 
-// Get recent watchlist activity from friends
-const friendIds = friends.map((f: any) => f.id);
+let friends: any[] = [];
+if (friendIds.length > 0) {
+  const { data: profileRows } = await Astro.locals.supabase
+    .from("profile")
+    .select("id, username, display_name, avatar_url")
+    .in("id", friendIds);
+  friends = profileRows ?? [];
+}
 
 let activityFeed: any[] = [];
 if (friendIds.length > 0) {
   const { data: activity } = await Astro.locals.supabase
     .from("watchlist")
-    .select("user_id, status, added_at, show:show_id(title, date, time, type, url, venue:venue_id(name)), profile:user_id(username, display_name, avatar_url)")
+    .select("user_id, status, added_at, show:show_id(title, date, time, type, url, venue:venue_id(name))")
     .in("user_id", friendIds)
     .order("added_at", { ascending: false })
     .limit(50);
-  activityFeed = activity ?? [];
+  // attach profile to each activity entry
+  const profileMap = Object.fromEntries(friends.map((p: any) => [p.id, p]));
+  activityFeed = (activity ?? []).map((e: any) => ({ ...e, profile: profileMap[e.user_id] }));
 }
 
 function timeAgo(dateStr: string): string {
