@@ -1,4 +1,4 @@
-import subprocess
+import subprocess  # nosec B404 — subprocess used for internal admin script only, no user input
 from pathlib import Path
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).parent.parent.parent.parent
 @router.post("/api/publish")
 def publish():
     def stream():
-        proc = subprocess.Popen(
+        proc = subprocess.Popen(  # nosec B603 B607 — fixed script path, no user input
             ["bash", "publish.sh"],
             cwd=str(REPO_ROOT),
             stdout=subprocess.PIPE,

@@ -1,12 +1,27 @@
-"""Run a SQL migration file against Supabase using the direct DB connection."""
+"""Run a SQL migration file against Supabase using the direct DB connection.
+
+Usage:
+    SUPABASE_DB_URL="postgresql://postgres:<password>@<host>:5432/postgres" python run_migration.py migrate_001.sql
+"""
+import os
 import sys
+from pathlib import Path
 import psycopg2
 
-DIRECT_URI = "postgresql://postgres:REDACTED@db.dbezgeiolffbvxefpuga.supabase.co:5432/postgres"
+DIRECT_URI = os.environ.get("SUPABASE_DB_URL")
+if not DIRECT_URI:
+    print("Error: SUPABASE_DB_URL environment variable not set.", file=sys.stderr)
+    sys.exit(1)
 
 def main():
-    sql_file = sys.argv[1] if len(sys.argv) > 1 else "migrate_001_city_preferences.sql"
-    sql = open(sql_file).read()
+    if len(sys.argv) < 2:
+        print("Usage: python run_migration.py <migration_file.sql>", file=sys.stderr)
+        sys.exit(1)
+    sql_path = Path(sys.argv[1]).resolve()
+    if not sql_path.exists():
+        print(f"Error: file not found: {sql_path}", file=sys.stderr)
+        sys.exit(1)
+    sql = sql_path.read_text()
 
     conn = psycopg2.connect(DIRECT_URI)
     conn.autocommit = False

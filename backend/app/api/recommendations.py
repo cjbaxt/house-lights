@@ -24,20 +24,32 @@ def _embed(query: str) -> list[float]:
 
 def _search(vec: list[float], exclude_ids: list[str], limit: int, session: Session):
     today = date.today().isoformat()
-    ids_list = ", ".join("'" + sid + "'" for sid in exclude_ids)
-    exclude_clause = f"AND id NOT IN ({ids_list})" if exclude_ids else ""
-    rows = session.exec(text(f"""
-        SELECT id, title, subtitle, venue_id, company_id, date, time,
-               type, url, ticket_status, price_from, currency,
-               description, image_url,
-               1 - (embedding <=> '{vec}'::vector) AS score
-        FROM show
-        WHERE date >= '{today}'
-          AND embedding IS NOT NULL
-          {exclude_clause}
-        ORDER BY embedding <=> '{vec}'::vector
-        LIMIT {limit}
-    """)).all()
+    vec_str = str(vec)
+    if exclude_ids:
+        rows = session.exec(text("""
+            SELECT id, title, subtitle, venue_id, company_id, date, time,
+                   type, url, ticket_status, price_from, currency,
+                   description, image_url,
+                   1 - (embedding <=> CAST(:vec AS vector)) AS score
+            FROM show
+            WHERE date >= :today
+              AND embedding IS NOT NULL
+              AND id != ALL(CAST(:exclude AS uuid[]))
+            ORDER BY embedding <=> CAST(:vec AS vector)
+            LIMIT :limit
+        """), {"vec": vec_str, "today": today, "exclude": exclude_ids, "limit": limit}).all()
+    else:
+        rows = session.exec(text("""
+            SELECT id, title, subtitle, venue_id, company_id, date, time,
+                   type, url, ticket_status, price_from, currency,
+                   description, image_url,
+                   1 - (embedding <=> CAST(:vec AS vector)) AS score
+            FROM show
+            WHERE date >= :today
+              AND embedding IS NOT NULL
+            ORDER BY embedding <=> CAST(:vec AS vector)
+            LIMIT :limit
+        """), {"vec": vec_str, "today": today, "limit": limit}).all()
     return [dict(r._mapping) for r in rows]
 
 
@@ -61,12 +73,11 @@ def recommended_shows(
         return []
 
     watched_ids = [str(w.show_id) for w in watchlist]
-    ids_sql = ", ".join(f"'{sid}'" for sid in watched_ids)
 
-    avg = session.exec(text(f"""
+    avg = session.exec(text("""
         SELECT avg(embedding) FROM show
-        WHERE id IN ({ids_sql}) AND embedding IS NOT NULL
-    """)).one()
+        WHERE id = ANY(CAST(:ids AS uuid[])) AND embedding IS NOT NULL
+    """), {"ids": watched_ids}).one()
 
     if avg[0] is None:
         return []
