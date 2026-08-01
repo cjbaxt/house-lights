@@ -1,0 +1,129 @@
+---
+import "../styles/global.css";
+import ClientRouter from "astro/components/ClientRouter.astro";
+
+if (!Astro.locals.user) return Astro.redirect("/login");
+
+// If user already has a confirmed username, no need to be here
+const { data: profile } = await Astro.locals.supabase
+  .from("profile")
+  .select("username, username_confirmed")
+  .eq("id", Astro.locals.user.id)
+  .single();
+
+if (profile?.username_confirmed) return Astro.redirect("/");
+
+const error = Astro.url.searchParams.get("error");
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <ClientRouter />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Choose your username — house lights</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#f5f0e8] min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-xs px-6">
+      <h1 class="font-sans font-black text-2xl uppercase tracking-tight text-[#1a1a1a] mb-1">
+        house lights
+      </h1>
+      <p class="text-sm text-[#888] mb-8">One last step</p>
+
+      <p class="text-sm text-[#1a1a1a] mb-6">Choose a username to complete your account.</p>
+
+      {error && <p class="text-xs text-[#e85d2f] mb-4">{decodeURIComponent(error)}</p>}
+
+      <form method="POST" action="/api/auth/complete-profile" class="space-y-4" data-astro-reload>
+        <div>
+          <label class="block text-[10px] uppercase tracking-widest text-[#888] mb-1.5">Username</label>
+          <div class="relative">
+            <input
+              id="username-input"
+              type="text"
+              name="username"
+              placeholder="your_username"
+              required
+              minlength="2"
+              maxlength="30"
+              autocomplete="username"
+              class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors pr-8"
+            />
+            <span id="username-status" class="absolute right-3 top-1/2 -translate-y-1/2 text-base"></span>
+          </div>
+          <p id="username-hint" class="text-[10px] text-[#bbb] mt-1">Letters, numbers, - and _ only</p>
+        </div>
+
+        <div>
+          <label class="block text-[10px] uppercase tracking-widest text-[#888] mb-1.5">Display name <span class="normal-case text-[#bbb]">(optional)</span></label>
+          <input
+            type="text"
+            name="display_name"
+            placeholder="Your Name"
+            maxlength="60"
+            class="w-full border border-[#ece7de] bg-white px-4 py-3 text-sm text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors"
+          />
+        </div>
+
+        <button
+          id="submit-btn"
+          type="submit"
+          class="w-full bg-[#1a1a1a] text-white text-sm py-3 hover:bg-[#333] transition-colors uppercase tracking-widest font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Continue
+        </button>
+      </form>
+    </div>
+
+    <script>
+      const input = document.getElementById("username-input") as HTMLInputElement;
+      const status = document.getElementById("username-status") as HTMLSpanElement;
+      const hint = document.getElementById("username-hint") as HTMLParagraphElement;
+      const btn = document.getElementById("submit-btn") as HTMLButtonElement;
+
+      let debounce: ReturnType<typeof setTimeout>;
+      let isAvailable = false;
+
+      function setStatus(state: "idle" | "checking" | "available" | "taken" | "invalid") {
+        status.textContent = state === "available" ? "✓" : state === "taken" ? "✗" : state === "checking" ? "…" : "";
+        status.className = `absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold ${
+          state === "available" ? "text-green-600" : state === "taken" ? "text-[#e85d2f]" : "text-[#aaa]"
+        }`;
+        isAvailable = state === "available";
+        btn.disabled = state !== "available" && state !== "idle";
+
+        hint.textContent = state === "taken"
+          ? "That username is taken"
+          : state === "invalid"
+          ? "Letters, numbers, - and _ only (2–30 chars)"
+          : "Letters, numbers, - and _ only";
+        hint.className = `text-[10px] mt-1 ${state === "taken" || state === "invalid" ? "text-[#e85d2f]" : "text-[#bbb]"}`;
+      }
+
+      input?.addEventListener("input", () => {
+        clearTimeout(debounce);
+        const val = input.value.trim().toLowerCase();
+        if (!val) { setStatus("idle"); return; }
+        if (!/^[a-z0-9_-]+$/.test(val) || val.length < 2 || val.length > 30) { setStatus("invalid"); return; }
+        setStatus("checking");
+        debounce = setTimeout(async () => {
+          const res = await fetch(`/api/users/check-username?username=${encodeURIComponent(val)}`);
+          const { available } = await res.json();
+          setStatus(available ? "available" : "taken");
+        }, 400);
+      });
+
+      // Initial state: allow submit if username field is empty (form validation will catch it)
+      btn.disabled = false;
+
+      // Block submit if username is invalid/taken
+      input?.closest("form")?.addEventListener("submit", (e) => {
+        const val = input.value.trim();
+        if (val && !isAvailable) { e.preventDefault(); }
+      });
+    </script>
+  </body>
+</html>
