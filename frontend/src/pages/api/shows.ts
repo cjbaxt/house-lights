@@ -9,7 +9,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
   const fromDate  = p.get("from_date") ?? new Date().toISOString().split("T")[0];
   const toDate    = p.get("to_date");
   const page      = Math.max(0, parseInt(p.get("page") ?? "0", 10));
-  const limit     = Math.min(100, Math.max(1, parseInt(p.get("limit") ?? "20", 10)));
+  const limit     = Math.min(1000, Math.max(1, parseInt(p.get("limit") ?? "20", 10)));
 
   let query = locals.supabase
     .from("show")

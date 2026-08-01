@@ -35,7 +35,7 @@ function endOfMonth(): string {
 }
 
 const CHIP_LIMIT = 5;
-const PROGRAMME_FETCH_SIZE = 150;
+const PROGRAMME_FETCH_SIZE = 1000;
 
 type DateEntry = { id: string; date: string; status: string; time?: string };
 
@@ -270,16 +270,33 @@ export default function ShowFeed() {
   const fetchShows = useCallback(async (pg: number) => {
     if (fetchController.current) fetchController.current.abort();
     fetchController.current = new AbortController();
-
-    const limit = displayView === "programme" ? PROGRAMME_FETCH_SIZE : pageSize;
-    const url = buildShowsUrl(pg, limit);
+    const signal = fetchController.current.signal;
 
     try {
       setFetching(true);
-      const resp = await fetch(url, { signal: fetchController.current.signal });
-      const data = await resp.json();
-      setShows(data.shows ?? []);
-      setTotal(data.total ?? 0);
+
+      if (displayView === "programme") {
+        // Fetch all shows in batches so programme grouping is correct
+        const allShows: Show[] = [];
+        let serverTotal = 0;
+        let batchPage = 0;
+        do {
+          const url = buildShowsUrl(batchPage, PROGRAMME_FETCH_SIZE);
+          const resp = await fetch(url, { signal });
+          const data = await resp.json();
+          allShows.push(...(data.shows ?? []));
+          serverTotal = data.total ?? 0;
+          batchPage++;
+        } while (allShows.length < serverTotal);
+        setShows(allShows);
+        setTotal(serverTotal);
+      } else {
+        const url = buildShowsUrl(pg, pageSize);
+        const resp = await fetch(url, { signal });
+        const data = await resp.json();
+        setShows(data.shows ?? []);
+        setTotal(data.total ?? 0);
+      }
     } catch (e: unknown) {
       if (e instanceof Error && e.name !== "AbortError") console.error(e);
     } finally {

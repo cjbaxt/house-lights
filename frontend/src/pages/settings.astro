@@ -130,22 +130,20 @@ const error = Astro.url.searchParams.get("error");
       <section class="mb-12 border-t border-[#ece7de] pt-10">
         <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-2">Cities</h2>
         <p class="text-xs text-[#aaa] mb-6">Choose which cities to include in your browse feed.</p>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2" id="city-toggles">
           {cities.map((city: CityItem) => {
             const isEnabled = enabledCityIds.has(city.id);
             if (city.is_active) {
               return (
-                <form method="POST" action="/api/user/cities" class="inline">
-                  <input type="hidden" name="city_id" value={city.id} />
-                  <input type="hidden" name="enabled" value={isEnabled ? "false" : "true"} />
-                  <button
-                    type="submit"
-                    class={`text-xs px-3 py-1.5 border transition-colors ${isEnabled ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : "border-[#ece7de] text-[#555] hover:border-[#1a1a1a]"}`}
-                  >
-                    {city.name}
-                    {city.country !== "NL" && <span class="ml-1 opacity-50">{city.country}</span>}
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  data-city-id={city.id}
+                  data-enabled={isEnabled ? "true" : "false"}
+                  class={`text-xs px-3 py-1.5 border transition-colors city-toggle ${isEnabled ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : "border-[#ece7de] text-[#555] hover:border-[#1a1a1a]"}`}
+                >
+                  {city.name}
+                  {city.country !== "NL" && <span class="ml-1 opacity-50">{city.country}</span>}
+                </button>
               );
             } else {
               return (
@@ -173,20 +171,18 @@ const error = Astro.url.searchParams.get("error");
               {group.venues.map((item: VenueItem) => {
                 const isHidden = hiddenVenueIds.has(item.id);
                 return (
-                  <form method="POST" action="/api/user/venues" class="inline">
-                    <input type="hidden" name="venue_id" value={item.id} />
-                    <input type="hidden" name="hidden" value={isHidden ? "false" : "true"} />
-                    <button
-                      type="submit"
-                      class={`text-xs px-3 py-1.5 border transition-colors ${
-                        isHidden
-                          ? "border-dashed border-[#ddd8cf] text-[#bbb]"
-                          : "border-[#ece7de] text-[#555] hover:border-[#1a1a1a] hover:text-[#1a1a1a]"
-                      }`}
-                    >
-                      {item.name}
-                    </button>
-                  </form>
+                  <button
+                    type="button"
+                    data-venue-id={item.id}
+                    data-hidden={isHidden ? "true" : "false"}
+                    class={`text-xs px-3 py-1.5 border transition-colors venue-toggle ${
+                      isHidden
+                        ? "border-dashed border-[#ddd8cf] text-[#bbb]"
+                        : "border-[#ece7de] text-[#555] hover:border-[#1a1a1a] hover:text-[#1a1a1a]"
+                    }`}
+                  >
+                    {item.name}
+                  </button>
                 );
               })}
             </div>
@@ -314,6 +310,42 @@ const error = Astro.url.searchParams.get("error");
           } else {
             alert("Something went wrong. Please try again.");
           }
+        });
+      </script>
+
+      <script>
+        // City toggles — use fetch to avoid ClientRouter intercepting form POSTs
+        document.querySelectorAll<HTMLButtonElement>(".city-toggle").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const cityId = btn.dataset.cityId!;
+            const isEnabled = btn.dataset.enabled === "true";
+            const next = !isEnabled;
+            btn.dataset.enabled = String(next);
+            btn.className = `text-xs px-3 py-1.5 border transition-colors city-toggle ${next ? "bg-[#1a1a1a] border-[#1a1a1a] text-white" : "border-[#ece7de] text-[#555] hover:border-[#1a1a1a]"}`;
+            const body = new FormData();
+            body.append("city_id", cityId);
+            body.append("enabled", String(next));
+            await fetch("/api/user/cities", { method: "POST", body });
+          });
+        });
+
+        // Venue toggles — use fetch to avoid ClientRouter intercepting form POSTs
+        document.querySelectorAll<HTMLButtonElement>(".venue-toggle").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const venueId = btn.dataset.venueId!;
+            const isHidden = btn.dataset.hidden === "true";
+            const nextHidden = !isHidden;
+            btn.dataset.hidden = String(nextHidden);
+            if (nextHidden) {
+              btn.className = "text-xs px-3 py-1.5 border transition-colors venue-toggle border-dashed border-[#ddd8cf] text-[#bbb]";
+            } else {
+              btn.className = "text-xs px-3 py-1.5 border transition-colors venue-toggle border-[#ece7de] text-[#555] hover:border-[#1a1a1a] hover:text-[#1a1a1a]";
+            }
+            const body = new FormData();
+            body.append("venue_id", venueId);
+            body.append("hidden", String(nextHidden));
+            await fetch("/api/user/venues", { method: "POST", body });
+          });
         });
       </script>
     </main>

@@ -16,8 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const { error } = await locals.supabase
     .from("user_preferences")
-    .update(update)
-    .eq("user_id", locals.user.id);
+    .upsert({ user_id: locals.user.id, ...update }, { onConflict: "user_id" });
 
   if (error) return new Response(error.message, { status: 500 });
   return new Response("OK");
