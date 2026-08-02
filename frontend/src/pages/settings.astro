@@ -59,7 +59,7 @@ const { data: prefsData } = await Astro.locals.supabase
   .select("share_ticket_status")
   .eq("user_id", Astro.locals.user.id)
   .single();
-const shareTicketStatus = prefsData?.share_ticket_status ?? true;
+const shareTicketStatus = prefsData?.share_ticket_status ?? false;
 
 const updated = Astro.url.searchParams.get("updated");
 const error = Astro.url.searchParams.get("error");

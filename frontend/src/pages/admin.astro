@@ -3,7 +3,7 @@ import "../styles/global.css";
 import Nav from "../components/Nav";
 import ClientRouter from "astro/components/ClientRouter.astro";
 
-const ADMIN_EMAIL = "clairejb93@gmail.com";
+const ADMIN_EMAIL = "dev@claireheaded.com";
 
 if (!Astro.locals.user || Astro.locals.user.email !== ADMIN_EMAIL) {
   return Astro.redirect("/");

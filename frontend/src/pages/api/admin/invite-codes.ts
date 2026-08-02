@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 
-const ADMIN_EMAIL = "clairejb93@gmail.com";
+const ADMIN_EMAIL = "dev@claireheaded.com";
 
 function adminClient() {
   return createClient(

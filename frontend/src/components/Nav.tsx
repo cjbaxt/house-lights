@@ -24,7 +24,7 @@ export default function Nav({ current }: { current: string }) {
   useEffect(() => {
     createClient().auth.getUser().then(({ data: { user } }) => {
       setIsLoggedIn(!!user);
-      setIsAdmin(user?.email === "clairejb93@gmail.com");
+      setIsAdmin(user?.email === "dev@claireheaded.com");
     });
   }, []);
 
