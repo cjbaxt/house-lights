@@ -34,15 +34,30 @@ if (currentUserId && !isOwnProfile) {
   isFollowing = !!friendship;
 }
 
-// Watchlist — only show public entries (tickets_bought items shown as "went")
+// Watchlist — fetch all entries and group multi-date shows into one card
 const { data: watchlistData } = await Astro.locals.supabase
   .from("watchlist")
-  .select("status, added_at, show:show_id(title, date, time, type, url, venue:venue_id(name))")
+  .select("status, added_at, show:show_id(id, title, date, time, type, url, venue:venue_id(name))")
   .eq("user_id", profile.id)
-  .order("added_at", { ascending: false })
-  .limit(20);
+  .order("show(date)", { ascending: true });
 
-const watchlist = (watchlistData ?? []) as any[];
+type WatchEntry = { status: string; added_at: string; show: { id: string; title: string; date: string; time: string | null; type: string | null; url: string | null; venue: { name: string } | null } | null };
+
+// Group by title + venue, collecting all dates
+const groupMap = new Map<string, { show: NonNullable<WatchEntry["show"]>; dates: string[]; status: string; added_at: string }>();
+for (const entry of (watchlistData ?? []) as WatchEntry[]) {
+  if (!entry.show) continue;
+  const key = `${entry.show.title.toLowerCase().trim()}||${entry.show.venue?.name ?? ""}`;
+  if (!groupMap.has(key)) {
+    groupMap.set(key, { show: entry.show, dates: [entry.show.date], status: entry.status, added_at: entry.added_at });
+  } else {
+    const g = groupMap.get(key)!;
+    g.dates.push(entry.show.date);
+    // Prefer tickets_bought status
+    if (entry.status === "tickets_bought") g.status = entry.status;
+  }
+}
+const watchlist = Array.from(groupMap.values()).slice(0, 30);
 
 const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).toUpperCase();
 ---
@@ -108,10 +123,16 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
           <p class="text-xs text-[#aaa]">Nothing here yet.</p>
         ) : (
           <ul class="space-y-4">
-            {watchlist.map((entry: any) => {
-              const show = entry.show;
-              if (!show) return null;
-              const date = show.date ? new Date(show.date).toLocaleDateString("en-NL", { day: "numeric", month: "short", year: "numeric" }) : null;
+            {watchlist.map((group) => {
+              const { show, dates, status } = group;
+              const firstDate = new Date(dates[0] + "T00:00:00");
+              const lastDate = new Date(dates[dates.length - 1] + "T00:00:00");
+              const fmt = (d: Date) => d.toLocaleDateString("en-NL", { day: "numeric", month: "short", year: "numeric" });
+              const dateLabel = dates.length === 1
+                ? fmt(firstDate)
+                : dates[0].slice(0, 7) === dates[dates.length - 1].slice(0, 7)
+                  ? `${firstDate.getDate()}–${fmt(lastDate)}`
+                  : `${fmt(firstDate)} – ${fmt(lastDate)}`;
               return (
                 <li class="border-b border-[#ece7de] pb-4 last:border-0">
                   <div class="flex items-start justify-between gap-4">
@@ -122,10 +143,11 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
                       }
                       <p class="text-xs text-[#888] mt-0.5">
                         {show.venue?.name}
-                        {date && <span class="text-[#bbb] ml-2">{date}</span>}
+                        <span class="text-[#bbb] ml-2">{dateLabel}</span>
+                        {dates.length > 1 && <span class="text-[#bbb] ml-1">· {dates.length} dates</span>}
                       </p>
                     </div>
-                    {entry.status === "tickets_bought" && (
+                    {status === "tickets_bought" && (
                       <span class="text-[10px] uppercase tracking-widest text-[#e85d2f] flex-shrink-0 mt-0.5">Ticketed</span>
                     )}
                   </div>
