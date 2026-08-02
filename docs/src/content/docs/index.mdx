@@ -1,0 +1,42 @@
+---
+title: Introduction
+description: house lights — Amsterdam arts event tracker. Documentation home.
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+**house lights** is an Amsterdam arts event tracker. It scrapes the programme pages of 25+ venues — theatre, dance, music, performance — and brings everything into one searchable, filterable feed with watchlist, calendar sync, and friend activity.
+
+This documentation covers the full technical internals: the scraping pipeline, database schema, frontend architecture, and deployment setup. It's written for contributors and for anyone curious about how the project is built.
+
+## Quick orientation
+
+<CardGrid>
+  <Card title="Architecture" icon="information">
+    How the scraping pipeline, database, and frontend fit together. Start here.
+
+    [Architecture overview →](/architecture)
+  </Card>
+  <Card title="Writing a scraper" icon="pencil">
+    Step-by-step guide to adding a new venue. The most common contribution.
+
+    [Scraper guide →](/scrapers/writing-a-scraper)
+  </Card>
+  <Card title="Database schema" icon="list-format">
+    Every table, column, and RLS policy documented.
+
+    [Schema reference →](/database/schema)
+  </Card>
+  <Card title="Deployment" icon="rocket">
+    Environment variables, Vercel config, and CI/CD pipeline.
+
+    [Deployment guide →](/deployment/environment-variables)
+  </Card>
+</CardGrid>
+
+## The short version
+
+1. Python scrapers run weekly via GitHub Actions and write shows to Supabase
+2. The Astro frontend (SSR on Vercel) queries Supabase directly — no separate API server
+3. Row-level security on Supabase means the frontend can safely use anon/user keys
+4. `dev` → `main` is the branching model; PRs require security scans to pass
