@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from datetime import date
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 AGENDA_URL = "https://ita.nl/en/agenda"
 BASE_URL = "https://ita.nl"
 
@@ -101,8 +103,8 @@ class ITAScraper(BaseScraper):
                             text = el.get_text(" ", strip=True)[:1000]
                             if text:
                                 return url, text
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return url, None
 
             unique_urls = list({it["url"] for it in items})

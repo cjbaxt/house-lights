@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 from datetime import date, time
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 AGENDA_URL = "https://www.bimhuis.nl/agenda/"
 BASE_URL = "https://www.bimhuis.nl"
 
@@ -89,8 +91,8 @@ class BimhuisScraper(BaseScraper):
                             if text:
                                 return url, text, img
                         return url, None, img
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return url, None, None
 
             unique_urls = list({it["url"] for it in items})

@@ -14,6 +14,8 @@ from html.parser import HTMLParser
 from datetime import date, datetime
 from .base import BaseScraper, ScrapedShow, infer_type
 
+logger = logging.getLogger(__name__)
+
 BASE_URL = "https://carre.nl"
 API_BASE = "https://carre.nl/api/render"
 HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://carre.nl/"}
@@ -141,8 +143,8 @@ class CarreScraper(BaseScraper):
                     r = await client.get(f"{API_BASE}/voorstelling/{slug}")
                     if r.status_code == 200:
                         return slug, r.json()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return slug, None
 
             results = await asyncio.gather(*[fetch_show(slug) for slug in slug_hrefs])

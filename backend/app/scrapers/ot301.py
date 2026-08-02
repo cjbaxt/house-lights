@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from datetime import date, time
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 EVENTS_URL = "https://www.ot301.nl/events"
 BASE_URL = "https://www.ot301.nl"
 
@@ -80,8 +82,8 @@ class OT301Scraper(BaseScraper):
                         el = ds.select_one("div.text")
                         if el:
                             return url, el.get_text(" ", strip=True)[:1000] or None
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return url, None
 
             unique_urls = list({it["url"] for it in items})

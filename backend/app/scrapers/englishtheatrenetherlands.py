@@ -11,6 +11,8 @@ from bs4 import BeautifulSoup
 from datetime import date
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 EVENTS_URL = "https://englishtheatrenetherlands.com/events/"
 
 MONTHS = {
@@ -113,8 +115,8 @@ class EnglishTheatreNetherlandsScraper(BaseScraper):
                             txt = p.get_text(strip=True)
                             if len(txt) > 40:
                                 return url, txt[:1000]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("%s scraping error: %s", __name__, e)
             return url, None
 
         unique_urls = list({it["url"] for it in items})

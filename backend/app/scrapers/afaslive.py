@@ -9,6 +9,8 @@ from bs4 import BeautifulSoup
 from datetime import date, time as time_type
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 AGENDA_URL = "https://www.afaslive.nl/agenda"
 BASE_URL = "https://www.afaslive.nl"
 
@@ -168,8 +170,8 @@ class AFASLiveScraper(BaseScraper):
                         meta = detail_soup.select_one('meta[name=description]')
                         desc = meta.get("content", "").strip() if meta else None
                         return href, timetable, desc or None
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return href, {}, None
 
             results = await asyncio.gather(*[fetch_detail(h) for h in needs_detail])
@@ -192,8 +194,8 @@ class AFASLiveScraper(BaseScraper):
                         meta = detail_soup.select_one('meta[name=description]')
                         desc = meta.get("content", "").strip() if meta else None
                         return href, desc or None
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return href, None
 
             desc_results = await asyncio.gather(*[fetch_desc_only(h) for h in needs_desc])

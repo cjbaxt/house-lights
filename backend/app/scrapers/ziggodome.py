@@ -14,6 +14,8 @@ from html import unescape
 from urllib.parse import urlparse, parse_qs
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 _HTML_TAG_RE = re.compile(r"<[^>]*>")
 
 API_URL = "https://www.ziggodome.nl/api/agenda/aankomend/"
@@ -60,8 +62,8 @@ async def _deezer_image(client: httpx.AsyncClient, artist: str) -> str | None:
             data = r.json().get("data", [])
             if data:
                 return data[0].get("picture_xl") or data[0].get("picture_big")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("%s scraping error: %s", __name__, e)
     return None
 
 

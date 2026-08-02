@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from datetime import date, time
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 EVENTS_URL = "https://inplayers.org/upcoming-events/"
 BASE_URL = "https://inplayers.org"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; house-lights-scraper)"}
@@ -26,14 +28,16 @@ def _parse(text):
         if month:
             try:
                 return date(int(m.group(3)), month, int(m.group(1))), time(int(m.group(4)), int(m.group(5)))
-            except ValueError: pass
+            except ValueError:
+                pass
     m2 = DATE_SHORT.search(text)
     if m2:
         month = MONTHS.get(m2.group(2).lower())
         if month:
             try:
                 return date(int(m2.group(3)), month, int(m2.group(1))), None
-            except ValueError: pass
+            except ValueError:
+                pass
     return None, None
 
 
@@ -92,8 +96,8 @@ class InPlayersScraper(BaseScraper):
                                 text = el.get_text(" ", strip=True)[:1000]
                                 if text:
                                     return url, text
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("%s scraping error: %s", __name__, e)
                     return url, None
 
                 detail_results = await asyncio.gather(*[fetch_desc(it["url"]) for it in no_desc])

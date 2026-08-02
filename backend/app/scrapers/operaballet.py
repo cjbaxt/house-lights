@@ -14,6 +14,8 @@ from datetime import date, time as time_type
 from bs4 import BeautifulSoup
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 AGENDA_BASE = "https://www.operaballet.nl/en/agenda"
 BASE_URL = "https://www.operaballet.nl"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
@@ -147,8 +149,8 @@ class OperaBalletScraper(BaseScraper):
                         if description and "Unfortunately" in description:
                             description = None
                         return url, node_id, subtitle, description
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return url, None, None, None
 
             detail_results = await asyncio.gather(*[fetch_detail(u) for u in show_entries])
@@ -169,8 +171,8 @@ class OperaBalletScraper(BaseScraper):
                     if r.status_code == 200:
                         data = r.json()
                         return url, data.get("results", [])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return url, []
 
             perf_results = await asyncio.gather(*[

@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from datetime import date, time
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 HOME_URL = "https://www.bostheater.nl"
 BASE_URL = "https://bostheater.nl"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; house-lights-scraper)"}
@@ -83,8 +85,8 @@ class BostheaterScraper(BaseScraper):
                             txt = p.get_text(strip=True)
                             if len(txt) > 80:
                                 return url, txt[:1000]
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return url, None
 
             desc_results = await asyncio.gather(*[fetch_desc(it["url"]) for it in items])

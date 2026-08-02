@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from datetime import date
 from .base import BaseScraper, ScrapedShow
 
+logger = logging.getLogger(__name__)
+
 HOME_URL = "https://www.cauldronperformingarts.com"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; house-lights-scraper)"}
 
@@ -88,8 +90,8 @@ class CauldronScraper(BaseScraper):
                             text = el.get_text(" ", strip=True)[:1000]
                             if text:
                                 return url, text
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("%s scraping error: %s", __name__, e)
                 return url, None
 
             unique_urls = list({it["url"] for it in items})
