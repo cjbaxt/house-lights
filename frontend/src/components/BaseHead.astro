@@ -1,0 +1,24 @@
+---
+import ClientRouter from "astro/components/ClientRouter.astro";
+
+interface Props {
+  title: string;
+  playfair?: boolean;
+  clientRouter?: boolean;
+}
+
+const { title, playfair = false, clientRouter = true } = Astro.props;
+
+const fontUrl = playfair
+  ? "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Playfair+Display:wght@400;500&display=swap"
+  : "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap";
+---
+<meta charset="utf-8" />
+{clientRouter && <ClientRouter />}
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{title}</title>
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href={fontUrl} rel="stylesheet" />

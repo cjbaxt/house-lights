@@ -228,14 +228,9 @@ export default function VenueList() {
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
 
   useEffect(() => {
-    Promise.all([api.getVenues(), api.getCompanies()]).then(([v, c]) => {
-      setVenues(v); setCompanies(c); setLoading(false);
+    Promise.all([api.getVenues(), api.getCompanies(), isEditor()]).then(([v, c, editor]) => {
+      setVenues(v); setCompanies(c); setEditing(editor); setLoading(false);
     });
-
-    function onEditorChange() { setEditing(isEditor()); }
-    onEditorChange();
-    window.addEventListener("editor-change", onEditorChange);
-    return () => window.removeEventListener("editor-change", onEditorChange);
   }, []);
 
   async function handleVenuePriority(id: string, priority: Priority) {

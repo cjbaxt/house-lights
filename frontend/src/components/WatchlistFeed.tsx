@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { localDateStr } from "../lib/api";
+import { localDateStr, formatDateChip } from "../lib/api";
 import type React from "react";
 import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar } from "@tabler/icons-react";
 import { createClient } from "../lib/supabase/client";
@@ -149,10 +149,7 @@ function GroupedCard({
         {(showAllDates ? group.entries : group.entries.slice(0, DATE_CHIPS_LIMIT)).map((entry) => {
           const d = new Date(entry.show.date + "T00:00:00");
           const isToday = entry.show.date === localDateStr();
-          const isCurrentYear = d.getFullYear() === new Date().getFullYear();
-          const label = (isToday ? "TODAY" : d.toLocaleDateString("en-GB", {
-            day: "numeric", month: "short", ...(!isCurrentYear && { year: "numeric" }),
-          })).toUpperCase();
+          const label = formatDateChip(entry.show.date);
           const isBought = entry.watchlist.status === "tickets_bought";
           const st = entry.show.ticket_status;
           const chipClass = isBought

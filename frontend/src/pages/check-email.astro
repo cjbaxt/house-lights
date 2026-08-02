@@ -7,12 +7,7 @@ if (Astro.locals.user) return Astro.redirect("/");
 
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Check your email — house lights</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <BaseHead title="Check your email — house lights" clientRouter={false} />
   </head>
   <body class="bg-[#f5f0e8] min-h-screen flex items-center justify-center">
     <div class="w-full max-w-xs px-6 text-center">

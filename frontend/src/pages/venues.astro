@@ -1,8 +1,8 @@
 ---
 import "../styles/global.css";
 import Nav from "../components/Nav";
+import BaseHead from "../components/BaseHead.astro";
 import EditorUnlock from "../components/EditorUnlock";
-import ClientRouter from "astro/components/ClientRouter.astro";
 import VenueList from "../components/VenueList";
 import { getIsAdmin } from "../lib/admin";
 
@@ -11,15 +11,7 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <ClientRouter />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Venues — house lights</title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
+    <BaseHead title="Venues — house lights" playfair />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
     <Nav current="/venues" isAdmin={isAdmin} client:load transition:persist />

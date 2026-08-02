@@ -35,6 +35,16 @@ export interface Venue {
   image_url?: string;
 }
 
+export interface Company {
+  id: string;
+  name: string;
+  website_url?: string;
+  priority: "high" | "medium" | "low";
+  description?: string;
+  image_url?: string;
+  active: boolean;
+}
+
 export interface City {
   id: string;
   name: string;
@@ -294,6 +304,20 @@ export const api = {
     return data as Venue;
   },
 
+  async getCompanies(): Promise<Company[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase.from("company").select("id,name,website_url,priority,description,image_url,active").eq("active", true).order("name");
+    if (error) throw error;
+    return (data ?? []) as Company[];
+  },
+
+  async updateVenuePriority(id: string, priority: "high" | "medium" | "low"): Promise<Venue> {
+    const supabase = createClient();
+    const { data, error } = await supabase.from("venue").update({ priority }).eq("id", id).select().single();
+    if (error) throw error;
+    return data as Venue;
+  },
+
   async updateCompanyPriority(id: string, priority: "high" | "medium" | "low"): Promise<Company> {
     const supabase = createClient();
     const { data, error } = await supabase.from("company").update({ priority }).eq("id", id).select().single();
@@ -314,6 +338,14 @@ export const api = {
 // ----------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------
+
+export function formatDateChip(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  if (dateStr === localDateStr()) return "TODAY";
+  const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+  return d.toLocaleDateString("en-GB", opts).toUpperCase();
+}
 
 export function localDateStr(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

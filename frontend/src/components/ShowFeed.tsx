@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type React from "react";
 import { IconList, IconCalendar, IconLayoutGrid, IconBookmark, IconBookmarkFilled, IconTicket, IconSearch, IconX, IconFlag, IconFlagFilled } from "@tabler/icons-react";
-import { api, localDateStr } from "../lib/api";
+import { api, localDateStr, formatDateChip } from "../lib/api";
 import type { Show, Venue, City, WatchlistEntry, WatchStatus } from "../lib/api";
 import ShowCard from "./ShowCard";
 import CalendarBody from "./CalendarBody";
@@ -123,10 +123,7 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
         {visible.map(({ id, date, status, time }) => {
           const d = new Date(date + "T00:00:00");
           const isToday = date === localDateStr();
-          const isCurrentYear = d.getFullYear() === new Date().getFullYear();
-          const label = isToday ? "TODAY" : d.toLocaleDateString("en-GB", {
-            day: "numeric", month: "short", ...(!isCurrentYear && { year: "numeric" })
-          }).toUpperCase();
+          const label = formatDateChip(date);
           const chipStatus = watchMap[id];
           const isDateWatched = chipStatus && chipStatus !== "passed";
           const isBought = chipStatus === "tickets_bought";

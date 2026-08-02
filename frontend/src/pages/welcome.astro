@@ -1,6 +1,5 @@
 ---
 import "../styles/global.css";
-import ClientRouter from "astro/components/ClientRouter.astro";
 
 if (!Astro.locals.user) return Astro.redirect("/login");
 
@@ -18,13 +17,7 @@ const error = Astro.url.searchParams.get("error");
 
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <ClientRouter />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Choose your username — house lights</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <BaseHead title="Choose your username — house lights" />
   </head>
   <body class="bg-[#f5f0e8] min-h-screen flex items-center justify-center">
     <div class="w-full max-w-xs px-6">
