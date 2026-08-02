@@ -37,7 +37,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const response = await next();
 
-  // Security headers
+  // Security headers — skip on redirects (redirect responses have immutable headers)
+  if (response.status >= 300 && response.status < 400) return response;
+
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
