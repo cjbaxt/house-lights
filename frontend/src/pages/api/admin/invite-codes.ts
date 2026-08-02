@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ locals }) => {
   const admin = adminClient();
   const { data, error } = await admin
     .from("invite_code")
-    .select("id, code, note, created_at, used_at, used_by, profile:used_by(username)")
+    .select("id, code, note, max_uses, use_count, created_at, used_at, used_by, profile:used_by(username)")
     .order("created_at", { ascending: false });
 
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
@@ -42,9 +42,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const body = await request.json().catch(() => ({}));
   const note = (body.note as string | undefined)?.trim() || null;
   const count = Math.min(20, Math.max(1, parseInt(body.count ?? "1", 10)));
+  const maxUses = Math.min(100, Math.max(1, parseInt(body.max_uses ?? "1", 10)));
 
   const admin = adminClient();
-  const codes = Array.from({ length: count }, () => ({ code: randomCode(), note }));
+  const codes = Array.from({ length: count }, () => ({ code: randomCode(), note, max_uses: maxUses }));
   const { data, error } = await admin.from("invite_code").insert(codes).select("id, code, note, created_at");
 
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
@@ -58,7 +59,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   if (!body.id) return new Response("Missing id", { status: 400 });
 
   const admin = adminClient();
-  const { error } = await admin.from("invite_code").delete().eq("id", body.id).is("used_by", null);
+  const { error } = await admin.from("invite_code").delete().eq("id", body.id);
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   return new Response(null, { status: 204 });
 };

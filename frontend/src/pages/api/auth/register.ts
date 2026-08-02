@@ -23,15 +23,15 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
 
   const { data: codeRow, error: codeErr } = await admin
     .from("invite_code")
-    .select("id, used_by")
+    .select("id, use_count, max_uses")
     .eq("code", inviteCode)
     .maybeSingle();
 
   if (codeErr || !codeRow) {
     return redirect(`/login?mode=signup&error=${encodeURIComponent("Invalid invite code.")}`);
   }
-  if (codeRow.used_by) {
-    return redirect(`/login?mode=signup&error=${encodeURIComponent("That invite code has already been used.")}`);
+  if (codeRow.use_count >= codeRow.max_uses) {
+    return redirect(`/login?mode=signup&error=${encodeURIComponent("That invite code has no uses remaining.")}`);
   }
 
   const { data: signUpData, error } = await locals.supabase.auth.signUp({ email, password });
@@ -40,9 +40,11 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
     return redirect(`/login?mode=signup&error=${encodeURIComponent(error.message)}`);
   }
 
-  // Mark code as used (best-effort — don't block signup if this fails)
+  // Increment use count (best-effort — don't block signup if this fails)
   if (signUpData?.user) {
-    await admin.from("invite_code").update({ used_by: signUpData.user.id, used_at: new Date().toISOString() }).eq("id", codeRow.id);
+    await admin.from("invite_code")
+      .update({ use_count: codeRow.use_count + 1, used_at: new Date().toISOString(), used_by: signUpData.user.id })
+      .eq("id", codeRow.id);
   }
 
   return redirect("/check-email");

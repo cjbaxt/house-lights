@@ -31,6 +31,8 @@ if (!isAdmin) return Astro.redirect("/");
           <div class="flex items-center gap-2">
             <input id="note-input" type="text" placeholder="Note (optional)" autocomplete="off"
               class="border border-[#ece7de] bg-white px-3 py-1.5 text-xs text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] w-36" />
+            <input id="max-uses-input" type="number" min="1" max="100" value="1" title="Max uses per code"
+              class="border border-[#ece7de] bg-white px-3 py-1.5 text-xs text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] w-20" />
             <select id="count-select" class="border border-[#ece7de] bg-white px-2 py-1.5 text-xs text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a]">
               <option value="1">1 code</option>
               <option value="5">5 codes</option>
@@ -50,7 +52,8 @@ if (!isAdmin) return Astro.redirect("/");
           <div class="flex items-center gap-4 px-4 py-2 bg-[#f9f8f6]">
             <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-28">Code</span>
             <span class="text-[10px] uppercase tracking-widest text-[#aaa] flex-1">Note</span>
-            <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-28">Used by</span>
+            <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-16">Uses</span>
+            <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-28">Last used by</span>
             <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-24">Created</span>
             <span class="w-6"></span>
           </div>
@@ -76,14 +79,16 @@ if (!isAdmin) return Astro.redirect("/");
         body.innerHTML = codes.map((c: any) => {
           const created = new Date(c.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
           const usedBy = c.profile?.username ?? (c.used_by ? "deleted user" : "");
-          const canDelete = !c.used_by;
+          const usesLabel = `${c.use_count}/${c.max_uses}`;
+          const full = c.use_count >= c.max_uses;
           return `
             <div class="flex items-center gap-4 px-4 py-2.5" data-id="${c.id}">
               <span class="text-xs font-mono font-bold text-[#1a1a1a] w-28 select-all">${c.code}</span>
               <span class="text-xs text-[#888] flex-1">${c.note ?? ""}</span>
+              <span class="text-xs w-16 ${full ? "text-[#e85d2f]" : "text-[#888]"}">${usesLabel}</span>
               <span class="text-xs ${usedBy ? "text-[#888]" : "text-[#ccc]"} w-28">${usedBy || "—"}</span>
               <span class="text-xs text-[#aaa] w-24">${created}</span>
-              <button class="delete-btn w-6 text-[#d4c9b8] hover:text-[#e85d2f] transition-colors text-sm leading-none ${canDelete ? "" : "invisible"}"
+              <button class="delete-btn w-6 text-[#d4c9b8] hover:text-[#e85d2f] transition-colors text-sm leading-none"
                 data-id="${c.id}" title="Delete code">×</button>
             </div>
           `;
@@ -92,7 +97,7 @@ if (!isAdmin) return Astro.redirect("/");
         body.querySelectorAll(".delete-btn").forEach(btn => {
           btn.addEventListener("click", async () => {
             const id = (btn as HTMLElement).dataset.id;
-            if (!confirm("Delete this unused code?")) return;
+            if (!confirm("Delete this code?")) return;
             await fetch(ADMIN_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
             loadCodes();
           });
@@ -102,13 +107,14 @@ if (!isAdmin) return Astro.redirect("/");
       document.getElementById("generate-btn")?.addEventListener("click", async () => {
         const note = (document.getElementById("note-input") as HTMLInputElement).value.trim();
         const count = parseInt((document.getElementById("count-select") as HTMLSelectElement).value, 10);
+        const maxUses = parseInt((document.getElementById("max-uses-input") as HTMLInputElement).value, 10) || 1;
         const errEl = document.getElementById("codes-error")!;
         errEl.classList.add("hidden");
 
         const r = await fetch(ADMIN_API, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ note: note || null, count }),
+          body: JSON.stringify({ note: note || null, count, max_uses: maxUses }),
         });
         if (!r.ok) {
           const d = await r.json();
