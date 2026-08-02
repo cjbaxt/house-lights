@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@supabase/supabase-js";
+import { createServiceClient } from "../../../lib/supabase/service";
 
 const BETA_CAP = parseInt(import.meta.env.BETA_CAP ?? "10", 10);
 
@@ -14,11 +14,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  const admin = createClient(
-    import.meta.env.SUPABASE_URL ?? import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
+  const admin = createServiceClient();
 
   // Count current registered users (profiles = confirmed users)
   const { count } = await admin.from("profile").select("*", { count: "exact", head: true });
@@ -49,17 +45,11 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 export const GET: APIRoute = async () => {
-  const admin = createClient(
-    import.meta.env.SUPABASE_URL ?? import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
-
-  const BETA_CAP_VAL = parseInt(import.meta.env.BETA_CAP ?? "10", 10);
+  const admin = createServiceClient();
   const { count } = await admin.from("profile").select("*", { count: "exact", head: true });
-  const spotsLeft = Math.max(0, BETA_CAP_VAL - (count ?? 0));
+  const spotsLeft = Math.max(0, BETA_CAP - (count ?? 0));
 
-  return new Response(JSON.stringify({ spotsLeft, cap: BETA_CAP_VAL }), {
+  return new Response(JSON.stringify({ spotsLeft, cap: BETA_CAP }), {
     headers: { "Content-Type": "application/json" },
   });
 };

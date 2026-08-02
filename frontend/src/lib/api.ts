@@ -305,10 +305,9 @@ export const api = {
   // Calendar
   // ----------------------------------------------------------------
 
-  calendarUrl(username?: string): string {
-    const u = username ?? "claireheaded";
+  calendarUrl(username: string): string {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://houselights.claireheaded.com";
-    return `${origin}/api/calendar/${u}.ics`.replace(/^https?:\/\//, "webcal://");
+    return `${origin}/api/calendar/${username}.ics`.replace(/^https?:\/\//, "webcal://");
   },
 };
 
@@ -320,5 +319,3 @@ export function localDateStr(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Keep STATIC export for any remaining references — always false now
-export const STATIC = false;

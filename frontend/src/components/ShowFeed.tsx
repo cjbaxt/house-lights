@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type React from "react";
 import { IconList, IconCalendar, IconLayoutGrid, IconBookmark, IconBookmarkFilled, IconTicket, IconSearch, IconX, IconFlag, IconFlagFilled } from "@tabler/icons-react";
-import { api } from "../lib/api";
+import { api, localDateStr } from "../lib/api";
 import type { Show, Venue, City, WatchlistEntry, WatchStatus } from "../lib/api";
 import ShowCard from "./ShowCard";
 import CalendarBody from "./CalendarBody";
@@ -17,10 +17,6 @@ type Timeframe = "today" | "week" | "month" | "all" | "custom";
 type DisplayView = "programme" | "agenda" | "calendar";
 
 const ALL_TYPES = ["music", "classical", "theatre", "comedy", "ballet", "dance", "opera", "cabaret", "circus", "spoken_word", "talk", "other"];
-
-function localDateStr(d = new Date()): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 function endOfWeek(): string {
   const d = new Date();
@@ -501,8 +497,8 @@ function clearAll() {
   }
 
   const activeCities = cities.filter(c => c.is_active);
-  const hasFilters = timeframe !== "all" || activeTypes.size > 0 || activeVenues.size > 0 || !!searchQuery.trim() || (activeCities.length > 1 && activeCityId !== null);
-  const filterCount = (timeframe !== "all" ? 1 : 0) + (activeTypes.size > 0 ? 1 : 0) + (activeVenues.size > 0 ? 1 : 0) + (activeCities.length > 1 && activeCityId !== null ? 1 : 0);
+  const hasFilters = timeframe !== "month" || activeTypes.size > 0 || activeVenues.size > 0 || !!searchQuery.trim() || (activeCities.length > 1 && activeCityId !== null);
+  const filterCount = (timeframe !== "month" ? 1 : 0) + (activeTypes.size > 0 ? 1 : 0) + (activeVenues.size > 0 ? 1 : 0) + (activeCities.length > 1 && activeCityId !== null ? 1 : 0);
 
   const displayCount = displayView === "programme" ? programmeGroups.length : filtered.length;
 

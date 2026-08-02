@@ -68,6 +68,10 @@ if (!isAdmin) return Astro.redirect("/");
     <script>
       const ADMIN_API = "/api/admin/invite-codes";
 
+      function esc(s: string) {
+        return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      }
+
       async function loadCodes() {
         const r = await fetch(ADMIN_API);
         const codes = await r.json();
@@ -84,7 +88,7 @@ if (!isAdmin) return Astro.redirect("/");
           return `
             <div class="flex items-center gap-4 px-4 py-2.5" data-id="${c.id}">
               <span class="text-xs font-mono font-bold text-[#1a1a1a] w-28 select-all">${c.code}</span>
-              <span class="text-xs text-[#888] flex-1">${c.note ?? ""}</span>
+              <span class="text-xs text-[#888] flex-1">${esc(c.note ?? "")}</span>
               <span class="text-xs w-16 ${full ? "text-[#e85d2f]" : "text-[#888]"}">${usesLabel}</span>
               <span class="text-xs ${usedBy ? "text-[#888]" : "text-[#ccc]"} w-28">${usedBy || "—"}</span>
               <span class="text-xs text-[#aaa] w-24">${created}</span>

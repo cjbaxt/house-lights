@@ -1,22 +1,6 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@supabase/supabase-js";
-
-function adminClient() {
-  return createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
-  );
-}
-
-async function isAdmin(locals: App.Locals): Promise<boolean> {
-  if (!locals.user?.id) return false;
-  const { data } = await locals.supabase
-    .from("profile")
-    .select("is_admin")
-    .eq("id", locals.user.id)
-    .single();
-  return data?.is_admin === true;
-}
+import { createServiceClient } from "../../../lib/supabase/service";
+import { getIsAdmin } from "../../../lib/admin";
 
 function randomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -24,9 +8,9 @@ function randomCode() {
 }
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!await isAdmin(locals)) return new Response("Forbidden", { status: 403 });
+  if (!await getIsAdmin(locals.supabase, locals.user?.id)) return new Response("Forbidden", { status: 403 });
 
-  const admin = adminClient();
+  const admin = createServiceClient();
   const { data, error } = await admin
     .from("invite_code")
     .select("id, code, note, max_uses, use_count, created_at, used_at, used_by, profile:used_by(username)")
@@ -37,14 +21,14 @@ export const GET: APIRoute = async ({ locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  if (!await isAdmin(locals)) return new Response("Forbidden", { status: 403 });
+  if (!await getIsAdmin(locals.supabase, locals.user?.id)) return new Response("Forbidden", { status: 403 });
 
   const body = await request.json().catch(() => ({}));
   const note = (body.note as string | undefined)?.trim() || null;
   const count = Math.min(20, Math.max(1, parseInt(body.count ?? "1", 10)));
   const maxUses = Math.min(100, Math.max(1, parseInt(body.max_uses ?? "1", 10)));
 
-  const admin = adminClient();
+  const admin = createServiceClient();
   const codes = Array.from({ length: count }, () => ({ code: randomCode(), note, max_uses: maxUses }));
   const { data, error } = await admin.from("invite_code").insert(codes).select("id, code, note, created_at");
 
@@ -53,12 +37,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  if (!await isAdmin(locals)) return new Response("Forbidden", { status: 403 });
+  if (!await getIsAdmin(locals.supabase, locals.user?.id)) return new Response("Forbidden", { status: 403 });
 
   const body = await request.json().catch(() => ({}));
   if (!body.id) return new Response("Missing id", { status: 400 });
 
-  const admin = adminClient();
+  const admin = createServiceClient();
   const { error } = await admin.from("invite_code").delete().eq("id", body.id);
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   return new Response(null, { status: 204 });

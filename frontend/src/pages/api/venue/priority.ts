@@ -1,8 +1,9 @@
 import type { APIRoute } from "astro";
 import { createServiceClient } from "../../../lib/supabase/service";
+import { getIsAdmin } from "../../../lib/admin";
 
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
-  if (!locals.user) return redirect("/login");
+  if (!await getIsAdmin(locals.supabase, locals.user?.id)) return new Response("Forbidden", { status: 403 });
 
   const form = await request.formData();
   const id = form.get("id") as string;

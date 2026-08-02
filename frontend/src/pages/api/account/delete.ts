@@ -1,17 +1,11 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@supabase/supabase-js";
+import { createServiceClient } from "../../../lib/supabase/service";
 
 export const POST: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response("Unauthorized", { status: 401 });
 
   try {
-    const supabaseUrl = import.meta.env.SUPABASE_URL ?? import.meta.env.PUBLIC_SUPABASE_URL;
-    const serviceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !serviceKey) {
-      return new Response("Server misconfiguration", { status: 500 });
-    }
-
-    const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+    const admin = createServiceClient();
 
     // Remove avatar from storage before deleting user (storage doesn't cascade)
     const { data: files } = await admin.storage.from("avatars").list(locals.user.id);

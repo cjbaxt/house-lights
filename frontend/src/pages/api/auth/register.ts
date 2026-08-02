@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@supabase/supabase-js";
+import { createServiceClient } from "../../../lib/supabase/service";
 
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
   const form = await request.formData();
@@ -15,11 +15,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
     return redirect(`/login?mode=signup&error=${encodeURIComponent("An invite code is required to sign up.")}`);
   }
 
-  // Validate invite code using service role (bypasses RLS)
-  const admin = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
-  );
+  const admin = createServiceClient();
 
   const { data: codeRow, error: codeErr } = await admin
     .from("invite_code")
@@ -40,11 +36,12 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
     return redirect(`/login?mode=signup&error=${encodeURIComponent(error.message)}`);
   }
 
-  // Increment use count (best-effort — don't block signup if this fails)
+  // Increment use count atomically — filter on use_count < max_uses to handle races
   if (signUpData?.user) {
     await admin.from("invite_code")
       .update({ use_count: codeRow.use_count + 1, used_at: new Date().toISOString(), used_by: signUpData.user.id })
-      .eq("id", codeRow.id);
+      .eq("id", codeRow.id)
+      .lt("use_count", codeRow.max_uses);
   }
 
   return redirect("/check-email");

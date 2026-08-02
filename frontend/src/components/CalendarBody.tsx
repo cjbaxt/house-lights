@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { localDateStr } from "../lib/api";
 import type { Show } from "../lib/api";
 import EventTypeIcon from "./EventTypeIcon";
 
@@ -8,9 +9,7 @@ type ViewMode = "month" | "week" | "day";
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-function isoDate(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
+const isoDate = (d: Date) => localDateStr(d);
 
 function startOfWeek(d: Date) {
   const day = d.getDay();
