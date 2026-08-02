@@ -2,10 +2,12 @@
 De Meervaart — static HTML (Tailwind-based site).
 Events as article elements; date like "vr 26 jun"
 """
-import httpx, re, asyncio
+import httpx, re, asyncio, logging
 from bs4 import BeautifulSoup
 from datetime import date
 from .base import BaseScraper, ScrapedShow
+
+logger = logging.getLogger(__name__)
 
 AGENDA_URL = "https://www.demeervaart.nl/agenda"
 BASE_URL = "https://www.demeervaart.nl"
@@ -101,8 +103,8 @@ class MeervaartScraper(BaseScraper):
                                 desc = el.get_text(" ", strip=True)[:1000] or None
                         tm = _parse_time(page_text)
                         return url, desc, tm
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("meervaart detail fetch failed for %s: %s", url, e)
                 return url, None, None
 
             unique_urls = list({it["url"] for it in items})

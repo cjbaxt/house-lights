@@ -10,9 +10,12 @@ Dates are encoded in the h4 activity titles:
 import re
 import httpx
 import asyncio
+import logging
 from datetime import date, time, timedelta
 from bs4 import BeautifulSoup
 from .base import BaseScraper, ScrapedShow
+
+logger = logging.getLogger(__name__)
 
 SHOWS_URL = "https://boomchicago.nl/shows/"
 BASE_URL = "https://boomchicago.nl"
@@ -95,7 +98,8 @@ def _fareharbor_dates(item_pk: str, today: date) -> list[date]:
             for a in data.get("availabilities", [])
             if a.get("status") == "bookable"
         ]
-    except Exception:
+    except Exception as e:
+        logger.warning("boomchicago fareharbor fetch failed for pk %s: %s", pk, e)
         return []
 
 
@@ -217,8 +221,8 @@ class BoomChicagoScraper(BaseScraper):
                             except ValueError:
                                 pass
                         return url, desc, img, tm
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("boomchicago detail fetch failed for %s: %s", url, e)
             return url, None, None, None
 
         unique_urls = list({it["url"] for it in items})

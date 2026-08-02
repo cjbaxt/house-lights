@@ -4,7 +4,8 @@ import { getIsAdmin } from "../../../lib/admin";
 
 function randomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return "HL-" + Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  return "HL-" + Array.from(bytes, (b) => chars[b % chars.length]).join("");
 }
 
 export const GET: APIRoute = async ({ locals }) => {

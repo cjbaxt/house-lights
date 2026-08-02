@@ -1,10 +1,12 @@
 """
 Cinetol — Webflow-based static HTML.
 """
-import httpx, re, asyncio
+import httpx, re, asyncio, logging
 from bs4 import BeautifulSoup
 from datetime import date, time
 from .base import BaseScraper, ScrapedShow
+
+logger = logging.getLogger(__name__)
 
 # "doors: show: 17:00" or "aanvang: 20:30" or standalone "20:30"
 _SHOW_TIME_RE = re.compile(r"(?:show|aanvang)[:\s]+(\d{1,2}):(\d{2})", re.I)
@@ -105,8 +107,8 @@ class CinetolScraper(BaseScraper):
                             except ValueError:
                                 pass
                         return href, desc, tm
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("cinetol detail fetch failed for %s: %s", href, e)
                 return href, None, None
 
             detail_results = await asyncio.gather(*[fetch_detail(it["href"]) for it in items])

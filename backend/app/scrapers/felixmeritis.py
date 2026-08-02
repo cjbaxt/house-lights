@@ -3,10 +3,12 @@ Felix Meritis — WordPress-based static HTML.
 Events as div.event-list__meta + h2.event-list__title
 Date format: "vr 3 jul"
 """
-import httpx, re, asyncio
+import httpx, re, asyncio, logging
 from bs4 import BeautifulSoup
 from datetime import date
 from .base import BaseScraper, ScrapedShow
+
+logger = logging.getLogger(__name__)
 
 AGENDA_URL = "https://felixmeritis.nl/programma/"
 BASE_URL = "https://felixmeritis.nl"
@@ -107,8 +109,8 @@ class FelixMeritisScraper(BaseScraper):
                             except (ValueError, ImportError):
                                 pass
                         return url, desc, tm
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("felixmeritis detail fetch failed for %s: %s", url, e)
                 return url, None, None
 
             unique_urls = list({it["url"] for it in items if it["url"] != AGENDA_URL})
