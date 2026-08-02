@@ -43,19 +43,15 @@ const { data: watchlistData } = await Astro.locals.supabase
 
 type WatchEntry = { status: string; added_at: string; show: { id: string; title: string; date: string; time: string | null; type: string | null; url: string | null; venue: { name: string } | null } | null };
 
-// Group by title + venue, collecting all dates
-const groupMap = new Map<string, { show: NonNullable<WatchEntry["show"]>; dates: string[]; status: string; added_at: string }>();
+// Group by title + venue, preserving per-date status and time
+const groupMap = new Map<string, { show: NonNullable<WatchEntry["show"]>; dates: { date: string; time: string | null; status: string }[] }>();
 for (const entry of (watchlistData ?? []) as WatchEntry[]) {
   if (!entry.show) continue;
   const key = `${entry.show.title.toLowerCase().trim()}||${entry.show.venue?.name ?? ""}`;
   if (!groupMap.has(key)) {
-    groupMap.set(key, { show: entry.show, dates: [entry.show.date], status: entry.status, added_at: entry.added_at });
-  } else {
-    const g = groupMap.get(key)!;
-    g.dates.push(entry.show.date);
-    // Prefer tickets_bought status
-    if (entry.status === "tickets_bought") g.status = entry.status;
+    groupMap.set(key, { show: entry.show, dates: [] });
   }
+  groupMap.get(key)!.dates.push({ date: entry.show.date, time: entry.show.time, status: entry.status });
 }
 const watchlist = Array.from(groupMap.values()).slice(0, 30);
 
@@ -124,32 +120,31 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
         ) : (
           <ul class="space-y-4">
             {watchlist.map((group) => {
-              const { show, dates, status } = group;
-              const firstDate = new Date(dates[0] + "T00:00:00");
-              const lastDate = new Date(dates[dates.length - 1] + "T00:00:00");
-              const fmt = (d: Date) => d.toLocaleDateString("en-NL", { day: "numeric", month: "short", year: "numeric" });
-              const dateLabel = dates.length === 1
-                ? fmt(firstDate)
-                : dates[0].slice(0, 7) === dates[dates.length - 1].slice(0, 7)
-                  ? `${firstDate.getDate()}–${fmt(lastDate)}`
-                  : `${fmt(firstDate)} – ${fmt(lastDate)}`;
+              const { show, dates } = group;
               return (
-                <li class="border-b border-[#ece7de] pb-4 last:border-0">
-                  <div class="flex items-start justify-between gap-4">
-                    <div class="min-w-0">
-                      {show.url
-                        ? <a href={show.url} target="_blank" rel="noopener noreferrer" class="font-medium text-sm text-[#1a1a1a] hover:underline leading-tight block truncate">{show.title}</a>
-                        : <span class="font-medium text-sm text-[#1a1a1a] leading-tight block truncate">{show.title}</span>
-                      }
-                      <p class="text-xs text-[#888] mt-0.5">
-                        {show.venue?.name}
-                        <span class="text-[#bbb] ml-2">{dateLabel}</span>
-                        {dates.length > 1 && <span class="text-[#bbb] ml-1">· {dates.length} dates</span>}
-                      </p>
+                <li class="border-b border-[#ece7de] pb-3 last:border-0">
+                  <div class="min-w-0 mb-1.5">
+                    <div class="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-0.5">
+                      {show.type ?? "other"}{show.venue?.name ? ` · ${show.venue.name}` : ""}
                     </div>
-                    {status === "tickets_bought" && (
-                      <span class="text-[10px] uppercase tracking-widest text-[#e85d2f] flex-shrink-0 mt-0.5">Ticketed</span>
-                    )}
+                    {show.url
+                      ? <a href={show.url} target="_blank" rel="noopener noreferrer" class="font-sans font-black text-sm uppercase tracking-tight text-[#1a1a1a] hover:underline leading-tight block truncate">{show.title}</a>
+                      : <span class="font-sans font-black text-sm uppercase tracking-tight text-[#1a1a1a] leading-tight block truncate">{show.title}</span>
+                    }
+                  </div>
+                  <div class="flex flex-wrap gap-1">
+                    {dates.map(({ date, time, status }) => {
+                      const d = new Date(date + "T00:00:00");
+                      const label = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase();
+                      const chipClass = status === "tickets_bought"
+                        ? "bg-[#1a1a1a] border-[#1a1a1a] text-white"
+                        : "border-[#ece7de] text-[#888]";
+                      return (
+                        <span class={`text-[10px] font-bold px-2 py-0.5 border tracking-wide ${chipClass}`}>
+                          {label}{time ? ` ${time.slice(0, 5)}` : ""}
+                        </span>
+                      );
+                    })}
                   </div>
                 </li>
               );
