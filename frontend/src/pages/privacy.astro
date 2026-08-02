@@ -52,10 +52,9 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
       <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Anonymous activity data</p>
       <ul class="space-y-2 mb-4">
         <li>— Ticket link click-throughs (which show was clicked, your user ID if signed in or null if not)</li>
-        <li>— Page views and navigation events — collected by Vercel Analytics (page URL, referrer, country, device type). No personal data is attached; no cookies are set.</li>
       </ul>
       <p class="text-xs text-[#aaa] mb-8">
-        Legal basis: legitimate interest (Article 6(1)(f) GDPR) — used to improve the service and understand how it is used. If you delete your account, your user ID is removed from click data; anonymous aggregate records are retained for up to 24 months. You can object to this processing at any time by emailing us.
+        Legal basis: legitimate interest (Article 6(1)(f) GDPR) — used to improve the service and evaluate whether venue partnerships are worthwhile. Collected server-side with no advertising or analytics trackers. If you delete your account, your user ID is removed from this data; anonymous aggregate records are retained for up to 24 months. You can object to this processing at any time by emailing us.
       </p>
 
       <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Security and infrastructure data</p>
@@ -80,12 +79,8 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
       <p class="mb-6">
         If you bookmark shows before creating an account, those bookmarks are stored in your browser's local storage — they never leave your device. When you sign up or log in, they are transferred to your account and the local copy is deleted. You can clear them at any time by clearing your browser's site data for house-lights.nl.
       </p>
-      <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Vercel Analytics</p>
       <p class="mb-6">
-        We use Vercel Analytics to count page views. It does not set cookies and does not track you across sites. It collects the page URL, referrer, country, and device type — no IP address is stored by Vercel Analytics.
-      </p>
-      <p class="mb-6">
-        We do not use advertising or tracking cookies.
+        We do not use advertising, tracking, or analytics cookies.
       </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Profile visibility</h2>
@@ -116,10 +111,10 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Sub-processors</h2>
       <ul class="space-y-2 mb-6">
         <li>— <a href="https://supabase.com/privacy" class="font-bold text-[#1a1a1a] underline hover:text-[#555]">Supabase</a> (AWS Frankfurt) — database, authentication, file storage. <a href="https://supabase.com/dpa" class="underline hover:text-[#1a1a1a]">GDPR-compliant DPA in place.</a></li>
-        <li>— <a href="https://vercel.com/legal/privacy-policy" class="font-bold text-[#1a1a1a] underline hover:text-[#555]">Vercel</a> — hosting, edge delivery, and page-view analytics. <a href="https://vercel.com/legal/dpa" class="underline hover:text-[#1a1a1a]">GDPR-compliant DPA in place.</a></li>
+        <li>— <a href="https://vercel.com/legal/privacy-policy" class="font-bold text-[#1a1a1a] underline hover:text-[#555]">Vercel</a> — hosting and edge delivery. <a href="https://vercel.com/legal/dpa" class="underline hover:text-[#1a1a1a]">GDPR-compliant DPA in place.</a></li>
         <li>— <a href="https://www.cloudflare.com/privacypolicy/" class="font-bold text-[#1a1a1a] underline hover:text-[#555]">Cloudflare</a> — DDoS protection, bot mitigation, security. <a href="https://www.cloudflare.com/gdpr/introduction/" class="underline hover:text-[#1a1a1a]">GDPR-compliant DPA in place.</a></li>
       </ul>
-      <p class="mb-6">No data is shared with any other third party. We do not sell data or run advertising.</p>
+      <p class="mb-6">No data is shared with any other third party. We do not sell data, run advertising, or use analytics services.</p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Minimum age</h2>
       <p class="mb-6">
