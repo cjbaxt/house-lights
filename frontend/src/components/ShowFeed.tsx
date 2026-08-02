@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type React from "react";
-import { IconList, IconCalendar, IconLayoutGrid, IconBookmark, IconBookmarkFilled, IconTicket, IconSearch, IconX } from "@tabler/icons-react";
+import { IconList, IconCalendar, IconLayoutGrid, IconBookmark, IconBookmarkFilled, IconTicket, IconSearch, IconX, IconFlag, IconFlagFilled } from "@tabler/icons-react";
 import { api } from "../lib/api";
 import type { Show, Venue, City, WatchlistEntry, WatchStatus } from "../lib/api";
 import ShowCard from "./ShowCard";
@@ -55,11 +55,27 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
   async function handleBookmark(e: React.MouseEvent) {
     e.preventDefault();
     if (anyWatched) {
-      await Promise.all(allDates.map(d => api.removeWatch(d.id)));
+      // Only remove dates that don't have tickets bought
+      const toRemove = allDates.filter(d => watchMap[d.id] && watchMap[d.id] !== "tickets_bought" && watchMap[d.id] !== "passed");
+      await Promise.all(toRemove.map(d => api.removeWatch(d.id)));
     } else {
       await Promise.all(allDates.map(d => api.upsertWatch(d.id, "interested", {
         snapshot: { title: show.title, date: d.date, type: show.type ?? undefined, venue_name: location || undefined, url: show.url ?? undefined, time: d.time ?? undefined },
       })));
+    }
+    onWatchChange();
+  }
+
+  async function handleDateWatch(e: React.MouseEvent, showId: string, date: string, time?: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    const current = watchMap[showId];
+    if (current && current !== "passed") {
+      await api.removeWatch(showId);
+    } else {
+      await api.upsertWatch(showId, "interested", {
+        snapshot: { title: show.title, date, type: show.type ?? undefined, venue_name: location || undefined, url: show.url ?? undefined, time: time ?? undefined },
+      });
     }
     onWatchChange();
   }
@@ -92,7 +108,9 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
               {show.title}
             </div>
             {show.subtitle && <div className="text-xs text-[#888] mt-0.5 line-clamp-2">{show.subtitle}</div>}
-            {show.summary && <ExpandableText text={show.summary} className="text-[11px] text-[#888] mt-1 leading-relaxed" lines={2} />}
+            {(show.description || show.summary) && (
+              <ExpandableText text={(show.description || show.summary)!} className="text-[11px] text-[#888] mt-1 leading-relaxed" lines={2} />
+            )}
           </div>
         </a>
         <button onClick={handleBookmark}
@@ -114,25 +132,30 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
             day: "numeric", month: "short", ...(!isCurrentYear && { year: "numeric" })
           }).toUpperCase();
           const chipStatus = watchMap[id];
+          const isDateWatched = chipStatus && chipStatus !== "passed";
           const isBought = chipStatus === "tickets_bought";
           const chipClass = isBought
             ? "bg-[#1a1a1a] border-[#1a1a1a] text-white"
+            : isDateWatched ? "border-[#e85d2f] text-[#e85d2f]"
             : status === "sold_out" ? "border-[#ece7de] text-[#ccc] line-through"
             : status === "few_left" ? "border-amber-300 text-amber-700"
-            : "border-[#ece7de] text-[#888] hover:border-[#e85d2f] hover:text-[#e85d2f]";
+            : "border-[#ece7de] text-[#888]";
           return (
-            <div key={id} className="flex items-center gap-0.5">
+            <div key={id} className="flex items-center">
+              {/* Date label — links to show page */}
               <a href={show.url ? `/api/out?show_id=${id}` : undefined} target="_blank" rel="noopener noreferrer"
-                className={`text-[10px] font-bold px-2 py-0.5 border transition-colors tracking-wide ${chipClass}`}
+                className={`text-[10px] font-bold px-2 py-0.5 border-y border-l transition-colors tracking-wide ${chipClass}`}
               >
                 {label}{time ? ` ${time.slice(0, 5)}` : ""}
               </a>
-              {anyWatched && (
-                <button onClick={(e) => handleMarkBought(e, id, date, time ?? undefined)}
-                  title={isBought ? "Unmark as bought" : "Mark tickets bought"}
-                  className={`p-0.5 transition-colors ${isBought ? "text-[#e85d2f]" : "text-[#d4c9b8] hover:text-[#888]"}`}
+              {/* Watch toggle — per date */}
+              {currentUser && (
+                <button
+                  onClick={(e) => isBought ? handleMarkBought(e, id, date, time ?? undefined) : handleDateWatch(e, id, date, time ?? undefined)}
+                  title={isBought ? "Unmark tickets" : isDateWatched ? "Remove from watchlist" : "Add this date to watchlist"}
+                  className={`px-1 py-0.5 border transition-colors ${isBought ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#333]" : isDateWatched ? "border-[#e85d2f] text-[#e85d2f] hover:bg-[#fff0ec]" : "border-[#ece7de] text-[#d4c9b8] hover:border-[#aaa] hover:text-[#888]"}`}
                 >
-                  <IconTicket size={11} />
+                  {isBought ? <IconTicket size={10} /> : isDateWatched ? <IconBookmarkFilled size={10} /> : <IconBookmark size={10} />}
                 </button>
               )}
             </div>

@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
   let query = locals.supabase
     .from("show")
     .select(
-      "id,title,subtitle,venue_id,company_id,city_id,date,time,type,url,ticket_status,price_from,currency,summary,image_url",
+      "id,title,subtitle,venue_id,company_id,city_id,date,time,type,url,ticket_status,price_from,currency,description,summary,image_url",
       { count: "exact" }
     )
     .gte("date", fromDate)

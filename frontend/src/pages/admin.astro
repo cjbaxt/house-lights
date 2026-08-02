@@ -1,0 +1,128 @@
+---
+import "../styles/global.css";
+import Nav from "../components/Nav";
+import ClientRouter from "astro/components/ClientRouter.astro";
+
+const ADMIN_EMAIL = "clairejb93@gmail.com";
+
+if (!Astro.locals.user || Astro.locals.user.email !== ADMIN_EMAIL) {
+  return Astro.redirect("/");
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <ClientRouter />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin — house lights</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#f5f3ef] min-h-screen">
+    <Nav current="" client:load transition:persist />
+    <main class="max-w-3xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
+
+      <h1 class="font-sans font-black text-xl text-[#1a1a1a] mb-8">Admin</h1>
+
+      <!-- Invite codes -->
+      <section class="mb-12">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a]">Invite codes</h2>
+          <div class="flex items-center gap-2">
+            <input id="note-input" type="text" placeholder="Note (optional)" autocomplete="off"
+              class="border border-[#ece7de] bg-white px-3 py-1.5 text-xs text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] w-36" />
+            <select id="count-select" class="border border-[#ece7de] bg-white px-2 py-1.5 text-xs text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a]">
+              <option value="1">1 code</option>
+              <option value="5">5 codes</option>
+              <option value="10">10 codes</option>
+              <option value="20">20 codes</option>
+            </select>
+            <button id="generate-btn"
+              class="text-xs uppercase tracking-widest font-bold px-4 py-1.5 bg-[#1a1a1a] text-white hover:bg-[#333] transition-colors">
+              Generate
+            </button>
+          </div>
+        </div>
+
+        <div id="codes-error" class="hidden text-xs text-[#e85d2f] mb-3"></div>
+
+        <div class="border border-[#ece7de] divide-y divide-[#ece7de]" id="codes-table">
+          <div class="flex items-center gap-4 px-4 py-2 bg-[#f9f8f6]">
+            <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-28">Code</span>
+            <span class="text-[10px] uppercase tracking-widest text-[#aaa] flex-1">Note</span>
+            <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-28">Used by</span>
+            <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-24">Created</span>
+            <span class="w-6"></span>
+          </div>
+          <div id="codes-body" class="divide-y divide-[#ece7de]">
+            <div class="px-4 py-3 text-xs text-[#aaa]">Loading…</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <script>
+      const ADMIN_API = "/api/admin/invite-codes";
+
+      async function loadCodes() {
+        const r = await fetch(ADMIN_API);
+        const codes = await r.json();
+        const body = document.getElementById("codes-body")!;
+        if (!codes.length) {
+          body.innerHTML = '<div class="px-4 py-3 text-xs text-[#aaa]">No codes yet.</div>';
+          return;
+        }
+        body.innerHTML = codes.map((c: any) => {
+          const created = new Date(c.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+          const usedBy = c.profile?.username ?? (c.used_by ? "deleted user" : "");
+          const canDelete = !c.used_by;
+          return `
+            <div class="flex items-center gap-4 px-4 py-2.5" data-id="${c.id}">
+              <span class="text-xs font-mono font-bold text-[#1a1a1a] w-28 select-all">${c.code}</span>
+              <span class="text-xs text-[#888] flex-1">${c.note ?? ""}</span>
+              <span class="text-xs ${usedBy ? "text-[#888]" : "text-[#ccc]"} w-28">${usedBy || "—"}</span>
+              <span class="text-xs text-[#aaa] w-24">${created}</span>
+              <button class="delete-btn w-6 text-[#d4c9b8] hover:text-[#e85d2f] transition-colors text-sm leading-none ${canDelete ? "" : "invisible"}"
+                data-id="${c.id}" title="Delete code">×</button>
+            </div>
+          `;
+        }).join("");
+
+        body.querySelectorAll(".delete-btn").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = (btn as HTMLElement).dataset.id;
+            if (!confirm("Delete this unused code?")) return;
+            await fetch(ADMIN_API, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+            loadCodes();
+          });
+        });
+      }
+
+      document.getElementById("generate-btn")?.addEventListener("click", async () => {
+        const note = (document.getElementById("note-input") as HTMLInputElement).value.trim();
+        const count = parseInt((document.getElementById("count-select") as HTMLSelectElement).value, 10);
+        const errEl = document.getElementById("codes-error")!;
+        errEl.classList.add("hidden");
+
+        const r = await fetch(ADMIN_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: note || null, count }),
+        });
+        if (!r.ok) {
+          const d = await r.json();
+          errEl.textContent = d.error ?? "Failed to generate codes.";
+          errEl.classList.remove("hidden");
+          return;
+        }
+        (document.getElementById("note-input") as HTMLInputElement).value = "";
+        loadCodes();
+      });
+
+      loadCodes();
+    </script>
+  </body>
+</html>
