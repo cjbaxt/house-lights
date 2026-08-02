@@ -18,10 +18,14 @@ function href(path: string) {
 export default function Nav({ current }: { current: string }) {
   const [showMobileTop, setShowMobileTop] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const lastScrollY = useRef(0);
 
   useEffect(() => {
-    createClient().auth.getUser().then(({ data: { user } }) => setIsLoggedIn(!!user));
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user);
+      setIsAdmin(user?.email === "clairejb93@gmail.com");
+    });
   }, []);
 
   useEffect(() => {
@@ -60,16 +64,30 @@ export default function Nav({ current }: { current: string }) {
           })}
         </nav>
         {isLoggedIn === true && (
-          <a
-            href={href("/settings")}
-            className={`text-sm pb-0.5 transition-colors ${
-              current === "/settings"
-                ? "text-[#e85d2f] border-b border-[#e85d2f]"
-                : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
-            }`}
-          >
-            Settings
-          </a>
+          <div className="flex items-center gap-6">
+            <a
+              href={href("/settings")}
+              className={`text-sm pb-0.5 transition-colors ${
+                current === "/settings"
+                  ? "text-[#e85d2f] border-b border-[#e85d2f]"
+                  : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
+              }`}
+            >
+              Settings
+            </a>
+            {isAdmin && (
+              <a
+                href={href("/admin")}
+                className={`text-sm pb-0.5 transition-colors ${
+                  current === "/admin"
+                    ? "text-[#e85d2f] border-b border-[#e85d2f]"
+                    : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
+                }`}
+              >
+                Admin
+              </a>
+            )}
+          </div>
         )}
         {isLoggedIn === false && (
           <div className="flex items-center gap-3">
