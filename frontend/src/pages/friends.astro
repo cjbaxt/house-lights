@@ -24,17 +24,57 @@ if (friendIds.length > 0) {
   friends = profileRows ?? [];
 }
 
-let activityFeed: any[] = [];
+// Grouped activity: one row per (user, show title+venue), with all dates as chips
+interface ActivityGroup {
+  profile: any;
+  title: string;
+  url: string | null;
+  venueName: string | null;
+  type: string | null;
+  latestStatus: string;
+  latestAt: string;
+  dates: { date: string; time: string | null; status: string }[];
+}
+
+let activityFeed: ActivityGroup[] = [];
 if (friendIds.length > 0) {
   const { data: activity } = await Astro.locals.supabase
     .from("watchlist")
     .select("user_id, status, added_at, show:show_id(title, date, time, type, url, venue:venue_id(name))")
     .in("user_id", friendIds)
     .order("added_at", { ascending: false })
-    .limit(50);
-  // attach profile to each activity entry
+    .limit(100);
+
   const profileMap = Object.fromEntries(friends.map((p: any) => [p.id, p]));
-  activityFeed = (activity ?? []).map((e: any) => ({ ...e, profile: profileMap[e.user_id] }));
+  const groupMap = new Map<string, ActivityGroup>();
+
+  for (const e of (activity ?? [])) {
+    const show = e.show as any;
+    if (!show) continue;
+    const key = `${e.user_id}|${show.title?.toLowerCase()}|${show.venue?.name ?? ""}`;
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        profile: profileMap[e.user_id],
+        title: show.title,
+        url: show.url ?? null,
+        venueName: show.venue?.name ?? null,
+        type: show.type ?? null,
+        latestStatus: e.status,
+        latestAt: e.added_at,
+        dates: [],
+      });
+    }
+    const g = groupMap.get(key)!;
+    g.dates.push({ date: show.date, time: show.time ?? null, status: e.status });
+    if (e.added_at > g.latestAt) { g.latestAt = e.added_at; g.latestStatus = e.status; }
+  }
+
+  // Sort dates within each group, then sort groups by latestAt desc
+  activityFeed = Array.from(groupMap.values())
+    .filter(g => g.profile)
+    .map(g => ({ ...g, dates: g.dates.sort((a, b) => a.date.localeCompare(b.date)) }))
+    .sort((a, b) => b.latestAt.localeCompare(a.latestAt))
+    .slice(0, 40);
 }
 
 function timeAgo(dateStr: string): string {
@@ -129,41 +169,55 @@ function timeAgo(dateStr: string): string {
             }
           </p>
         ) : (
-          <ul class="space-y-4">
-            {activityFeed.map((entry: any) => {
+          <ul class="divide-y divide-[#ece7de]">
+            {activityFeed.map((entry) => {
               const profile = entry.profile;
-              const show = entry.show;
-              if (!profile || !show) return null;
               const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).toUpperCase();
-              const date = show.date ? new Date(show.date).toLocaleDateString("en-NL", { day: "numeric", month: "short" }) : null;
+              const anyBought = entry.dates.some(d => d.status === "tickets_bought");
+              const verb = anyBought ? "bought tickets for" : "is watching";
               return (
-                <li class="flex gap-3 border-b border-[#ece7de] pb-4 last:border-0">
-                  <a href={`/u/${profile.username}`} class="flex-shrink-0 mt-0.5">
-                    <div class="w-7 h-7 rounded-full overflow-hidden bg-[#f0ede8] flex items-center justify-center">
-                      {profile.avatar_url
-                        ? <img src={profile.avatar_url} alt={profile.username} class="w-full h-full object-cover" />
-                        : <span class="text-[9px] font-bold text-[#888]">{initials}</span>
-                      }
+                <li class="py-3">
+                  <div class="flex gap-3">
+                    <a href={`/u/${profile.username}`} class="flex-shrink-0 mt-0.5">
+                      <div class="w-7 h-7 rounded-full overflow-hidden bg-[#f0ede8] flex items-center justify-center">
+                        {profile.avatar_url
+                          ? <img src={profile.avatar_url} alt={profile.username} class="w-full h-full object-cover" />
+                          : <span class="text-[9px] font-bold text-[#888]">{initials}</span>
+                        }
+                      </div>
+                    </a>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs text-[#555] leading-relaxed">
+                        <a href={`/u/${profile.username}`} class="font-medium text-[#1a1a1a] hover:underline">
+                          {profile.display_name ?? profile.username}
+                        </a>
+                        {" "}{verb}{" "}
+                        {entry.url
+                          ? <a href={entry.url} target="_blank" rel="noopener noreferrer" class="font-medium text-[#1a1a1a] hover:underline">{entry.title}</a>
+                          : <span class="font-medium text-[#1a1a1a]">{entry.title}</span>
+                        }
+                      </p>
+                      <p class="text-[10px] text-[#bbb] mt-0.5">
+                        {entry.venueName}
+                        <span class="ml-2">{timeAgo(entry.latestAt)}</span>
+                      </p>
+                      {entry.dates.length > 0 && (
+                        <div class="flex flex-wrap gap-1 mt-1.5">
+                          {entry.dates.map(d => {
+                            const dateObj = new Date(d.date + "T00:00:00");
+                            const label = dateObj.toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase();
+                            const chipClass = d.status === "tickets_bought"
+                              ? "bg-[#1a1a1a] border-[#1a1a1a] text-white"
+                              : "border-[#ece7de] text-[#888]";
+                            return (
+                              <span class={`text-[10px] font-bold px-2 py-0.5 border tracking-wide ${chipClass}`}>
+                                {label}{d.time ? ` ${d.time.slice(0, 5)}` : ""}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  </a>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-xs text-[#555] leading-relaxed">
-                      <a href={`/u/${profile.username}`} class="font-medium text-[#1a1a1a] hover:underline">
-                        {profile.display_name ?? profile.username}
-                      </a>
-                      {" "}
-                      {entry.status === "tickets_bought" ? "bought tickets for" : "is watching"}
-                      {" "}
-                      {show.url
-                        ? <a href={show.url} target="_blank" rel="noopener noreferrer" class="font-medium text-[#1a1a1a] hover:underline">{show.title}</a>
-                        : <span class="font-medium text-[#1a1a1a]">{show.title}</span>
-                      }
-                    </p>
-                    <p class="text-[10px] text-[#bbb] mt-0.5">
-                      {show.venue?.name}
-                      {date && <span class="ml-2">{date}</span>}
-                      <span class="ml-2">{timeAgo(entry.added_at)}</span>
-                    </p>
                   </div>
                 </li>
               );
