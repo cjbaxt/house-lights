@@ -141,22 +141,31 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
             : status === "few_left" ? "border-amber-300 text-amber-700"
             : "border-[#ece7de] text-[#888]";
           return (
-            <div key={id} className="flex items-center">
+            <div key={id} className="flex items-center gap-1">
               {/* Date label — links to show page */}
               <a href={show.url ? `/api/out?show_id=${id}` : undefined} target="_blank" rel="noopener noreferrer"
-                className={`text-[10px] font-bold px-2 py-0.5 border-y border-l transition-colors tracking-wide ${chipClass}`}
+                className={`text-[10px] font-bold px-2 py-0.5 border transition-colors tracking-wide ${chipClass}`}
               >
                 {label}{time ? ` ${time.slice(0, 5)}` : ""}
               </a>
-              {/* Watch toggle — per date */}
+              {/* Watchlist + ticket icons — borderless, float free */}
               {currentUser && (
-                <button
-                  onClick={(e) => isBought ? handleMarkBought(e, id, date, time ?? undefined) : handleDateWatch(e, id, date, time ?? undefined)}
-                  title={isBought ? "Unmark tickets" : isDateWatched ? "Remove from watchlist" : "Add this date to watchlist"}
-                  className={`px-1 py-0.5 border transition-colors ${isBought ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#333]" : isDateWatched ? "border-[#e85d2f] text-[#e85d2f] hover:bg-[#fff0ec]" : "border-[#ece7de] text-[#d4c9b8] hover:border-[#aaa] hover:text-[#888]"}`}
-                >
-                  {isBought ? <IconTicket size={10} /> : isDateWatched ? <IconBookmarkFilled size={10} /> : <IconBookmark size={10} />}
-                </button>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={(e) => handleDateWatch(e, id, date, time ?? undefined)}
+                    title={isDateWatched ? "Remove from watchlist" : "Add to watchlist"}
+                    className={`p-0.5 transition-colors ${isDateWatched ? (isBought ? "text-white" : "text-[#e85d2f]") : "text-[#d4c9b8] hover:text-[#888]"}`}
+                  >
+                    {isDateWatched ? <IconBookmarkFilled size={11} /> : <IconBookmark size={11} />}
+                  </button>
+                  <button
+                    onClick={(e) => handleMarkBought(e, id, date, time ?? undefined)}
+                    title={isBought ? "Unmark tickets" : "Mark tickets bought"}
+                    className={`p-0.5 transition-colors ${isBought ? "text-white" : "text-[#d4c9b8] hover:text-[#888]"}`}
+                  >
+                    <IconTicket size={11} />
+                  </button>
+                </div>
               )}
             </div>
           );
