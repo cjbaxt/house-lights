@@ -76,7 +76,7 @@ if (!isAdmin) return Astro.redirect("/");
         }
         body.innerHTML = codes.map((c: any) => {
           const created = new Date(c.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-          const usedBy = c.profile?.username ?? (c.used_by ? "deleted user" : "");
+          const usedBy = c.used_by ? "used" : "";
           const usesLabel = `${c.use_count}/${c.max_uses}`;
           const full = c.use_count >= c.max_uses;
           return `

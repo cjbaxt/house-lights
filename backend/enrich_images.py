@@ -6,7 +6,10 @@ Uses async httpx with a concurrency limit to avoid hammering sites.
 """
 import asyncio
 import re
+import logging
 import httpx
+
+logger = logging.getLogger(__name__)
 from sqlmodel import Session, select
 from app.db import engine
 from app.models.core import Show
@@ -32,8 +35,8 @@ async def fetch_og_image(client: httpx.AsyncClient, show_id, url: str) -> tuple:
             m = pattern.search(html)
             if m:
                 return show_id, m.group(1).strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("enrich_images fetch failed for show %s: %s", show_id, e)
     return show_id, None
 
 

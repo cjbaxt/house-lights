@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ locals }) => {
   const admin = createServiceClient();
   const { data, error } = await admin
     .from("invite_code")
-    .select("id, code, note, max_uses, use_count, created_at, used_at, used_by, profile:used_by(username)")
+    .select("id, code, note, max_uses, use_count, created_at, used_at, used_by")
     .order("created_at", { ascending: false });
 
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });

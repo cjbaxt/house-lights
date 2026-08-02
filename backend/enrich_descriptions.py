@@ -4,7 +4,10 @@ Run after scraping: python enrich_descriptions.py
 """
 import asyncio
 import re
+import logging
 import httpx
+
+logger = logging.getLogger(__name__)
 from sqlmodel import Session, select
 from app.db import engine
 from app.models.core import Show
@@ -35,8 +38,8 @@ async def fetch_description(client: httpx.AsyncClient, show_id, url: str) -> tup
                 desc = m.group(1).strip()
                 if len(desc) > 20:
                     return show_id, desc
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("enrich_descriptions fetch failed for show %s: %s", show_id, e)
     return show_id, None
 
 
