@@ -149,24 +149,22 @@ function ProgrammeCard({ show, allDates, location, watchMap, onWatchChange, curr
                 {label}{time ? ` ${time.slice(0, 5)}` : ""}
               </a>
               {/* Watchlist + ticket icons — borderless, float free */}
-              {currentUser && (
-                <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={(e) => handleDateWatch(e, id, date, time ?? undefined)}
-                    title={isDateWatched ? "Remove from watchlist" : "Add to watchlist"}
-                    className={`p-0.5 transition-colors ${isDateWatched ? (isBought ? "text-white" : "text-[#e85d2f]") : "text-[#d4c9b8] hover:text-[#888]"}`}
-                  >
-                    {isDateWatched ? <IconBookmarkFilled size={11} /> : <IconBookmark size={11} />}
-                  </button>
-                  <button
-                    onClick={(e) => handleMarkBought(e, id, date, time ?? undefined)}
-                    title={isBought ? "Unmark tickets" : "Mark tickets bought"}
-                    className={`p-0.5 transition-colors ${isBought ? "text-white" : "text-[#d4c9b8] hover:text-[#888]"}`}
-                  >
-                    <IconTicket size={11} />
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-0.5">
+                <button
+                  onClick={(e) => currentUser ? handleDateWatch(e, id, date, time ?? undefined) : (e.preventDefault(), window.location.href = "/login")}
+                  title={isDateWatched ? "Remove from watchlist" : "Add to watchlist"}
+                  className={`p-0.5 transition-colors ${isDateWatched ? (isBought ? "text-white" : "text-[#e85d2f]") : "text-[#d4c9b8] hover:text-[#888]"}`}
+                >
+                  {isDateWatched ? <IconBookmarkFilled size={11} /> : <IconBookmark size={11} />}
+                </button>
+                <button
+                  onClick={(e) => currentUser ? handleMarkBought(e, id, date, time ?? undefined) : (e.preventDefault(), window.location.href = "/login")}
+                  title={isBought ? "Unmark tickets" : "Mark tickets bought"}
+                  className={`p-0.5 transition-colors ${isBought ? "text-white" : "text-[#d4c9b8] hover:text-[#888]"}`}
+                >
+                  <IconTicket size={11} />
+                </button>
+              </div>
             </div>
           );
         })}
