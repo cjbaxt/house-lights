@@ -16,7 +16,6 @@ class Venue(SQLModel, table=True):
     website_url: Optional[str] = None
     scrape_url: Optional[str] = None
     scraper_key: Optional[str] = None
-    priority: str = "medium"  # high / medium / low
     active: bool = True
     # enrichment fields
     address: Optional[str] = None
@@ -37,7 +36,6 @@ class Company(SQLModel, table=True):
     website_url: Optional[str] = None
     scrape_url: Optional[str] = None
     scraper_key: Optional[str] = None
-    priority: str = "medium"
     active: bool = True
     description: Optional[str] = None
     image_url: Optional[str] = None

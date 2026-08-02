@@ -7,15 +7,8 @@ from app.models.core import Venue, Company
 
 router = APIRouter(tags=["venues"])
 
-VALID_PRIORITIES = {"high", "medium", "low"}
-
-
-class PriorityUpdate(BaseModel):
-    priority: str
-
 
 class VenueUpdate(BaseModel):
-    priority: str | None = None
     name: str | None = None
     description: str | None = None
     image_url: str | None = None
@@ -26,7 +19,7 @@ class VenueUpdate(BaseModel):
 
 @router.get("/venues")
 def list_venues(session: Session = Depends(get_session)):
-    return session.exec(select(Venue).where(Venue.active == True).order_by(Venue.priority, Venue.name)).all()
+    return session.exec(select(Venue).where(Venue.active == True).order_by(Venue.name)).all()
 
 
 @router.patch("/venues/{venue_id}")
@@ -34,10 +27,6 @@ def update_venue(venue_id: uuid.UUID, data: VenueUpdate, session: Session = Depe
     venue = session.get(Venue, venue_id)
     if not venue:
         raise HTTPException(status_code=404)
-    if data.priority is not None:
-        if data.priority not in VALID_PRIORITIES:
-            raise HTTPException(status_code=422, detail="Invalid priority")
-        venue.priority = data.priority
     if data.name is not None:
         venue.name = data.name.strip()
     if data.description is not None:
@@ -58,18 +47,4 @@ def update_venue(venue_id: uuid.UUID, data: VenueUpdate, session: Session = Depe
 
 @router.get("/companies")
 def list_companies(session: Session = Depends(get_session)):
-    return session.exec(select(Company).where(Company.active == True).order_by(Company.priority, Company.name)).all()
-
-
-@router.patch("/companies/{company_id}")
-def update_company(company_id: uuid.UUID, data: PriorityUpdate, session: Session = Depends(get_session)):
-    if data.priority not in VALID_PRIORITIES:
-        raise HTTPException(status_code=422, detail="Invalid priority")
-    company = session.get(Company, company_id)
-    if not company:
-        raise HTTPException(status_code=404)
-    company.priority = data.priority
-    session.add(company)
-    session.commit()
-    session.refresh(company)
-    return company
+    return session.exec(select(Company).where(Company.active == True).order_by(Company.name)).all()

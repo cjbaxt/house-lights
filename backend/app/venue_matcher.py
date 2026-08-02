@@ -38,7 +38,6 @@ def get_or_create_venue(session: Session, name: str, city_slug: str = "amsterdam
     new_venue = Venue(
         name=name.strip(),
         city_id=city.id,
-        priority="low",
         active=True,
     )
     session.add(new_venue)

@@ -26,7 +26,6 @@ export interface Venue {
   name: string;
   city_id?: string;
   website_url?: string;
-  priority: "high" | "medium" | "low";
   address?: string;
   neighbourhood?: string;
   venue_type?: string;
@@ -39,7 +38,6 @@ export interface Company {
   id: string;
   name: string;
   website_url?: string;
-  priority: "high" | "medium" | "low";
   description?: string;
   image_url?: string;
   active: boolean;
@@ -89,7 +87,7 @@ export const api = {
     const supabase = createClient();
     const { data } = await supabase
       .from("venue")
-      .select("id,name,city_id,website_url,priority,address,neighbourhood,venue_type,capacity,description,image_url")
+      .select("id,name,city_id,website_url,address,neighbourhood,venue_type,capacity,description,image_url")
       .eq("active", true)
       .order("name");
     return (data ?? []) as Venue[];
@@ -297,7 +295,7 @@ export const api = {
   // Admin (venue/company management — owner only)
   // ----------------------------------------------------------------
 
-  async updateVenue(id: string, fields: Partial<Pick<Venue, "name" | "description" | "image_url" | "website_url" | "address" | "neighbourhood" | "priority">>): Promise<Venue> {
+  async updateVenue(id: string, fields: Partial<Pick<Venue, "name" | "description" | "image_url" | "website_url" | "address" | "neighbourhood">>): Promise<Venue> {
     const supabase = createClient();
     const { data, error } = await supabase.from("venue").update(fields).eq("id", id).select().single();
     if (error) throw error;
@@ -306,23 +304,9 @@ export const api = {
 
   async getCompanies(): Promise<Company[]> {
     const supabase = createClient();
-    const { data, error } = await supabase.from("company").select("id,name,website_url,priority,description,image_url,active").eq("active", true).order("name");
+    const { data, error } = await supabase.from("company").select("id,name,website_url,description,image_url,active").eq("active", true).order("name");
     if (error) throw error;
     return (data ?? []) as Company[];
-  },
-
-  async updateVenuePriority(id: string, priority: "high" | "medium" | "low"): Promise<Venue> {
-    const supabase = createClient();
-    const { data, error } = await supabase.from("venue").update({ priority }).eq("id", id).select().single();
-    if (error) throw error;
-    return data as Venue;
-  },
-
-  async updateCompanyPriority(id: string, priority: "high" | "medium" | "low"): Promise<Company> {
-    const supabase = createClient();
-    const { data, error } = await supabase.from("company").update({ priority }).eq("id", id).select().single();
-    if (error) throw error;
-    return data as Company;
   },
 
   // ----------------------------------------------------------------

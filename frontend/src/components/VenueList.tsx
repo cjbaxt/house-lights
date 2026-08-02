@@ -7,31 +7,6 @@ import { IconPencil, IconX, IconCheck } from "@tabler/icons-react";
 import ExpandableText from "./ExpandableText";
 
 type Tab = "venues" | "companies";
-type Priority = "high" | "medium" | "low";
-
-const PRIORITY_LABEL: Record<Priority, string> = { high: "Regular", medium: "Occasional", low: "Exploring" };
-const PRIORITY_ORDER: Priority[] = ["high", "medium", "low"];
-
-function PrioritySelect({
-  value,
-  onChange,
-}: {
-  value: Priority;
-  onChange: (p: Priority) => void;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as Priority)}
-      onClick={(e) => e.stopPropagation()}
-      className="text-[11px] border border-neutral-200 rounded-md px-2 py-1 text-neutral-500 bg-white focus:outline-none focus:border-neutral-400 cursor-pointer"
-    >
-      <option value="high">Regular</option>
-      <option value="medium">Occasional</option>
-      <option value="low">Exploring</option>
-    </select>
-  );
-}
 
 const VENUE_TYPE_LABEL: Record<string, string> = {
   theatre: "Theatre",
@@ -95,11 +70,11 @@ function EditVenueModal({ venue, onSave, onClose }: { venue: Venue; onSave: (upd
         </div>
         <div className="px-5 py-4 flex flex-col gap-3">
           {[
-            { label: "Name", key: "name" as const, type: "input" },
-            { label: "Image URL", key: "image_url" as const, type: "input" },
-            { label: "Website URL", key: "website_url" as const, type: "input" },
-            { label: "Address", key: "address" as const, type: "input" },
-            { label: "Neighbourhood", key: "neighbourhood" as const, type: "input" },
+            { label: "Name", key: "name" as const },
+            { label: "Image URL", key: "image_url" as const },
+            { label: "Website URL", key: "website_url" as const },
+            { label: "Address", key: "address" as const },
+            { label: "Neighbourhood", key: "neighbourhood" as const },
           ].map(({ label, key }) => (
             <div key={key}>
               <label className="text-[10px] uppercase tracking-widest text-neutral-400 mb-1 block">{label}</label>
@@ -145,9 +120,7 @@ function VenueRow({
   id,
   name,
   website_url,
-  priority,
   editing,
-  onPriorityChange,
   onEdit,
   address,
   neighbourhood,
@@ -159,9 +132,7 @@ function VenueRow({
   id: string;
   name: string;
   website_url?: string;
-  priority: Priority;
   editing: boolean;
-  onPriorityChange: (id: string, p: Priority) => void;
   onEdit?: () => void;
   address?: string;
   neighbourhood?: string;
@@ -175,17 +146,6 @@ function VenueRow({
     neighbourhood ?? null,
     capacity ? `${capacityLabel(capacity)} · ${capacity.toLocaleString()}` : null,
   ].filter(Boolean).join(" · ");
-
-  const editControls = editing && (
-    <div className="flex items-center gap-2 flex-shrink-0">
-      <PrioritySelect value={priority} onChange={(p) => onPriorityChange(id, p)} />
-      {onEdit && (
-        <button onClick={onEdit} className="text-neutral-300 hover:text-neutral-600 transition-colors" title="Edit venue">
-          <IconPencil size={13} />
-        </button>
-      )}
-    </div>
-  );
 
   return (
     <div className="bg-[#f5f3ef] border-b border-[#ece7de] overflow-hidden hover:bg-white transition-colors flex">
@@ -201,7 +161,11 @@ function VenueRow({
             {meta && <div className="text-[9px] font-bold tracking-widest text-[#e85d2f] uppercase mb-0.5">{meta}</div>}
             <span className="font-sans text-sm font-black uppercase tracking-tight text-[#1a1a1a]">{name}</span>
           </div>
-          {editControls}
+          {editing && onEdit && (
+            <button onClick={onEdit} className="text-neutral-300 hover:text-neutral-600 transition-colors flex-shrink-0" title="Edit venue">
+              <IconPencil size={13} />
+            </button>
+          )}
           {website_url && (
             <a href={website_url} target="_blank" rel="noopener noreferrer"
               className="text-[#d4c9b8] hover:text-[#e85d2f] transition-colors flex-shrink-0">
@@ -233,22 +197,11 @@ export default function VenueList() {
     });
   }, []);
 
-  async function handleVenuePriority(id: string, priority: Priority) {
-    const updated = await api.updateVenuePriority(id, priority);
-    setVenues((prev) => prev.map((v) => (v.id === id ? { ...v, priority: updated.priority } : v)));
-  }
-
-  async function handleCompanyPriority(id: string, priority: Priority) {
-    const updated = await api.updateCompanyPriority(id, priority);
-    setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, priority: updated.priority } : c)));
-  }
-
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-neutral-300 text-sm tracking-widest uppercase">Loading…</div>;
   }
 
   const items = tab === "venues" ? venues : companies;
-  const onPriorityChange = tab === "venues" ? handleVenuePriority : handleCompanyPriority;
 
   return (
     <div>
@@ -263,7 +216,6 @@ export default function VenueList() {
         />
       )}
 
-      {/* Tab toggle */}
       <div className="flex items-center gap-4 mb-6">
         <div className="flex items-center border border-[#ece7de] overflow-hidden">
           {(["venues", "companies"] as Tab[]).map((t) => (
@@ -281,40 +233,24 @@ export default function VenueList() {
         )}
       </div>
 
-      {/* Groups */}
-      {PRIORITY_ORDER.map((p) => {
-        const group = items.filter((item) => item.priority === p);
-        if (!group.length) return null;
-        return (
-          <div key={p} className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-[#e85d2f]">{PRIORITY_LABEL[p]}</span>
-              <span className="text-[10px] text-[#bbb]">{group.length}</span>
-              <div className="flex-1 h-px bg-[#ece7de]" />
-            </div>
-            <div className="flex flex-col">
-              {group.map((item) => (
-                <VenueRow
-                  key={item.id}
-                  id={item.id}
-                  name={item.name}
-                  website_url={item.website_url ?? undefined}
-                  priority={item.priority as Priority}
-                  editing={editing}
-                  onPriorityChange={onPriorityChange}
-                  onEdit={tab === "venues" ? () => setEditingVenue(item as Venue) : undefined}
-                  address={"address" in item ? (item as Venue).address ?? undefined : undefined}
-                  neighbourhood={"neighbourhood" in item ? (item as Venue).neighbourhood ?? undefined : undefined}
-                  venue_type={"venue_type" in item ? (item as Venue).venue_type ?? undefined : undefined}
-                  capacity={"capacity" in item ? (item as Venue).capacity ?? undefined : undefined}
-                  description={item.description ?? undefined}
-                  image_url={item.image_url ?? undefined}
-                />
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      <div className="flex flex-col">
+        {items.map((item) => (
+          <VenueRow
+            key={item.id}
+            id={item.id}
+            name={item.name}
+            website_url={item.website_url ?? undefined}
+            editing={editing}
+            onEdit={tab === "venues" ? () => setEditingVenue(item as Venue) : undefined}
+            address={"address" in item ? (item as Venue).address ?? undefined : undefined}
+            neighbourhood={"neighbourhood" in item ? (item as Venue).neighbourhood ?? undefined : undefined}
+            venue_type={"venue_type" in item ? (item as Venue).venue_type ?? undefined : undefined}
+            capacity={"capacity" in item ? (item as Venue).capacity ?? undefined : undefined}
+            description={item.description ?? undefined}
+            image_url={item.image_url ?? undefined}
+          />
+        ))}
+      </div>
     </div>
   );
 }

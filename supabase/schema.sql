@@ -30,7 +30,6 @@ create table venue (
   website_url   text,
   scrape_url    text,
   scraper_key   text,
-  priority      text not null default 'medium',
   active        boolean not null default true,
   address       text,
   neighbourhood text,
@@ -46,7 +45,6 @@ create table company (
   website_url text,
   scrape_url  text,
   scraper_key text,
-  priority    text not null default 'medium',
   active      boolean not null default true,
   description text,
   image_url   text

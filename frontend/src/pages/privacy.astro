@@ -51,8 +51,7 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 
       <p class="mb-3 font-medium text-[#1a1a1a] text-xs uppercase tracking-widest">Anonymous activity data</p>
       <ul class="space-y-2 mb-4">
-        <li>— Ticket link click-throughs (which show was clicked, whether you were signed in at the time)</li>
-        <li>— Search queries (what you searched for — used to identify missing venues and improve results)</li>
+        <li>— Ticket link click-throughs (which show was clicked, your user ID if signed in or null if not)</li>
       </ul>
       <p class="text-xs text-[#aaa] mb-8">
         Legal basis: legitimate interest (Article 6(1)(f) GDPR) — used to improve the service and evaluate whether venue partnerships are worthwhile. Collected server-side with no advertising or analytics trackers. If you delete your account, your user ID is removed from this data; anonymous aggregate records are retained for up to 24 months. You can object to this processing at any time by emailing us.
@@ -86,7 +85,7 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Profile visibility</h2>
       <p class="mb-6">
-        By default, your profile (username, display name, and watchlist) is public — other house lights users can see what you're watching. You can make your profile private in Settings, which hides your watchlist from everyone except people you've approved as friends. Your email address is never visible to other users.
+        By default, your profile (username, display name, and watchlist) is public — anyone can see what you're watching. You can make your profile private in Settings, which hides it from other users. Your email address is never visible to other users.
       </p>
 
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">How long we keep your data</h2>
@@ -134,7 +133,7 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
         <li>— <strong class="text-[#1a1a1a]">Withdraw consent</strong> — where processing is based on consent, you can withdraw it at any time without affecting prior processing</li>
       </ul>
       <p class="mb-4">
-        You can exercise most of these rights directly from <a href="/settings" class="underline hover:text-[#1a1a1a]">Settings</a> — download your data or delete your account with one click. For any other request, email <a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a>. We will respond within 30 days.
+        You can delete your account directly from <a href="/settings" class="underline hover:text-[#1a1a1a]">Settings</a>. For any other request — access, rectification, portability, restriction, or objection — email <a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a>. We will respond within 30 days.
       </p>
       <p class="mb-6">
         You also have the right to lodge a complaint with the Dutch supervisory authority:<br />
