@@ -16,6 +16,8 @@ MONTHS_NL = {"jan":1,"feb":2,"mrt":3,"apr":4,"mei":5,"jun":6,
 DATE_RE = re.compile(r"\w{2}\s+(\d{1,2})\s+(\w{3})", re.I)
 YEAR_RE = re.compile(r"\b(202\d)\b")
 TIME_RE = re.compile(r"(\d{1,2}):(\d{2})")
+# "Tijd 19.30" or "Tijd: 20:00" on detail pages
+DETAIL_TIME_RE = re.compile(r"Tijd[:\s]+(\d{1,2})[.:](\d{2})", re.I)
 
 
 def _parse(text):
@@ -80,34 +82,47 @@ class FelixMeritisScraper(BaseScraper):
                 items.append({"title": title, "date": d, "time": tm, "url": url, "href": href,
                                "sold_out": sold_out, "image_url": image_url})
 
-            # Fetch descriptions from detail pages in parallel
-            async def fetch_desc(url: str) -> tuple[str, str | None]:
+            # Fetch descriptions and times from detail pages in parallel
+            async def fetch_detail(url: str) -> tuple[str, str | None, "time | None"]:
                 try:
                     r = await client.get(url, timeout=15)
                     if r.status_code == 200:
                         ds = BeautifulSoup(r.text, "html.parser")
+                        page_text = ds.get_text(" ", strip=True)
+                        desc = None
                         meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
                         if meta:
-                            desc = meta.get("content", "").strip()
-                            if desc:
-                                return url, desc
-                        el = ds.select_one(".entry-content, .post-content, .event-description, article p")
-                        if el:
-                            text = el.get_text(" ", strip=True)[:1000]
-                            if text:
-                                return url, text
+                            desc = meta.get("content", "").strip() or None
+                        if not desc:
+                            el = ds.select_one(".entry-content, .post-content, .event-description, article p")
+                            if el:
+                                desc = el.get_text(" ", strip=True)[:1000] or None
+                        tm = None
+                        m = DETAIL_TIME_RE.search(page_text)
+                        if not m:
+                            m = TIME_RE.search(page_text)
+                        if m:
+                            try:
+                                tm = time(int(m.group(1)), int(m.group(2)))
+                            except (ValueError, ImportError):
+                                pass
+                        return url, desc, tm
                 except Exception:
                     pass
-                return url, None
+                return url, None, None
 
             unique_urls = list({it["url"] for it in items if it["url"] != AGENDA_URL})
-            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
-            descriptions = dict(desc_results)
+            detail_results = await asyncio.gather(*[fetch_detail(u) for u in unique_urls])
+            descriptions = {u: d for u, d, _ in detail_results}
+            times_map = {u: t for u, _, t in detail_results}
 
         shows = []
         for it in items:
+            # Prefer time from detail page (more reliable) over listing
+            detail_time = times_map.get(it["url"])
             shows.append(ScrapedShow(
-                title=it["title"], date=it["date"], time=it["time"], url=it["url"],
+                title=it["title"], date=it["date"],
+                time=detail_time or it["time"], url=it["url"],
                 source_id=f"felixmeritis:{it['href'] or it['title']}",
                 type="other",
                 ticket_status="sold_out" if it["sold_out"] else "available",

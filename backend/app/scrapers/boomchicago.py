@@ -191,14 +191,15 @@ class BoomChicagoScraper(BaseScraper):
                     "ticket_status": status, "image_url": image_url,
                 })
 
-        # Fetch descriptions and images from detail pages (one per unique URL)
-        async def fetch_detail(url: str) -> tuple[str, str | None, str | None]:
+        # Fetch descriptions, images, and times from detail pages (one per unique URL)
+        async def fetch_detail(url: str) -> tuple[str, str | None, str | None, "time | None"]:
             try:
                 async with httpx.AsyncClient(timeout=15, follow_redirects=True,
                                               headers={"User-Agent": "Mozilla/5.0"}) as c:
                     r = await c.get(url)
                     if r.status_code == 200:
                         s = BeautifulSoup(r.text, "html.parser")
+                        page_text = s.get_text(" ", strip=True)
                         desc = None
                         meta = s.select_one("meta[name=description]")
                         if meta:
@@ -207,22 +208,33 @@ class BoomChicagoScraper(BaseScraper):
                         og_img = s.select_one("meta[property='og:image']")
                         if og_img:
                             img = og_img.get("content", "").strip() or None
-                        return url, desc, img
+                        # Time: look for "at HH:MM" in full page text
+                        tm: time | None = None
+                        tm_m = _TIME_RE.search(page_text)
+                        if tm_m:
+                            try:
+                                tm = time(int(tm_m.group(1)), int(tm_m.group(2)))
+                            except ValueError:
+                                pass
+                        return url, desc, img, tm
             except Exception:
                 pass
-            return url, None, None
+            return url, None, None, None
 
         unique_urls = list({it["url"] for it in items})
         detail_results = await asyncio.gather(*[fetch_detail(u) for u in unique_urls])
-        descriptions = {u: d for u, d, _ in detail_results}
-        images = {u: i for u, _, i in detail_results}
+        descriptions = {u: d for u, d, _, __ in detail_results}
+        images = {u: i for u, _, i, __ in detail_results}
+        detail_times = {u: t for u, _, __, t in detail_results}
 
         shows: list[ScrapedShow] = []
         for it in items:
+            # Prefer time from title parse; fall back to detail page
+            show_time = it["time"] or detail_times.get(it["url"])
             shows.append(ScrapedShow(
                 title=it["title"],
                 date=it["date"],
-                time=it["time"],
+                time=show_time,
                 url=it["url"],
                 source_id=it["source_id"],
                 type="comedy",

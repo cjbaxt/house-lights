@@ -3,8 +3,12 @@ Cinetol — Webflow-based static HTML.
 """
 import httpx, re, asyncio
 from bs4 import BeautifulSoup
-from datetime import date
+from datetime import date, time
 from .base import BaseScraper, ScrapedShow
+
+# "doors: show: 17:00" or "aanvang: 20:30" or standalone "20:30"
+_SHOW_TIME_RE = re.compile(r"(?:show|aanvang)[:\s]+(\d{1,2}):(\d{2})", re.I)
+_TIME_RE = re.compile(r"\b(\d{1,2}):(\d{2})\b")
 
 AGENDA_URL = "https://www.cinetol.nl/programma"
 BASE_URL = "https://www.cinetol.nl"
@@ -80,22 +84,34 @@ class CinetolScraper(BaseScraper):
                     "subtitle": subtitle, "date": d, "image_url": image_url,
                 })
 
-            # Fetch detail pages in parallel for descriptions
-            async def fetch_desc(href: str) -> tuple[str, str | None]:
+            # Fetch detail pages in parallel for descriptions and times
+            async def fetch_detail(href: str) -> tuple[str, str | None, time | None]:
                 detail_url = BASE_URL + href if href.startswith("/") else href
                 try:
                     r = await client.get(detail_url, timeout=20)
                     if r.status_code == 200:
                         ds = BeautifulSoup(r.text, "html.parser")
-                        el = ds.select_one(".w-richtext")
-                        if el:
-                            return href, el.get_text(" ", strip=True)[:1000] or None
+                        desc_el = ds.select_one(".w-richtext")
+                        desc = desc_el.get_text(" ", strip=True)[:1000] or None if desc_el else None
+                        # Time: "show: HH:MM" preferred, else first time after "doors:"
+                        page_text = ds.get_text(" ", strip=True)
+                        tm: time | None = None
+                        m = _SHOW_TIME_RE.search(page_text)
+                        if not m:
+                            m = _TIME_RE.search(page_text)
+                        if m:
+                            try:
+                                tm = time(int(m.group(1)), int(m.group(2)))
+                            except ValueError:
+                                pass
+                        return href, desc, tm
                 except Exception:
                     pass
-                return href, None
+                return href, None, None
 
-            desc_results = await asyncio.gather(*[fetch_desc(it["href"]) for it in items])
-            descriptions = dict(desc_results)
+            detail_results = await asyncio.gather(*[fetch_detail(it["href"]) for it in items])
+            descriptions = {h: d for h, d, _ in detail_results}
+            times = {h: t for h, _, t in detail_results}
 
         shows = []
         for it in items:
@@ -103,6 +119,7 @@ class CinetolScraper(BaseScraper):
                 title=it["title"],
                 subtitle=it["subtitle"],
                 date=it["date"],
+                time=times.get(it["href"]),
                 url=it["url"],
                 source_id=f"cinetol:{it['href']}",
                 type="music",

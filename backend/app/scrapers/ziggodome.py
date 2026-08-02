@@ -25,6 +25,13 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; house-lights-scraper)",
 SAS_EXPIRY_RE = re.compile(r"[?&]se=([^&]+)")
 
 
+def _clean_performer(name: str) -> str:
+    """Strip tour/edition suffixes for better Deezer matching."""
+    name = re.split(r"[:|]\s*", name)[0].strip()
+    name = re.sub(r"\s*[-–]\s*(world tour|tour|live|at .+)$", "", name, flags=re.I).strip()
+    return name
+
+
 def _sas_valid(sas_url: str) -> bool:
     """Return True if the SAS token expiry (se=) is in the future."""
     m = SAS_EXPIRY_RE.search(sas_url)
@@ -85,10 +92,12 @@ class ZiggoDomeScraper(BaseScraper):
             deezer_needed: set[str] = set()
             for evt in raw_events:
                 sas = (evt.get("artistImage") or {}).get("assetFileSas", "")
-                if not sas or not _sas_valid(sas):
-                    title = (evt.get("performerName") or "").strip()
-                    if title:
-                        deezer_needed.add(title)
+                bg_sas = (evt.get("backgroundImage") or {}).get("assetFileSas", "")
+                if (not sas or not _sas_valid(sas)) and (not bg_sas or not _sas_valid(bg_sas)):
+                    raw_name = (evt.get("performerName") or "").strip()
+                    clean = _clean_performer(raw_name)
+                    if clean:
+                        deezer_needed.add(clean)
 
             # Fetch Deezer images sequentially to avoid rate limiting
             deezer_cache: dict[str, str | None] = {}
@@ -117,12 +126,15 @@ class ZiggoDomeScraper(BaseScraper):
             url = ticket_url or f"{BASE_URL}/agenda/"
             sold_out = (evt.get("showState") or "").lower() in ("soldout", "sold out")
 
-            # Image: prefer valid SAS, fall back to Deezer
+            # Image: prefer artistImage SAS, then backgroundImage SAS, then Deezer
             sas = (evt.get("artistImage") or {}).get("assetFileSas", "")
+            bg_sas = (evt.get("backgroundImage") or {}).get("assetFileSas", "")
             if sas and _sas_valid(sas):
                 image_url = sas
+            elif bg_sas and _sas_valid(bg_sas):
+                image_url = bg_sas
             else:
-                image_url = deezer_cache.get(title)
+                image_url = deezer_cache.get(_clean_performer(title))
 
             raw_desc = evt.get("description") or ""
             description: str | None = None
