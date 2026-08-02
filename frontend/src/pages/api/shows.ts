@@ -42,7 +42,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
   const { data, error, count } = await query;
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("shows query error:", error.message);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

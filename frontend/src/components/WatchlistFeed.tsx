@@ -257,7 +257,7 @@ export default function WatchlistFeed() {
           </div>
           <div className="flex items-center gap-3">
             <a href="/login?mode=signup" className="text-xs uppercase tracking-widest font-bold text-white bg-[#1a1a1a] border border-[#1a1a1a] px-3 py-1.5 hover:bg-[#333] transition-colors">
-              Sign up to save
+              Sign up
             </a>
             <a href="/login" className="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">
               Log in
@@ -265,19 +265,26 @@ export default function WatchlistFeed() {
           </div>
         </div>
         {guestWatchlist.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
+          <div className="flex flex-col items-center justify-center h-48 gap-4 text-center px-4">
             <p className="text-sm text-[#888]">Browse shows and bookmark anything you want to see.</p>
-            <p className="text-xs text-[#aaa]">Your watchlist is saved locally — sign up to keep it across devices.</p>
+            <p className="text-xs text-[#aaa] leading-relaxed max-w-xs">
+              <a href="/login?mode=signup" className="font-bold text-[#1a1a1a] hover:underline">Sign up</a> to keep your watchlist safe, get a personal calendar feed, and see what your friends are watching.{" "}
+              Already have an account? <a href="/login" className="font-bold text-[#1a1a1a] hover:underline">Log in</a>.
+            </p>
           </div>
         ) : (
           <div className="flex flex-col">
             <div className="mb-4 px-4 py-3 bg-[#fff8f0] border border-[#f0d9b5] text-xs text-[#7a5c2e] leading-relaxed">
               <strong className="font-bold">Your watchlist is only saved in this browser.</strong>{" "}
-              It will be lost if you clear your browser data or switch devices.{" "}
+              It will be lost if you clear your browser data or close a private window.{" "}
               <a href="/login?mode=signup" className="font-bold underline hover:text-[#1a1a1a] transition-colors">
-                Sign up free
+                Sign up
               </a>{" "}
-              to save it permanently and see what friends are watching.
+              to keep it permanently, get a calendar feed, and see what your friends are watching.{" "}
+              Already have an account?{" "}
+              <a href="/login" className="font-bold underline hover:text-[#1a1a1a] transition-colors">
+                Log in
+              </a>.
             </div>
             {guestWatchlist
               .slice()
@@ -317,7 +324,7 @@ export default function WatchlistFeed() {
                 );
               })}
             <p className="text-[10px] text-[#aaa] mt-4 text-center">
-              Sign up to sync across devices and see what your friends are watching.
+              <a href="/login?mode=signup" className="font-bold text-[#888] hover:text-[#1a1a1a] transition-colors">Sign up</a> to keep this safe, get a calendar feed, and see what friends are watching.
             </p>
           </div>
         )}

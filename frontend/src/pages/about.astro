@@ -47,7 +47,7 @@ const grouped = (cities as CityItem[]).map(c => ({
     <Nav current="/about" client:load transition:persist />
     <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
 
-      <div class="text-sm text-[#555] leading-relaxed space-y-4 mb-16">
+      <div class="text-sm text-[#555] leading-relaxed space-y-4 mb-8">
         {paragraphs.map((p: string) => {
           if (p.startsWith("- ")) {
             const items = p.split("\n").filter((l: string) => l.startsWith("- "));
@@ -63,6 +63,17 @@ const grouped = (cities as CityItem[]).map(c => ({
           }
           return <p>{p}</p>;
         })}
+      </div>
+
+      <div class="mb-16">
+        <a
+          href="https://buymeacoffee.com/claireheaded"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-block text-xs text-[#888] border border-[#ece7de] px-4 py-2 hover:border-[#1a1a1a] hover:text-[#1a1a1a] transition-colors"
+        >
+          ☕ Buy me a coffee
+        </a>
       </div>
 
       <section class="mb-16">
@@ -91,16 +102,8 @@ const grouped = (cities as CityItem[]).map(c => ({
         )}
       </section>
 
-      <section class="text-xs text-[#aaa] border-t border-[#ece7de] pt-8 flex items-center justify-between flex-wrap gap-4">
+      <section class="text-xs text-[#aaa] border-t border-[#ece7de] pt-8">
         <a href="/privacy" class="hover:text-[#555] transition-colors">Privacy policy</a>
-        <a
-          href="https://buymeacoffee.com/claireheaded"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-xs text-[#888] border border-[#ece7de] px-4 py-2 hover:border-[#1a1a1a] hover:text-[#1a1a1a] transition-colors"
-        >
-          ☕ Buy me a coffee
-        </a>
       </section>
 
     </main>
