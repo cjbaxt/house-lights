@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-export const POST: APIRoute = async ({ request, locals, redirect }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) return new Response("Unauthorized", { status: 401 });
 
   const form = await request.formData();
@@ -20,5 +20,5 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       .eq("venue_id", venueId);
   }
 
-  return redirect("/settings?updated=1");
+  return new Response("OK");
 };
