@@ -1,0 +1,136 @@
+---
+import "../styles/global.css";
+import Nav from "../components/Nav";
+import BaseHead from "../components/BaseHead.astro";
+import { getIsAdmin } from "../lib/admin";
+
+const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
+---
+
+<html lang="en">
+  <head>
+    <BaseHead title="How it works — house lights" playfair />
+  </head>
+  <body class="bg-[#f5f3ef] min-h-screen">
+    <Nav current="" isAdmin={isAdmin} client:load transition:persist />
+    <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
+
+      <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a] mb-2">How it works</h1>
+      <p class="text-xs text-[#aaa] mb-10">A behind-the-scenes look at house lights</p>
+
+      <div class="text-sm text-[#555] leading-relaxed space-y-6 mb-12">
+        <p>
+          Amsterdam has an extraordinary arts scene — theatre, dance, improvised music, performance art,
+          things that don't have a name yet. But keeping track of it is genuinely hard.
+          Every venue runs its own website, its own calendar, its own newsletter. You either know to look,
+          or you miss it.
+        </p>
+        <p>
+          house lights fixes that by scraping every venue's programme and putting it in one feed.
+          No curation, no editorial angle — just everything, in one place, updated regularly.
+        </p>
+      </div>
+
+      <!-- Pipeline -->
+      <section class="mb-14">
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-6">The pipeline</h2>
+
+        <div class="space-y-0">
+          {[
+            {
+              step: "01",
+              title: "Scrapers fetch venue programmes",
+              body: "Each venue has a dedicated Python scraper that reads its agenda page — or in some cases, calls an undocumented API. Most use httpx and BeautifulSoup. A handful of venues render their calendars entirely in JavaScript, so those use Playwright to run a real browser headlessly.",
+            },
+            {
+              step: "02",
+              title: "Shows are parsed and stored",
+              body: "The scraper extracts title, date, time, type, and URL for each show and writes it to a PostgreSQL database on Supabase. Duplicate shows (same title, venue, date) are skipped. A separate enrichment step fetches descriptions and images from individual show pages.",
+            },
+            {
+              step: "03",
+              title: "The frontend queries the database",
+              body: "The Astro frontend runs server-side on Vercel and queries Supabase directly — there is no separate API layer. Row-level security policies mean each user only ever sees data they're entitled to.",
+            },
+            {
+              step: "04",
+              title: "You see the result",
+              body: "Your feed is filtered by city, filtered by venues you've hidden, and sorted by date. You can bookmark shows to your watchlist, track ticket status, subscribe to a calendar feed, and follow what your friends are watching.",
+            },
+          ].map(({ step, title, body }) => (
+            <div class="flex gap-6 border-b border-[#ece7de] py-6 last:border-0">
+              <div class="text-[11px] font-black text-[#e85d2f] tracking-widest pt-0.5 flex-shrink-0 w-6">{step}</div>
+              <div>
+                <div class="font-bold text-[13px] text-[#1a1a1a] mb-2">{title}</div>
+                <p class="text-sm text-[#666] leading-relaxed">{body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <!-- Stack -->
+      <section class="mb-14">
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-6">The stack</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            { label: "Frontend", value: "Astro (SSR) · React · Tailwind CSS" },
+            { label: "Database & auth", value: "Supabase — PostgreSQL with row-level security" },
+            { label: "Hosting", value: "Vercel — edge-deployed, no cold starts" },
+            { label: "Scrapers", value: "Python — httpx, BeautifulSoup, Playwright" },
+            { label: "Scraper runtime", value: "GitHub Actions — runs weekly, logs to the repo" },
+            { label: "Security scanning", value: "Semgrep, Bandit, njsscan, Bearer, OSV Scanner" },
+          ].map(({ label, value }) => (
+            <div class="border border-[#ece7de] px-4 py-3">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-[#e85d2f] mb-1">{label}</div>
+              <div class="text-xs text-[#555]">{value}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <!-- Freshness -->
+      <section class="mb-14">
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-4">Data freshness</h2>
+        <p class="text-sm text-[#666] leading-relaxed mb-3">
+          Scrapers run every Monday morning. Most venues publish their full season at the start of the year,
+          so weekly is usually more than enough. For venues that update frequently — like Paradiso or Melkweg —
+          runs can be triggered manually when something new goes on sale.
+        </p>
+        <p class="text-sm text-[#666] leading-relaxed">
+          If you notice a show is missing or a date is wrong, the most likely explanation is that the venue changed
+          their website structure and the scraper needs updating.
+        </p>
+      </section>
+
+      <!-- Open source -->
+      <section class="mb-14">
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-4">Open source</h2>
+        <p class="text-sm text-[#666] leading-relaxed mb-3">
+          house lights will be open source. The plan is to release the codebase — scrapers, frontend, and all —
+          once the project is stable enough that the code is worth reading. If you want to write a scraper for
+          a venue that isn't covered yet, that will be easy to contribute.
+        </p>
+        <p class="text-sm text-[#666] leading-relaxed">
+          Full documentation will live at <span class="text-[#1a1a1a] font-medium">docs.houselights.claireheaded.com</span> when the project goes public.
+        </p>
+      </section>
+
+      <!-- Missing venue -->
+      <section class="mb-14 bg-white border border-[#ece7de] px-6 py-5">
+        <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-3">Missing a venue?</h2>
+        <p class="text-sm text-[#666] leading-relaxed">
+          If there's a venue you'd like to see covered, email
+          <a href="mailto:support@claireheaded.com" class="text-[#1a1a1a] underline hover:text-[#555] transition-colors">support@claireheaded.com</a>.
+          Amsterdam is the focus for now, but the architecture supports multiple cities.
+        </p>
+      </section>
+
+      <section class="text-xs text-[#aaa] border-t border-[#ece7de] pt-8 flex gap-6">
+        <a href="/about" class="hover:text-[#555] transition-colors">About</a>
+        <a href="/privacy" class="hover:text-[#555] transition-colors">Privacy policy</a>
+      </section>
+
+    </main>
+  </body>
+</html>

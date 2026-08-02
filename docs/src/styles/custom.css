@@ -1,0 +1,50 @@
+/* house lights brand colours */
+:root {
+  --sl-color-accent-low: #fdf1ec;
+  --sl-color-accent: #e85d2f;
+  --sl-color-accent-high: #c44a20;
+  --sl-color-white: #f5f3ef;
+  --sl-color-gray-1: #1a1a1a;
+  --sl-color-gray-2: #333;
+  --sl-color-gray-3: #555;
+  --sl-color-gray-4: #888;
+  --sl-color-gray-5: #d4c9b8;
+  --sl-color-gray-6: #ece7de;
+  --sl-color-black: #f5f3ef;
+  --sl-font: "Inter", system-ui, sans-serif;
+  --sl-font-mono: "JetBrains Mono", "Fira Code", monospace;
+}
+
+:root[data-theme="light"] {
+  --sl-color-bg: #f5f3ef;
+  --sl-color-bg-nav: #ffffff;
+  --sl-color-bg-sidebar: #ffffff;
+  --sl-color-hairline: #ece7de;
+  --sl-color-text: #1a1a1a;
+  --sl-color-text-accent: #e85d2f;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-bg: #1a1a1a;
+  --sl-color-bg-nav: #141412;
+  --sl-color-bg-sidebar: #141412;
+  --sl-color-hairline: #2a2825;
+  --sl-color-text: #f0ede8;
+  --sl-color-text-accent: #e85d2f;
+}
+
+/* Tighten up headings */
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3 {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+/* Site title */
+.site-title {
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
