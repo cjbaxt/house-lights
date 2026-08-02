@@ -3,8 +3,10 @@ import "../styles/global.css";
 import Nav from "../components/Nav";
 import AvatarUpload from "../components/AvatarUpload";
 import ClientRouter from "astro/components/ClientRouter.astro";
+import { getIsAdmin } from "../lib/admin";
 
 if (!Astro.locals.user) return Astro.redirect("/login");
+const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 
 const { data: profile } = await Astro.locals.supabase
   .from("profile")
@@ -76,7 +78,7 @@ const error = Astro.url.searchParams.get("error");
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
-    <Nav current="/settings" client:load transition:persist />
+    <Nav current="/settings" isAdmin={isAdmin} client:load transition:persist />
     <main class="max-w-xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
       <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a] mb-8">Settings</h1>
 

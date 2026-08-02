@@ -4,6 +4,9 @@ import Nav from "../components/Nav";
 import EditorUnlock from "../components/EditorUnlock";
 import ClientRouter from "astro/components/ClientRouter.astro";
 import ShowFeed from "../components/ShowFeed";
+import { getIsAdmin } from "../lib/admin";
+
+const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 ---
 
 <html lang="en">
@@ -19,7 +22,7 @@ import ShowFeed from "../components/ShowFeed";
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
-    <Nav current="/" client:load transition:persist />
+    <Nav current="/" isAdmin={isAdmin} client:load transition:persist />
     <EditorUnlock client:load transition:persist />
     <main class="max-w-3xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
       <ShowFeed client:load />

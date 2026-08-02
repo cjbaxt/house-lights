@@ -1,8 +1,6 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 
-const ADMIN_EMAIL = "dev@claireheaded.com";
-
 function adminClient() {
   return createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -10,8 +8,14 @@ function adminClient() {
   );
 }
 
-function isAdmin(locals: App.Locals) {
-  return locals.user?.email === ADMIN_EMAIL;
+async function isAdmin(locals: App.Locals): Promise<boolean> {
+  if (!locals.user?.id) return false;
+  const { data } = await locals.supabase
+    .from("profile")
+    .select("is_admin")
+    .eq("id", locals.user.id)
+    .single();
+  return data?.is_admin === true;
 }
 
 function randomCode() {
@@ -20,7 +24,7 @@ function randomCode() {
 }
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!isAdmin(locals)) return new Response("Forbidden", { status: 403 });
+  if (!await isAdmin(locals)) return new Response("Forbidden", { status: 403 });
 
   const admin = adminClient();
   const { data, error } = await admin
@@ -33,7 +37,7 @@ export const GET: APIRoute = async ({ locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  if (!isAdmin(locals)) return new Response("Forbidden", { status: 403 });
+  if (!await isAdmin(locals)) return new Response("Forbidden", { status: 403 });
 
   const body = await request.json().catch(() => ({}));
   const note = (body.note as string | undefined)?.trim() || null;
@@ -48,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  if (!isAdmin(locals)) return new Response("Forbidden", { status: 403 });
+  if (!await isAdmin(locals)) return new Response("Forbidden", { status: 403 });
 
   const body = await request.json().catch(() => ({}));
   if (!body.id) return new Response("Missing id", { status: 400 });

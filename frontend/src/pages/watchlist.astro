@@ -3,6 +3,9 @@ import "../styles/global.css";
 import Nav from "../components/Nav";
 import ClientRouter from "astro/components/ClientRouter.astro";
 import WatchlistFeed from "../components/WatchlistFeed";
+import { getIsAdmin } from "../lib/admin";
+
+const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 ---
 
 <html lang="en">
@@ -18,7 +21,7 @@ import WatchlistFeed from "../components/WatchlistFeed";
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
-    <Nav current="/watchlist" client:load transition:persist />
+    <Nav current="/watchlist" isAdmin={isAdmin} client:load transition:persist />
     <main class="max-w-3xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
       <WatchlistFeed client:load />
     </main>

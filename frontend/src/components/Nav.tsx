@@ -15,16 +15,14 @@ function href(path: string) {
   return path === "/" ? `${BASE}/` : `${BASE}${path}`;
 }
 
-export default function Nav({ current }: { current: string }) {
+export default function Nav({ current, isAdmin = false }: { current: string; isAdmin?: boolean }) {
   const [showMobileTop, setShowMobileTop] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const lastScrollY = useRef(0);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data: { user } }) => {
       setIsLoggedIn(!!user);
-      setIsAdmin(user?.email === "dev@claireheaded.com");
     });
   }, []);
 

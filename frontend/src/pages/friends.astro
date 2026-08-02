@@ -2,8 +2,10 @@
 import "../styles/global.css";
 import Nav from "../components/Nav";
 import ClientRouter from "astro/components/ClientRouter.astro";
+import { getIsAdmin } from "../lib/admin";
 
 const isLoggedIn = !!Astro.locals.user;
+const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 
 // Get friends (people this user follows)
 // friendship.friend_id → auth.users; profile.id → auth.users (no direct FK between them)
@@ -99,7 +101,7 @@ function timeAgo(dateStr: string): string {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
-    <Nav current="/friends" client:load transition:persist />
+    <Nav current="/friends" isAdmin={isAdmin} client:load transition:persist />
     <main class="max-w-xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
 
       {!isLoggedIn && (

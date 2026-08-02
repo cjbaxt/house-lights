@@ -3,8 +3,10 @@ import "../styles/global.css";
 import Nav from "../components/Nav";
 import ClientRouter from "astro/components/ClientRouter.astro";
 import { readFileSync } from "fs";
+import { getIsAdmin } from "../lib/admin";
 import { resolve } from "path";
 
+const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 const raw = readFileSync(resolve("src/content/about.md"), "utf-8");
 const paragraphs = raw.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
 
@@ -44,7 +46,7 @@ const grouped = (cities as CityItem[]).map(c => ({
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
-    <Nav current="/about" client:load transition:persist />
+    <Nav current="/about" isAdmin={isAdmin} client:load transition:persist />
     <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
 
       <div class="text-sm text-[#555] leading-relaxed space-y-4 mb-8">

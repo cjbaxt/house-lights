@@ -2,7 +2,9 @@
 import "../../styles/global.css";
 import Nav from "../../components/Nav";
 import ClientRouter from "astro/components/ClientRouter.astro";
+import { getIsAdmin } from "../../lib/admin";
 
+const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 const { username } = Astro.params;
 
 const { data: profile, error } = await Astro.locals.supabase
@@ -69,7 +71,7 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
-    <Nav current="" client:load transition:persist />
+    <Nav current="" isAdmin={isAdmin} client:load transition:persist />
     <main class="max-w-xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
 
       <!-- Profile header -->

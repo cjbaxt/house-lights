@@ -2,12 +2,10 @@
 import "../styles/global.css";
 import Nav from "../components/Nav";
 import ClientRouter from "astro/components/ClientRouter.astro";
+import { getIsAdmin } from "../lib/admin";
 
-const ADMIN_EMAIL = "dev@claireheaded.com";
-
-if (!Astro.locals.user || Astro.locals.user.email !== ADMIN_EMAIL) {
-  return Astro.redirect("/");
-}
+const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
+if (!isAdmin) return Astro.redirect("/");
 ---
 
 <html lang="en">
@@ -21,7 +19,7 @@ if (!Astro.locals.user || Astro.locals.user.email !== ADMIN_EMAIL) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
-    <Nav current="" client:load transition:persist />
+    <Nav current="" isAdmin={isAdmin} client:load transition:persist />
     <main class="max-w-3xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24">
 
       <h1 class="font-sans font-black text-xl text-[#1a1a1a] mb-8">Admin</h1>
