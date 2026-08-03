@@ -3,6 +3,7 @@ import "../../styles/global.css";
 import Nav from "../../components/Nav";
 import BaseHead from "../../components/BaseHead.astro";
 import { getIsAdmin } from "../../lib/admin";
+import { createServiceClient } from "../../lib/supabase/service";
 
 const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 const { username } = Astro.params;
@@ -36,21 +37,22 @@ if (currentUserId && !isOwnProfile) {
   isFollowing = !!friendship;
 }
 
-// Follower / following counts
+// Follower / following counts — use service client to bypass RLS (these are public stats)
+const svc = createServiceClient();
 const [{ count: followingCount }, { count: followersCount }] = await Promise.all([
-  Astro.locals.supabase.from("friendship").select("*", { count: "exact", head: true }).eq("user_id", profile.id),
-  Astro.locals.supabase.from("friendship").select("*", { count: "exact", head: true }).eq("friend_id", profile.id),
+  svc.from("friendship").select("*", { count: "exact", head: true }).eq("user_id", profile.id),
+  svc.from("friendship").select("*", { count: "exact", head: true }).eq("friend_id", profile.id),
 ]);
 
 // Following list (people this profile follows)
-const { data: followingRows } = await Astro.locals.supabase
+const { data: followingRows } = await svc
   .from("friendship")
   .select("friend_id")
   .eq("user_id", profile.id);
 const followingIds = (followingRows ?? []).map((r: any) => r.friend_id);
 let followingProfiles: any[] = [];
 if (followingIds.length > 0) {
-  const { data } = await Astro.locals.supabase
+  const { data } = await svc
     .from("profile")
     .select("id, username, display_name, avatar_url")
     .in("id", followingIds);
@@ -58,14 +60,14 @@ if (followingIds.length > 0) {
 }
 
 // Followers list (people who follow this profile)
-const { data: followerRows } = await Astro.locals.supabase
+const { data: followerRows } = await svc
   .from("friendship")
   .select("user_id")
   .eq("friend_id", profile.id);
 const followerIds = (followerRows ?? []).map((r: any) => r.user_id);
 let followerProfiles: any[] = [];
 if (followerIds.length > 0) {
-  const { data } = await Astro.locals.supabase
+  const { data } = await svc
     .from("profile")
     .select("id, username, display_name, avatar_url")
     .in("id", followerIds);
