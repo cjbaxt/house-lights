@@ -18,7 +18,7 @@ export default defineConfig({
         {
           label: "Overview",
           items: [
-            { label: "Introduction", slug: "index" },
+            { label: "Introduction", slug: "" },
             { label: "Architecture", slug: "architecture" },
             { label: "Repository structure", slug: "repo-structure" },
           ],
@@ -26,7 +26,7 @@ export default defineConfig({
         {
           label: "Scrapers",
           items: [
-            { label: "How scrapers work", slug: "scrapers/index" },
+            { label: "How scrapers work", slug: "scrapers" },
             { label: "Writing a scraper", slug: "scrapers/writing-a-scraper" },
             { label: "BaseScraper reference", slug: "scrapers/base-scraper" },
           ],
@@ -42,7 +42,7 @@ export default defineConfig({
         {
           label: "Frontend",
           items: [
-            { label: "Overview", slug: "frontend/index" },
+            { label: "Overview", slug: "frontend" },
             { label: "API routes", slug: "frontend/api-routes" },
             { label: "Authentication", slug: "frontend/auth" },
           ],

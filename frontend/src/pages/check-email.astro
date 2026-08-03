@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import BaseHead from "../components/BaseHead.astro";
 
 // If already confirmed and logged in, no need to be here
 if (Astro.locals.user) return Astro.redirect("/");
