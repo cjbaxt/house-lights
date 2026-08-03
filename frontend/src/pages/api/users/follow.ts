@@ -19,6 +19,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       user_id: locals.user.id,
       friend_id: targetId,
     });
+    // Create a follow notification (ignore error — non-critical)
+    await locals.supabase.from("notification").upsert(
+      { user_id: targetId, actor_id: locals.user.id, type: "follow", read: false },
+      { onConflict: "user_id,actor_id,type", ignoreDuplicates: true }
+    );
   } else {
     await locals.supabase
       .from("friendship")

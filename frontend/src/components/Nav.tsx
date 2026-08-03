@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { IconLayoutList, IconCalendarHeart, IconInfoCircle, IconUsers } from "@tabler/icons-react";
+import { IconLayoutList, IconCalendarHeart, IconInfoCircle, IconUsers, IconBell, IconSettings } from "@tabler/icons-react";
 import { createClient } from "../lib/supabase/client";
+import NotificationBell from "./NotificationBell";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
@@ -62,30 +63,7 @@ export default function Nav({ current, isAdmin = false }: { current: string; isA
           })}
         </nav>
         {isLoggedIn === true && (
-          <div className="flex items-center gap-6">
-            <a
-              href={href("/settings")}
-              className={`text-sm pb-0.5 transition-colors ${
-                current === "/settings"
-                  ? "text-[#e85d2f] border-b border-[#e85d2f]"
-                  : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
-              }`}
-            >
-              Settings
-            </a>
-            {isAdmin && (
-              <a
-                href={href("/admin")}
-                className={`text-sm pb-0.5 transition-colors ${
-                  current === "/admin"
-                    ? "text-[#e85d2f] border-b border-[#e85d2f]"
-                    : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
-                }`}
-              >
-                Admin
-              </a>
-            )}
-          </div>
+          <NotificationBell current={current} isAdmin={isAdmin} />
         )}
         {isLoggedIn === false && (
           <div className="flex items-center gap-3">
@@ -108,6 +86,9 @@ export default function Nav({ current, isAdmin = false }: { current: string; isA
         <a href={href("/")} className="font-sans font-black text-[13px] tracking-[0.1em] uppercase text-[#f5f3ef] hover:opacity-70 transition-opacity">
           house lights
         </a>
+        {isLoggedIn === true && (
+          <NotificationBell current={current} isAdmin={isAdmin} />
+        )}
       </header>
 
       {/* Mobile bottom tab bar */}
