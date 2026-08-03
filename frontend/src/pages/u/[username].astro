@@ -123,21 +123,18 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
           )}
         </div>
         {!isOwnProfile && currentUserId && (
-          <form method="POST" action="/api/users/follow" id="follow-form">
-            <input type="hidden" name="user_id" value={profile.id} />
-            <input type="hidden" name="action" value={isFollowing ? "unfollow" : "follow"} id="follow-action" />
-            <button
-              type="submit"
-              id="follow-btn"
-              class={`text-xs uppercase tracking-widest font-bold px-4 py-2 border transition-colors ${
-                isFollowing
-                  ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#333]"
-                  : "border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white"
-              }`}
-            >
-              {isFollowing ? "Following" : "Follow"}
-            </button>
-          </form>
+          <button
+            id="follow-btn"
+            data-user-id={profile.id}
+            data-following={isFollowing ? "true" : "false"}
+            class={`text-xs uppercase tracking-widest font-bold px-4 py-2 border transition-colors ${
+              isFollowing
+                ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#333]"
+                : "border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white"
+            }`}
+          >
+            {isFollowing ? "Following" : "Follow"}
+          </button>
         )}
         {isOwnProfile && (
           <a href="/settings" class="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">
@@ -285,28 +282,29 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
 
       <script>
         // Optimistic follow toggle
-        const form = document.getElementById("follow-form") as HTMLFormElement | null;
         const btn = document.getElementById("follow-btn") as HTMLButtonElement | null;
-        const actionInput = document.getElementById("follow-action") as HTMLInputElement | null;
-
-        form?.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          if (!btn || !actionInput) return;
-          const action = actionInput.value;
-          const res = await fetch("/api/users/follow", { method: "POST", body: new FormData(form) });
-          if (!res.ok) return;
-          if (action === "follow") {
-            btn.textContent = "Following";
-            btn.classList.add("bg-[#1a1a1a]", "text-white");
-            btn.classList.remove("text-[#1a1a1a]");
-            actionInput.value = "unfollow";
-          } else {
-            btn.textContent = "Follow";
-            btn.classList.remove("bg-[#1a1a1a]", "text-white");
-            btn.classList.add("text-[#1a1a1a]");
-            actionInput.value = "follow";
-          }
-        });
+        if (btn) {
+          btn.addEventListener("click", async () => {
+            const userId = btn.dataset.userId!;
+            const following = btn.dataset.following === "true";
+            const body = new FormData();
+            body.set("user_id", userId);
+            body.set("action", following ? "unfollow" : "follow");
+            const res = await fetch("/api/users/follow", { method: "POST", body });
+            if (!res.ok) return;
+            if (following) {
+              btn.textContent = "Follow";
+              btn.classList.remove("bg-[#1a1a1a]", "text-white");
+              btn.classList.add("text-[#1a1a1a]");
+              btn.dataset.following = "false";
+            } else {
+              btn.textContent = "Following";
+              btn.classList.add("bg-[#1a1a1a]", "text-white");
+              btn.classList.remove("text-[#1a1a1a]");
+              btn.dataset.following = "true";
+            }
+          });
+        }
       </script>
     </main>
   </body>

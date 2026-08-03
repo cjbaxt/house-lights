@@ -1,7 +1,5 @@
 import type { APIRoute } from "astro";
 
-export const GET: APIRoute = () => new Response(null, { status: 405 });
-
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) return new Response("Unauthorized", { status: 401 });
 
