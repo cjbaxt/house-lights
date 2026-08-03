@@ -28,20 +28,19 @@ const currentUserId = Astro.locals.user?.id ?? null;
 const isOwnProfile = currentUserId === profile.id;
 const svc = createServiceClient();
 
-// Run all remaining queries in parallel
+// Run all queries in parallel — friendship FKs point to auth.users so
+// we can't use PostgREST joins; fetch IDs first then profiles by ID
 const [
   friendshipCheck,
-  { data: followingRows },
-  { data: followerRows },
+  { data: followingIdRows },
+  { data: followerIdRows },
   watchlistResult,
 ] = await Promise.all([
   currentUserId && !isOwnProfile
     ? Astro.locals.supabase.from("friendship").select("user_id").eq("user_id", currentUserId).eq("friend_id", profile.id).maybeSingle()
     : Promise.resolve({ data: null }),
-  // Joined query: following list with profile data in one trip
-  svc.from("friendship").select("friend:friend_id(id, username, display_name, avatar_url)").eq("user_id", profile.id),
-  // Joined query: followers list with profile data in one trip
-  svc.from("friendship").select("follower:user_id(id, username, display_name, avatar_url)").eq("friend_id", profile.id),
+  svc.from("friendship").select("friend_id").eq("user_id", profile.id),
+  svc.from("friendship").select("user_id").eq("friend_id", profile.id),
   Astro.locals.supabase
     .from("watchlist")
     .select("status, added_at, show:show_id(id, title, date, time, type, url, venue:venue_id(name))")
@@ -50,9 +49,22 @@ const [
 ]);
 
 const isFollowing = !!(friendshipCheck as any).data;
-const followingProfiles = (followingRows ?? []).map((r: any) => r.friend).filter(Boolean);
-const followerProfiles = (followerRows ?? []).map((r: any) => r.follower).filter(Boolean);
 const watchlistData = (watchlistResult as any).data;
+
+const followingIds = (followingIdRows ?? []).map((r: any) => r.friend_id);
+const followerIds = (followerIdRows ?? []).map((r: any) => r.user_id);
+
+// Fetch profiles for following/follower IDs in parallel
+const [{ data: followingProfileData }, { data: followerProfileData }] = await Promise.all([
+  followingIds.length > 0
+    ? svc.from("profile").select("id, username, display_name, avatar_url").in("id", followingIds)
+    : Promise.resolve({ data: [] }),
+  followerIds.length > 0
+    ? svc.from("profile").select("id, username, display_name, avatar_url").in("id", followerIds)
+    : Promise.resolve({ data: [] }),
+]);
+const followingProfiles = followingProfileData ?? [];
+const followerProfiles = followerProfileData ?? [];
 
 type WatchEntry = { status: string; added_at: string; show: { id: string; title: string; date: string; time: string | null; type: string | null; url: string | null; venue: { name: string } | null } | null };
 
