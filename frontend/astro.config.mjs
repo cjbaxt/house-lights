@@ -6,7 +6,11 @@ import vercel from '@astrojs/vercel';
 
 export default defineConfig({
   output: 'server',
-  adapter: vercel(),
+  adapter: vercel({
+    webAnalytics: {
+      enabled: true,
+    },
+  }),
   integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
@@ -14,6 +18,10 @@ export default defineConfig({
       watch: {
         ignored: ["**/public/data/**"],
       },
+    },
+    define: {
+      'import.meta.env.PUBLIC_VERCEL_ANALYTICS_ID':
+        JSON.stringify(process.env.VERCEL_ANALYTICS_ID),
     },
   },
 });
