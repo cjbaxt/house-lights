@@ -3,19 +3,22 @@ import "../../styles/global.css";
 import Nav from "../../components/Nav";
 import BaseHead from "../../components/BaseHead.astro";
 import { getIsAdmin } from "../../lib/admin";
+import { createServiceClient } from "../../lib/supabase/service";
 
-const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 const { username } = Astro.params;
 
-const { data: profile, error } = await Astro.locals.supabase
-  .from("profile")
-  .select("id, username, display_name, avatar_url, is_public, created_at")
-  .eq("username", username)
-  .single();
+// Fetch profile and admin status in parallel
+const [isAdmin, { data: profile, error }] = await Promise.all([
+  getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id),
+  Astro.locals.supabase
+    .from("profile")
+    .select("id, username, display_name, avatar_url, is_public, created_at")
+    .eq("username", username)
+    .single(),
+]);
 
 if (error || !profile) return Astro.redirect("/404");
 if (!profile.is_public) {
-  // Private profile — only the owner can see it
   if (!Astro.locals.user || Astro.locals.user.id !== profile.id) {
     return Astro.redirect("/404");
   }
@@ -23,25 +26,33 @@ if (!profile.is_public) {
 
 const currentUserId = Astro.locals.user?.id ?? null;
 const isOwnProfile = currentUserId === profile.id;
+const svc = createServiceClient();
 
-// Check if current user follows this profile
-let isFollowing = false;
-if (currentUserId && !isOwnProfile) {
-  const { data: friendship } = await Astro.locals.supabase
-    .from("friendship")
-    .select("user_id")
-    .eq("user_id", currentUserId)
-    .eq("friend_id", profile.id)
-    .maybeSingle();
-  isFollowing = !!friendship;
-}
+// Run all remaining queries in parallel
+const [
+  friendshipCheck,
+  { data: followingRows },
+  { data: followerRows },
+  watchlistResult,
+] = await Promise.all([
+  currentUserId && !isOwnProfile
+    ? Astro.locals.supabase.from("friendship").select("user_id").eq("user_id", currentUserId).eq("friend_id", profile.id).maybeSingle()
+    : Promise.resolve({ data: null }),
+  // Joined query: following list with profile data in one trip
+  svc.from("friendship").select("friend:friend_id(id, username, display_name, avatar_url)").eq("user_id", profile.id),
+  // Joined query: followers list with profile data in one trip
+  svc.from("friendship").select("follower:user_id(id, username, display_name, avatar_url)").eq("friend_id", profile.id),
+  Astro.locals.supabase
+    .from("watchlist")
+    .select("status, added_at, show:show_id(id, title, date, time, type, url, venue:venue_id(name))")
+    .eq("user_id", profile.id)
+    .order("show(date)", { ascending: true }),
+]);
 
-// Watchlist — fetch all entries and group multi-date shows into one card
-const { data: watchlistData } = await Astro.locals.supabase
-  .from("watchlist")
-  .select("status, added_at, show:show_id(id, title, date, time, type, url, venue:venue_id(name))")
-  .eq("user_id", profile.id)
-  .order("show(date)", { ascending: true });
+const isFollowing = !!(friendshipCheck as any).data;
+const followingProfiles = (followingRows ?? []).map((r: any) => r.friend).filter(Boolean);
+const followerProfiles = (followerRows ?? []).map((r: any) => r.follower).filter(Boolean);
+const watchlistData = (watchlistResult as any).data;
 
 type WatchEntry = { status: string; added_at: string; show: { id: string; title: string; date: string; time: string | null; type: string | null; url: string | null; venue: { name: string } | null } | null };
 
@@ -79,27 +90,25 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
         <div class="flex-1 min-w-0">
           <h1 class="font-sans font-black text-xl text-[#1a1a1a] truncate">
             {profile.display_name ?? profile.username}
+            {isOwnProfile && <span class="text-sm font-normal text-[#aaa] ml-1">(you)</span>}
           </h1>
           {profile.display_name && (
             <p class="text-xs text-[#aaa] mt-0.5">@{profile.username}</p>
           )}
         </div>
         {!isOwnProfile && currentUserId && (
-          <form method="POST" action="/api/users/follow" id="follow-form">
-            <input type="hidden" name="user_id" value={profile.id} />
-            <input type="hidden" name="action" value={isFollowing ? "unfollow" : "follow"} id="follow-action" />
-            <button
-              type="submit"
-              id="follow-btn"
-              class={`text-xs uppercase tracking-widest font-bold px-4 py-2 border transition-colors ${
-                isFollowing
-                  ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#333]"
-                  : "border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white"
-              }`}
-            >
-              {isFollowing ? "Following" : "Follow"}
-            </button>
-          </form>
+          <button
+            id="follow-btn"
+            data-user-id={profile.id}
+            data-following={isFollowing ? "true" : "false"}
+            class={`text-xs uppercase tracking-widest font-bold px-4 py-2 border transition-colors ${
+              isFollowing
+                ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#333]"
+                : "border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white"
+            }`}
+          >
+            {isFollowing ? "Following" : "Follow"}
+          </button>
         )}
         {isOwnProfile && (
           <a href="/settings" class="text-xs uppercase tracking-widest text-[#888] hover:text-[#1a1a1a] transition-colors">
@@ -108,8 +117,24 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
         )}
       </div>
 
-      <!-- Watchlist -->
-      <section>
+      <!-- Stats -->
+      <div class="flex gap-6 mb-8 text-xs text-[#888]">
+        <button id="tab-btn-watchlist" class="tab-btn flex flex-col items-center gap-0.5 hover:text-[#1a1a1a] transition-colors">
+          <span class="font-black text-sm text-[#1a1a1a]">{watchlist.length}</span>
+          <span class="uppercase tracking-widest">Watchlist</span>
+        </button>
+        <button id="tab-btn-following" class="tab-btn flex flex-col items-center gap-0.5 hover:text-[#1a1a1a] transition-colors">
+          <span class="font-black text-sm text-[#1a1a1a]">{followingProfiles.length}</span>
+          <span class="uppercase tracking-widest">Following</span>
+        </button>
+        <button id="tab-btn-followers" class="tab-btn flex flex-col items-center gap-0.5 hover:text-[#1a1a1a] transition-colors">
+          <span class="font-black text-sm text-[#1a1a1a]">{followerProfiles.length}</span>
+          <span class="uppercase tracking-widest">Followers</span>
+        </button>
+      </div>
+
+      <!-- Watchlist tab -->
+      <section id="tab-watchlist">
         <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-5">Watchlist</h2>
         {watchlist.length === 0 ? (
           <p class="text-xs text-[#aaa]">Nothing here yet.</p>
@@ -149,30 +174,127 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
         )}
       </section>
 
-      <script>
-        // Optimistic follow toggle
-        const form = document.getElementById("follow-form") as HTMLFormElement | null;
-        const btn = document.getElementById("follow-btn") as HTMLButtonElement | null;
-        const actionInput = document.getElementById("follow-action") as HTMLInputElement | null;
+      <!-- Following tab -->
+      <section id="tab-following" class="hidden">
+        {isOwnProfile && (
+          <div class="mb-5">
+            <a href="/feed" class="text-xs uppercase tracking-widest font-bold border border-[#1a1a1a] text-[#1a1a1a] px-4 py-2 hover:bg-[#1a1a1a] hover:text-white transition-colors inline-block">
+              Find people
+            </a>
+          </div>
+        )}
+        {followingProfiles.length === 0 ? (
+          <p class="text-xs text-[#aaa]">Not following anyone yet.</p>
+        ) : (
+          <ul class="divide-y divide-[#ece7de]">
+            {followingProfiles.map((f: any) => {
+              const ini = (f.display_name ?? f.username ?? "?").slice(0, 2).toUpperCase();
+              return (
+                <li>
+                  <a href={`/u/${f.username}`} class="flex items-center gap-3 py-3 hover:opacity-70 transition-opacity">
+                    <div class="w-8 h-8 rounded-full overflow-hidden bg-[#f0ede8] flex items-center justify-center flex-shrink-0">
+                      {f.avatar_url
+                        ? <img src={f.avatar_url} alt={f.username} class="w-full h-full object-cover" />
+                        : <span class="text-[10px] font-bold text-[#888]">{ini}</span>
+                      }
+                    </div>
+                    <div>
+                      <div class="text-sm font-bold text-[#1a1a1a]">{f.display_name ?? f.username}</div>
+                      {f.display_name && <div class="text-xs text-[#aaa]">@{f.username}</div>}
+                    </div>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
-        form?.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          if (!btn || !actionInput) return;
-          const action = actionInput.value;
-          const res = await fetch("/api/users/follow", { method: "POST", body: new FormData(form) });
-          if (!res.ok) return;
-          if (action === "follow") {
-            btn.textContent = "Following";
-            btn.classList.add("bg-[#1a1a1a]", "text-white");
-            btn.classList.remove("text-[#1a1a1a]");
-            actionInput.value = "unfollow";
-          } else {
-            btn.textContent = "Follow";
-            btn.classList.remove("bg-[#1a1a1a]", "text-white");
-            btn.classList.add("text-[#1a1a1a]");
-            actionInput.value = "follow";
-          }
+      <!-- Followers tab -->
+      <section id="tab-followers" class="hidden">
+        {followerProfiles.length === 0 ? (
+          <p class="text-xs text-[#aaa]">No followers yet.</p>
+        ) : (
+          <ul class="divide-y divide-[#ece7de]">
+            {followerProfiles.map((f: any) => {
+              const ini = (f.display_name ?? f.username ?? "?").slice(0, 2).toUpperCase();
+              return (
+                <li>
+                  <a href={`/u/${f.username}`} class="flex items-center gap-3 py-3 hover:opacity-70 transition-opacity">
+                    <div class="w-8 h-8 rounded-full overflow-hidden bg-[#f0ede8] flex items-center justify-center flex-shrink-0">
+                      {f.avatar_url
+                        ? <img src={f.avatar_url} alt={f.username} class="w-full h-full object-cover" />
+                        : <span class="text-[10px] font-bold text-[#888]">{ini}</span>
+                      }
+                    </div>
+                    <div>
+                      <div class="text-sm font-bold text-[#1a1a1a]">{f.display_name ?? f.username}</div>
+                      {f.display_name && <div class="text-xs text-[#aaa]">@{f.username}</div>}
+                    </div>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <script>
+        // Profile sub-tabs
+        const tabs = ["watchlist", "following", "followers"];
+        tabs.forEach((tab) => {
+          document.getElementById(`tab-btn-${tab}`)?.addEventListener("click", () => {
+            tabs.forEach((t) => {
+              document.getElementById(`tab-${t}`)?.classList.toggle("hidden", t !== tab);
+              document.getElementById(`tab-btn-${t}`)?.classList.toggle("text-[#e85d2f]", t === tab);
+            });
+          });
         });
+        // Default active state
+        document.getElementById("tab-btn-watchlist")?.classList.add("text-[#e85d2f]");
+      </script>
+
+      <script>
+        // Optimistic follow toggle — update UI immediately, then persist
+        const btn = document.getElementById("follow-btn") as HTMLButtonElement | null;
+        if (btn) {
+          btn.addEventListener("click", () => {
+            const userId = btn.dataset.userId!;
+            const following = btn.dataset.following === "true";
+            // Update UI immediately
+            if (following) {
+              btn.textContent = "Follow";
+              btn.classList.remove("bg-[#1a1a1a]", "text-white");
+              btn.classList.add("text-[#1a1a1a]");
+              btn.dataset.following = "false";
+            } else {
+              btn.textContent = "Following";
+              btn.classList.add("bg-[#1a1a1a]", "text-white");
+              btn.classList.remove("text-[#1a1a1a]");
+              btn.dataset.following = "true";
+            }
+            // Persist in background
+            const body = new FormData();
+            body.set("user_id", userId);
+            body.set("action", following ? "unfollow" : "follow");
+            fetch("/api/users/follow", { method: "POST", body }).then(res => {
+              if (!res.ok) {
+                // Revert on failure
+                if (following) {
+                  btn.textContent = "Following";
+                  btn.classList.add("bg-[#1a1a1a]", "text-white");
+                  btn.classList.remove("text-[#1a1a1a]");
+                  btn.dataset.following = "true";
+                } else {
+                  btn.textContent = "Follow";
+                  btn.classList.remove("bg-[#1a1a1a]", "text-white");
+                  btn.classList.add("text-[#1a1a1a]");
+                  btn.dataset.following = "false";
+                }
+              }
+            });
+          });
+        }
       </script>
     </main>
   </body>

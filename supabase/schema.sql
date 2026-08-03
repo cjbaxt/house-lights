@@ -130,6 +130,18 @@ create table friendship (
   check (user_id <> friend_id)
 );
 
+create table notification (
+  id         uuid primary key default uuid_generate_v4(),
+  user_id    uuid not null references profile(id) on delete cascade,
+  actor_id   uuid not null references profile(id) on delete cascade,
+  type       text not null check (type in ('follow')),
+  read       boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index notification_user_id_idx on notification(user_id, read, created_at desc);
+create unique index notification_follow_unique on notification(user_id, actor_id, type);
+
 -- ============================================================
 -- Row Level Security
 -- ============================================================
@@ -143,6 +155,7 @@ alter table user_preferences enable row level security;
 alter table user_city      enable row level security;
 alter table watchlist      enable row level security;
 alter table friendship     enable row level security;
+alter table notification   enable row level security;
 
 -- public read
 create policy "public read cities"    on city     for select using (true);
@@ -191,6 +204,16 @@ create policy "own friendships" on friendship
 
 create policy "read incoming friendships" on friendship
   for select using (auth.uid() = friend_id);
+
+-- notification
+create policy "own notifications read" on notification
+  for select using (auth.uid() = user_id);
+
+create policy "own notifications update" on notification
+  for update using (auth.uid() = user_id);
+
+create policy "authenticated insert notification" on notification
+  for insert with check (auth.uid() is not null);
 
 -- ============================================================
 -- Seed data

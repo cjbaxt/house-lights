@@ -45,9 +45,9 @@ if (!isAdmin) return Astro.redirect("/");
         <div class="border border-[#ece7de] divide-y divide-[#ece7de]" id="codes-table">
           <div class="flex items-center gap-4 px-4 py-2 bg-[#f9f8f6]">
             <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-28">Code</span>
-            <span class="text-[10px] uppercase tracking-widest text-[#aaa] flex-1">Note</span>
+            <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-28">Note</span>
             <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-16">Uses</span>
-            <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-28">Last used by</span>
+            <span class="text-[10px] uppercase tracking-widest text-[#aaa] flex-1">Used by</span>
             <span class="text-[10px] uppercase tracking-widest text-[#aaa] w-24">Created</span>
             <span class="w-6"></span>
           </div>
@@ -76,15 +76,18 @@ if (!isAdmin) return Astro.redirect("/");
         }
         body.innerHTML = codes.map((c: any) => {
           const created = new Date(c.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-          const usedBy = c.used_by ? "used" : "";
+          const users: string[] = c.users ?? [];
+          const usedByHtml = users.length
+            ? users.map(u => `<a href="/u/${esc(u)}" class="hover:text-[#e85d2f] transition-colors">@${esc(u)}</a>`).join(", ")
+            : '<span class="text-[#ccc]">—</span>';
           const usesLabel = `${c.use_count}/${c.max_uses}`;
           const full = c.use_count >= c.max_uses;
           return `
-            <div class="flex items-center gap-4 px-4 py-2.5" data-id="${c.id}">
+            <div class="flex items-start gap-4 px-4 py-2.5" data-id="${c.id}">
               <span class="text-xs font-mono font-bold text-[#1a1a1a] w-28 select-all">${c.code}</span>
-              <span class="text-xs text-[#888] flex-1">${esc(c.note ?? "")}</span>
+              <span class="text-xs text-[#888] w-28">${esc(c.note ?? "")}</span>
               <span class="text-xs w-16 ${full ? "text-[#e85d2f]" : "text-[#888]"}">${usesLabel}</span>
-              <span class="text-xs ${usedBy ? "text-[#888]" : "text-[#ccc]"} w-28">${usedBy || "—"}</span>
+              <span class="text-xs text-[#888] flex-1">${usedByHtml}</span>
               <span class="text-xs text-[#aaa] w-24">${created}</span>
               <button class="delete-btn w-6 text-[#d4c9b8] hover:text-[#e85d2f] transition-colors text-sm leading-none"
                 data-id="${c.id}" title="Delete code">×</button>

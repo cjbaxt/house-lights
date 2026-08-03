@@ -16,18 +16,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   );
 
-  const { data: { user } } = await context.locals.supabase.auth.getUser();
-  context.locals.user = user ?? null;
+  const { data: { session } } = await context.locals.supabase.auth.getSession();
+  context.locals.user = session?.user ?? null;
 
   // Redirect users who haven't set a username yet to the welcome/onboarding page
-  if (user) {
+  if (context.locals.user) {
     const path = new URL(context.request.url).pathname;
-    const isExempt = path.startsWith("/api/") || path === "/welcome" || path === "/login" || path === "/logout" || path === "/check-email" || path === "/privacy" || path === "/about";
+    const isExempt = path.startsWith("/api/") || path === "/welcome" || path === "/login" || path === "/logout" || path === "/check-email" || path === "/privacy" || path === "/about" || path === "/feed";
     if (!isExempt) {
       const { data: profile } = await context.locals.supabase
         .from("profile")
         .select("username_confirmed")
-        .eq("id", user.id)
+        .eq("id", context.locals.user!.id)
         .single();
       if (profile && !profile.username_confirmed) {
         return context.redirect("/welcome");

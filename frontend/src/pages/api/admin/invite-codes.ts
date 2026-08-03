@@ -14,11 +14,18 @@ export const GET: APIRoute = async ({ locals }) => {
   const admin = createServiceClient();
   const { data, error } = await admin
     .from("invite_code")
-    .select("id, code, note, max_uses, use_count, created_at, used_at, used_by")
+    .select("id, code, note, max_uses, use_count, created_at, used_at, users:profile(username)")
     .order("created_at", { ascending: false });
 
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-  return new Response(JSON.stringify(data), { headers: { "Content-Type": "application/json" } });
+
+  // Reshape: attach the list of usernames who used each code
+  const shaped = (data ?? []).map((c: any) => {
+    const users = Array.isArray(c.users) ? c.users : (c.users ? [c.users] : []);
+    return { ...c, users: users.map((u: any) => u.username) };
+  });
+
+  return new Response(JSON.stringify(shaped), { headers: { "Content-Type": "application/json" } });
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
