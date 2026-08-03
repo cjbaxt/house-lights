@@ -117,6 +117,7 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
         <div class="flex-1 min-w-0">
           <h1 class="font-sans font-black text-xl text-[#1a1a1a] truncate">
             {profile.display_name ?? profile.username}
+            {isOwnProfile && <span class="text-sm font-normal text-[#aaa] ml-1">(you)</span>}
           </h1>
           {profile.display_name && (
             <p class="text-xs text-[#aaa] mt-0.5">@{profile.username}</p>
@@ -281,17 +282,13 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
       </script>
 
       <script>
-        // Optimistic follow toggle
+        // Optimistic follow toggle — update UI immediately, then persist
         const btn = document.getElementById("follow-btn") as HTMLButtonElement | null;
         if (btn) {
-          btn.addEventListener("click", async () => {
+          btn.addEventListener("click", () => {
             const userId = btn.dataset.userId!;
             const following = btn.dataset.following === "true";
-            const body = new FormData();
-            body.set("user_id", userId);
-            body.set("action", following ? "unfollow" : "follow");
-            const res = await fetch("/api/users/follow", { method: "POST", body });
-            if (!res.ok) return;
+            // Update UI immediately
             if (following) {
               btn.textContent = "Follow";
               btn.classList.remove("bg-[#1a1a1a]", "text-white");
@@ -303,6 +300,26 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
               btn.classList.remove("text-[#1a1a1a]");
               btn.dataset.following = "true";
             }
+            // Persist in background
+            const body = new FormData();
+            body.set("user_id", userId);
+            body.set("action", following ? "unfollow" : "follow");
+            fetch("/api/users/follow", { method: "POST", body }).then(res => {
+              if (!res.ok) {
+                // Revert on failure
+                if (following) {
+                  btn.textContent = "Following";
+                  btn.classList.add("bg-[#1a1a1a]", "text-white");
+                  btn.classList.remove("text-[#1a1a1a]");
+                  btn.dataset.following = "true";
+                } else {
+                  btn.textContent = "Follow";
+                  btn.classList.remove("bg-[#1a1a1a]", "text-white");
+                  btn.classList.add("text-[#1a1a1a]");
+                  btn.dataset.following = "false";
+                }
+              }
+            });
           });
         }
       </script>
