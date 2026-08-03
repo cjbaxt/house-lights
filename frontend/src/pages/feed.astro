@@ -5,14 +5,15 @@ import BaseHead from "../components/BaseHead.astro";
 import { getIsAdmin } from "../lib/admin";
 
 const isLoggedIn = !!Astro.locals.user;
-const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 
-const { data: friendshipRows } = isLoggedIn ? await Astro.locals.supabase
-  .from("friendship")
-  .select("friend_id")
-  .eq("user_id", Astro.locals.user!.id) : { data: null };
+const [isAdmin, friendshipResult] = await Promise.all([
+  getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id),
+  isLoggedIn
+    ? Astro.locals.supabase.from("friendship").select("friend_id").eq("user_id", Astro.locals.user!.id)
+    : Promise.resolve({ data: null }),
+]);
 
-const friendIds = (friendshipRows ?? []).map((f: any) => f.friend_id as string);
+const friendIds = ((friendshipResult as any).data ?? []).map((f: any) => f.friend_id as string);
 
 let friends: any[] = [];
 if (friendIds.length > 0) {

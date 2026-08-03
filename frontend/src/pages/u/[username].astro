@@ -5,18 +5,20 @@ import BaseHead from "../../components/BaseHead.astro";
 import { getIsAdmin } from "../../lib/admin";
 import { createServiceClient } from "../../lib/supabase/service";
 
-const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 const { username } = Astro.params;
 
-const { data: profile, error } = await Astro.locals.supabase
-  .from("profile")
-  .select("id, username, display_name, avatar_url, is_public, created_at")
-  .eq("username", username)
-  .single();
+// Fetch profile and admin status in parallel
+const [isAdmin, { data: profile, error }] = await Promise.all([
+  getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id),
+  Astro.locals.supabase
+    .from("profile")
+    .select("id, username, display_name, avatar_url, is_public, created_at")
+    .eq("username", username)
+    .single(),
+]);
 
 if (error || !profile) return Astro.redirect("/404");
 if (!profile.is_public) {
-  // Private profile — only the owner can see it
   if (!Astro.locals.user || Astro.locals.user.id !== profile.id) {
     return Astro.redirect("/404");
   }
@@ -24,62 +26,33 @@ if (!profile.is_public) {
 
 const currentUserId = Astro.locals.user?.id ?? null;
 const isOwnProfile = currentUserId === profile.id;
-
-// Check if current user follows this profile
-let isFollowing = false;
-if (currentUserId && !isOwnProfile) {
-  const { data: friendship } = await Astro.locals.supabase
-    .from("friendship")
-    .select("user_id")
-    .eq("user_id", currentUserId)
-    .eq("friend_id", profile.id)
-    .maybeSingle();
-  isFollowing = !!friendship;
-}
-
-// Follower / following counts — use service client to bypass RLS (these are public stats)
 const svc = createServiceClient();
-const [{ count: followingCount }, { count: followersCount }] = await Promise.all([
-  svc.from("friendship").select("*", { count: "exact", head: true }).eq("user_id", profile.id),
-  svc.from("friendship").select("*", { count: "exact", head: true }).eq("friend_id", profile.id),
+
+// Run all remaining queries in parallel
+const [
+  friendshipCheck,
+  { data: followingRows },
+  { data: followerRows },
+  watchlistResult,
+] = await Promise.all([
+  currentUserId && !isOwnProfile
+    ? Astro.locals.supabase.from("friendship").select("user_id").eq("user_id", currentUserId).eq("friend_id", profile.id).maybeSingle()
+    : Promise.resolve({ data: null }),
+  // Joined query: following list with profile data in one trip
+  svc.from("friendship").select("friend:friend_id(id, username, display_name, avatar_url)").eq("user_id", profile.id),
+  // Joined query: followers list with profile data in one trip
+  svc.from("friendship").select("follower:user_id(id, username, display_name, avatar_url)").eq("friend_id", profile.id),
+  Astro.locals.supabase
+    .from("watchlist")
+    .select("status, added_at, show:show_id(id, title, date, time, type, url, venue:venue_id(name))")
+    .eq("user_id", profile.id)
+    .order("show(date)", { ascending: true }),
 ]);
 
-// Following list (people this profile follows)
-const { data: followingRows } = await svc
-  .from("friendship")
-  .select("friend_id")
-  .eq("user_id", profile.id);
-const followingIds = (followingRows ?? []).map((r: any) => r.friend_id);
-let followingProfiles: any[] = [];
-if (followingIds.length > 0) {
-  const { data } = await svc
-    .from("profile")
-    .select("id, username, display_name, avatar_url")
-    .in("id", followingIds);
-  followingProfiles = data ?? [];
-}
-
-// Followers list (people who follow this profile)
-const { data: followerRows } = await svc
-  .from("friendship")
-  .select("user_id")
-  .eq("friend_id", profile.id);
-const followerIds = (followerRows ?? []).map((r: any) => r.user_id);
-let followerProfiles: any[] = [];
-if (followerIds.length > 0) {
-  const { data } = await svc
-    .from("profile")
-    .select("id, username, display_name, avatar_url")
-    .in("id", followerIds);
-  followerProfiles = data ?? [];
-}
-
-// Watchlist — fetch all entries and group multi-date shows into one card
-const { data: watchlistData } = await Astro.locals.supabase
-  .from("watchlist")
-  .select("status, added_at, show:show_id(id, title, date, time, type, url, venue:venue_id(name))")
-  .eq("user_id", profile.id)
-  .order("show(date)", { ascending: true });
+const isFollowing = !!(friendshipCheck as any).data;
+const followingProfiles = (followingRows ?? []).map((r: any) => r.friend).filter(Boolean);
+const followerProfiles = (followerRows ?? []).map((r: any) => r.follower).filter(Boolean);
+const watchlistData = (watchlistResult as any).data;
 
 type WatchEntry = { status: string; added_at: string; show: { id: string; title: string; date: string; time: string | null; type: string | null; url: string | null; venue: { name: string } | null } | null };
 
@@ -151,11 +124,11 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
           <span class="uppercase tracking-widest">Watchlist</span>
         </button>
         <button id="tab-btn-following" class="tab-btn flex flex-col items-center gap-0.5 hover:text-[#1a1a1a] transition-colors">
-          <span class="font-black text-sm text-[#1a1a1a]">{followingCount ?? 0}</span>
+          <span class="font-black text-sm text-[#1a1a1a]">{followingProfiles.length}</span>
           <span class="uppercase tracking-widest">Following</span>
         </button>
         <button id="tab-btn-followers" class="tab-btn flex flex-col items-center gap-0.5 hover:text-[#1a1a1a] transition-colors">
-          <span class="font-black text-sm text-[#1a1a1a]">{followersCount ?? 0}</span>
+          <span class="font-black text-sm text-[#1a1a1a]">{followerProfiles.length}</span>
           <span class="uppercase tracking-widest">Followers</span>
         </button>
       </div>
