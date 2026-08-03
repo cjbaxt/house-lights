@@ -42,6 +42,10 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       .update({ use_count: codeRow.use_count + 1, used_at: new Date().toISOString(), used_by: signUpData.user.id })
       .eq("id", codeRow.id)
       .lt("use_count", codeRow.max_uses);
+    // Record which invite code this user signed up with (enables admin to list all users per code)
+    await admin.from("profile")
+      .update({ invite_code_id: codeRow.id })
+      .eq("id", signUpData.user.id);
   }
 
   return redirect("/check-email");
