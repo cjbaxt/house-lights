@@ -76,8 +76,8 @@ const bob = await getProfile(BOB_USERNAME);
 
 if (!alice) { console.error(`User "${ALICE_USERNAME}" not found`); process.exit(1); }
 if (!bob) { console.error(`User "${BOB_USERNAME}" not found`); process.exit(1); }
-console.log(`  Alice = ${alice.username} (${alice.id})`);
-console.log(`  Bob   = ${bob.username} (${bob.id})\n`);
+console.log(`  Alice = ${alice.username}`);
+console.log(`  Bob   = ${bob.username}\n`);
 
 // Clean up any existing state so tests are idempotent
 await db.from("friendship").delete().eq("user_id", alice.id).eq("friend_id", bob.id);
@@ -145,5 +145,6 @@ await db.from("notification").delete().eq("user_id", bob.id).eq("actor_id", alic
 
 // ─── Summary ────────────────────────────────────────────────────────────────
 
-console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed`);
+const total = passed + failed;
+process.stdout.write(`\n${total} tests: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
