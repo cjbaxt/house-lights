@@ -1,3 +1,4 @@
+import logging
 """
 Royal Concertgebouw — static HTML.
 Events as <article> on homepage; date like "di 30 jun 2026"

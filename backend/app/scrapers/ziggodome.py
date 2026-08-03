@@ -1,3 +1,4 @@
+import logging
 """
 Ziggo Dome — public REST JSON API.
 GET /api/agenda/aankomend/?limit=50&offset=N

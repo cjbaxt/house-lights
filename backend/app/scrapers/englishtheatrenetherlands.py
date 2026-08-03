@@ -1,3 +1,4 @@
+import logging
 """
 englishtheatrenetherlands.com — WordPress Events Calendar site.
 Covers all English-language theatre companies in NL in one pass.

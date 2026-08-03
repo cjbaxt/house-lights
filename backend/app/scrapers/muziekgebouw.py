@@ -1,3 +1,4 @@
+import logging
 """
 Muziekgebouw aan 't IJ — static HTML.
 Events as li.eventCard; date like "Sat 27 Jun 2026 17:00"

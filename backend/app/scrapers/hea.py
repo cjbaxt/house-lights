@@ -1,3 +1,4 @@
+import logging
 """
 HEA Productions (Het Engels Amateurtheater Amsterdam) — simple static site.
 Shows listed as article elements with "Month DD-DD, YYYY" date format.

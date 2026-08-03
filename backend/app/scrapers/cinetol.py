@@ -1,3 +1,4 @@
+import logging
 """
 Cinetol — Webflow-based static HTML.
 """

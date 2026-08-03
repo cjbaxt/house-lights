@@ -1,3 +1,4 @@
+import logging
 """
 Koninklijk Theater Carré — uses the internal render API.
 

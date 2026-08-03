@@ -1,3 +1,4 @@
+import logging
 """
 Bostheater (Amsterdamse Bos) — WordPress site, static HTML.
 Events as article elements with /events/ links.

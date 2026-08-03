@@ -1,3 +1,4 @@
+import logging
 """
 OT301 — static HTML.
 Events as a.event-item; date from surrounding day header like "Friday 26 June"

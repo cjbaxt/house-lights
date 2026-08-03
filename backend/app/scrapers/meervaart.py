@@ -1,3 +1,4 @@
+import logging
 """
 De Meervaart — static HTML (Tailwind-based site).
 Events as article elements; date like "vr 26 jun"

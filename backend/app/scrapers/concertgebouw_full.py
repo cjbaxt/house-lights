@@ -1,3 +1,4 @@
+import logging
 """
 Royal Concertgebouw — static HTML (Nuxt SSR).
 Concerts on /concerten-en-tickets as article elements with /concerten/ links.
