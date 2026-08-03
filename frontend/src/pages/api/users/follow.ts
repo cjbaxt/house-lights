@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { createServiceClient } from "../../../lib/supabase/service";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) return new Response("Unauthorized", { status: 401 });
@@ -14,13 +15,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response("Cannot follow yourself", { status: 400 });
   }
 
+  // Use service client for notification writes — the update RLS policy
+  // requires user_id = auth.uid(), but the actor writing the notification
+  // is not the recipient, so it would silently fail with the session client.
+  const svc = createServiceClient();
+
   if (action === "follow") {
     await locals.supabase.from("friendship").upsert({
       user_id: locals.user.id,
       friend_id: targetId,
     });
-    // Upsert notification — always reset to unread so re-follows surface again
-    await locals.supabase.from("notification").upsert(
+    await svc.from("notification").upsert(
       { user_id: targetId, actor_id: locals.user.id, type: "follow", read: false, created_at: new Date().toISOString() },
       { onConflict: "user_id,actor_id,type" }
     );
@@ -30,8 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .delete()
       .eq("user_id", locals.user.id)
       .eq("friend_id", targetId);
-    // Remove the notification so a future re-follow triggers a fresh one
-    await locals.supabase
+    await svc
       .from("notification")
       .delete()
       .eq("user_id", targetId)
