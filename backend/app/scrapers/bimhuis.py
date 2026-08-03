@@ -1,3 +1,4 @@
+import logging
 """
 Bimhuis scraper — static HTML.
 Structure: li.agenda-tile-overview__item > div.agenda-tile > div.agenda-tile__content

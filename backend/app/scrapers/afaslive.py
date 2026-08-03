@@ -1,3 +1,4 @@
+import logging
 """
 AFAS Live — static HTML agenda + per-event detail pages for times.
 Agenda page lists each performance date separately (same href can appear multiple times).

@@ -1,3 +1,4 @@
+import logging
 """
 Shelter Amsterdam — WordPress portfolio-based site.
 Events as article.dt_portfolio with date like "Friday 26.06 23:00 - 06:00"

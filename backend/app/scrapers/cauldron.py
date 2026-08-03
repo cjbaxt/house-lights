@@ -1,3 +1,4 @@
+import logging
 """
 The Cauldron Performing Arts — WordPress site, static HTML.
 Events as article elements with "DD Month YYYY" dates.

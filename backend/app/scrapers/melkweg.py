@@ -1,3 +1,4 @@
+import logging
 """
 Melkweg scraper — static HTML agenda page.
 URL pattern: /nl/agenda/title-DD-MM-YYYY/

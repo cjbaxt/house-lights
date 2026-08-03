@@ -1,3 +1,4 @@
+import logging
 """
 Felix Meritis — WordPress-based static HTML.
 Events as div.event-list__meta + h2.event-list__title

@@ -1,3 +1,4 @@
+import logging
 """
 Frascati — static HTML, same eventCard structure as Muziekgebouw.
 Date format: "Thu 25 Jun '26"

@@ -1,3 +1,4 @@
+import logging
 """
 DeLaMar — static HTML, productions as div.tile with links.
 Individual show pages needed for dates — scrape the full agenda page.

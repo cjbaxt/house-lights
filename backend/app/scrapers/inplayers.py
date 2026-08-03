@@ -1,3 +1,4 @@
+import logging
 """
 InPlayers — Squarespace site, static HTML.
 Events at /upcoming-events/ with date "Sat, DD Mon YYYY HH:MM"
