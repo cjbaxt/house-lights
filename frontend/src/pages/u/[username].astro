@@ -36,6 +36,42 @@ if (currentUserId && !isOwnProfile) {
   isFollowing = !!friendship;
 }
 
+// Follower / following counts
+const [{ count: followingCount }, { count: followersCount }] = await Promise.all([
+  Astro.locals.supabase.from("friendship").select("*", { count: "exact", head: true }).eq("user_id", profile.id),
+  Astro.locals.supabase.from("friendship").select("*", { count: "exact", head: true }).eq("friend_id", profile.id),
+]);
+
+// Following list (people this profile follows)
+const { data: followingRows } = await Astro.locals.supabase
+  .from("friendship")
+  .select("friend_id")
+  .eq("user_id", profile.id);
+const followingIds = (followingRows ?? []).map((r: any) => r.friend_id);
+let followingProfiles: any[] = [];
+if (followingIds.length > 0) {
+  const { data } = await Astro.locals.supabase
+    .from("profile")
+    .select("id, username, display_name, avatar_url")
+    .in("id", followingIds);
+  followingProfiles = data ?? [];
+}
+
+// Followers list (people who follow this profile)
+const { data: followerRows } = await Astro.locals.supabase
+  .from("friendship")
+  .select("user_id")
+  .eq("friend_id", profile.id);
+const followerIds = (followerRows ?? []).map((r: any) => r.user_id);
+let followerProfiles: any[] = [];
+if (followerIds.length > 0) {
+  const { data } = await Astro.locals.supabase
+    .from("profile")
+    .select("id, username, display_name, avatar_url")
+    .in("id", followerIds);
+  followerProfiles = data ?? [];
+}
+
 // Watchlist — fetch all entries and group multi-date shows into one card
 const { data: watchlistData } = await Astro.locals.supabase
   .from("watchlist")
@@ -108,8 +144,24 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
         )}
       </div>
 
-      <!-- Watchlist -->
-      <section>
+      <!-- Stats -->
+      <div class="flex gap-6 mb-8 text-xs text-[#888]">
+        <button id="tab-btn-watchlist" class="tab-btn flex flex-col items-center gap-0.5 hover:text-[#1a1a1a] transition-colors">
+          <span class="font-black text-sm text-[#1a1a1a]">{watchlist.length}</span>
+          <span class="uppercase tracking-widest">Watchlist</span>
+        </button>
+        <button id="tab-btn-following" class="tab-btn flex flex-col items-center gap-0.5 hover:text-[#1a1a1a] transition-colors">
+          <span class="font-black text-sm text-[#1a1a1a]">{followingCount ?? 0}</span>
+          <span class="uppercase tracking-widest">Following</span>
+        </button>
+        <button id="tab-btn-followers" class="tab-btn flex flex-col items-center gap-0.5 hover:text-[#1a1a1a] transition-colors">
+          <span class="font-black text-sm text-[#1a1a1a]">{followersCount ?? 0}</span>
+          <span class="uppercase tracking-widest">Followers</span>
+        </button>
+      </div>
+
+      <!-- Watchlist tab -->
+      <section id="tab-watchlist">
         <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-5">Watchlist</h2>
         {watchlist.length === 0 ? (
           <p class="text-xs text-[#aaa]">Nothing here yet.</p>
@@ -148,6 +200,77 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
           </ul>
         )}
       </section>
+
+      </section>
+
+      <!-- Following tab -->
+      <section id="tab-following" class="hidden">
+        {followingProfiles.length === 0 ? (
+          <p class="text-xs text-[#aaa]">Not following anyone yet.</p>
+        ) : (
+          <div class="flex flex-wrap gap-3">
+            {followingProfiles.map((f: any) => {
+              const initials = (f.display_name ?? f.username ?? "?").slice(0, 2).toUpperCase();
+              return (
+                <a href={`/u/${f.username}`} class="flex items-center gap-2 border border-[#ece7de] bg-white px-3 py-2 hover:border-[#1a1a1a] transition-colors">
+                  <div class="w-6 h-6 rounded-full overflow-hidden bg-[#f0ede8] flex items-center justify-center flex-shrink-0">
+                    {f.avatar_url
+                      ? <img src={f.avatar_url} alt={f.username} class="w-full h-full object-cover" />
+                      : <span class="text-[9px] font-bold text-[#888]">{initials}</span>
+                    }
+                  </div>
+                  <div>
+                    <div class="text-xs text-[#1a1a1a]">{f.display_name ?? f.username}</div>
+                    {f.display_name && <div class="text-[10px] text-[#aaa]">@{f.username}</div>}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <!-- Followers tab -->
+      <section id="tab-followers" class="hidden">
+        {followerProfiles.length === 0 ? (
+          <p class="text-xs text-[#aaa]">No followers yet.</p>
+        ) : (
+          <div class="flex flex-wrap gap-3">
+            {followerProfiles.map((f: any) => {
+              const initials = (f.display_name ?? f.username ?? "?").slice(0, 2).toUpperCase();
+              return (
+                <a href={`/u/${f.username}`} class="flex items-center gap-2 border border-[#ece7de] bg-white px-3 py-2 hover:border-[#1a1a1a] transition-colors">
+                  <div class="w-6 h-6 rounded-full overflow-hidden bg-[#f0ede8] flex items-center justify-center flex-shrink-0">
+                    {f.avatar_url
+                      ? <img src={f.avatar_url} alt={f.username} class="w-full h-full object-cover" />
+                      : <span class="text-[9px] font-bold text-[#888]">{initials}</span>
+                    }
+                  </div>
+                  <div>
+                    <div class="text-xs text-[#1a1a1a]">{f.display_name ?? f.username}</div>
+                    {f.display_name && <div class="text-[10px] text-[#aaa]">@{f.username}</div>}
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <script>
+        // Profile sub-tabs
+        const tabs = ["watchlist", "following", "followers"];
+        tabs.forEach((tab) => {
+          document.getElementById(`tab-btn-${tab}`)?.addEventListener("click", () => {
+            tabs.forEach((t) => {
+              document.getElementById(`tab-${t}`)?.classList.toggle("hidden", t !== tab);
+              document.getElementById(`tab-btn-${t}`)?.classList.toggle("text-[#e85d2f]", t === tab);
+            });
+          });
+        });
+        // Default active state
+        document.getElementById("tab-btn-watchlist")?.classList.add("text-[#e85d2f]");
+      </script>
 
       <script>
         // Optimistic follow toggle

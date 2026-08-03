@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef } from "react";
-import { IconLayoutList, IconCalendarHeart, IconInfoCircle, IconUsers, IconBell, IconSettings } from "@tabler/icons-react";
+import { useState, useEffect } from "react";
+import { IconLayoutList, IconCalendarHeart, IconRss } from "@tabler/icons-react";
 import { createClient } from "../lib/supabase/client";
 import NotificationBell from "./NotificationBell";
+import AvatarMenu from "./AvatarMenu";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
 const links = [
   { path: "/", label: "Browse", icon: IconLayoutList },
   { path: "/watchlist", label: "Watchlist", icon: IconCalendarHeart },
-  { path: "/friends", label: "Friends", icon: IconUsers },
-  { path: "/about", label: "About", icon: IconInfoCircle },
+  { path: "/feed", label: "Feed", icon: IconRss },
 ];
 
 function href(path: string) {
@@ -19,7 +19,7 @@ function href(path: string) {
 export default function Nav({ current, isAdmin = false }: { current: string; isAdmin?: boolean }) {
   const [showMobileTop, setShowMobileTop] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-  const lastScrollY = useRef(0);
+  const lastScrollY = { current: 0 };
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data: { user } }) => {
@@ -63,7 +63,22 @@ export default function Nav({ current, isAdmin = false }: { current: string; isA
           })}
         </nav>
         {isLoggedIn === true && (
-          <NotificationBell current={current} isAdmin={isAdmin} />
+          <div className="flex items-center gap-4">
+            {isAdmin && (
+              <a
+                href={href("/admin")}
+                className={`text-sm pb-0.5 transition-colors ${
+                  current === "/admin"
+                    ? "text-[#e85d2f] border-b border-[#e85d2f]"
+                    : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
+                }`}
+              >
+                Admin
+              </a>
+            )}
+            <NotificationBell current={current} />
+            <AvatarMenu />
+          </div>
         )}
         {isLoggedIn === false && (
           <div className="flex items-center gap-3">
@@ -77,7 +92,7 @@ export default function Nav({ current, isAdmin = false }: { current: string; isA
         )}
       </header>
 
-      {/* Mobile top bar — hides on scroll down */}
+      {/* Mobile top bar */}
       <header
         className={`md:hidden fixed top-0 inset-x-0 z-40 h-12 bg-[#1a1a1a] flex items-center justify-between px-4 transition-transform duration-200 ${
           showMobileTop ? "translate-y-0" : "-translate-y-full"
@@ -87,7 +102,10 @@ export default function Nav({ current, isAdmin = false }: { current: string; isA
           house lights
         </a>
         {isLoggedIn === true && (
-          <NotificationBell current={current} isAdmin={isAdmin} />
+          <div className="flex items-center gap-3">
+            <NotificationBell current={current} />
+            <AvatarMenu />
+          </div>
         )}
       </header>
 
@@ -104,9 +122,7 @@ export default function Nav({ current, isAdmin = false }: { current: string; isA
                 key={path}
                 href={href(path)}
                 className={`flex-1 flex flex-col items-center gap-1 pt-2 transition-colors ${
-                  active
-                    ? "text-[#e85d2f]"
-                    : "text-[#f5f3ef]/30"
+                  active ? "text-[#e85d2f]" : "text-[#f5f3ef]/30"
                 }`}
               >
                 <Icon size={22} strokeWidth={active ? 2 : 1.5} />

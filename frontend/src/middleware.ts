@@ -22,7 +22,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Redirect users who haven't set a username yet to the welcome/onboarding page
   if (user) {
     const path = new URL(context.request.url).pathname;
-    const isExempt = path.startsWith("/api/") || path === "/welcome" || path === "/login" || path === "/logout" || path === "/check-email" || path === "/privacy" || path === "/about";
+    const isExempt = path.startsWith("/api/") || path === "/welcome" || path === "/login" || path === "/logout" || path === "/check-email" || path === "/privacy" || path === "/about" || path === "/feed";
     if (!isExempt) {
       const { data: profile } = await context.locals.supabase
         .from("profile")

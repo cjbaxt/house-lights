@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { IconBell, IconSettings, IconUserPlus } from "@tabler/icons-react";
+import { IconBell, IconUserPlus } from "@tabler/icons-react";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 function href(path: string) {
@@ -9,7 +9,7 @@ function href(path: string) {
 type Actor = { id: string; username: string; avatar_url: string | null };
 type Notification = { id: string; type: string; read: boolean; created_at: string; actor: Actor };
 
-export default function NotificationBell({ current, isAdmin = false }: { current: string; isAdmin?: boolean }) {
+export default function NotificationBell({ current }: { current: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [followingBack, setFollowingBack] = useState<Set<string>>(new Set());
@@ -63,7 +63,7 @@ export default function NotificationBell({ current, isAdmin = false }: { current
   }
 
   return (
-    <div className="flex items-center gap-3" ref={ref}>
+    <div className="relative" ref={ref}>
       {/* Notification bell */}
       <div className="relative">
         <button
@@ -129,31 +129,6 @@ export default function NotificationBell({ current, isAdmin = false }: { current
         )}
       </div>
 
-      {/* Settings icon */}
-      <a
-        href={href("/settings")}
-        aria-label="Settings"
-        className={`transition-colors ${
-          current === "/settings"
-            ? "text-[#e85d2f]"
-            : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
-        }`}
-      >
-        <IconSettings size={18} strokeWidth={1.5} />
-      </a>
-
-      {isAdmin && (
-        <a
-          href={href("/admin")}
-          className={`text-sm pb-0.5 transition-colors ${
-            current === "/admin"
-              ? "text-[#e85d2f] border-b border-[#e85d2f]"
-              : "text-[#f5f3ef]/40 hover:text-[#f5f3ef]"
-          }`}
-        >
-          Admin
-        </a>
-      )}
     </div>
   );
 }
