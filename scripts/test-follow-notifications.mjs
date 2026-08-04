@@ -35,10 +35,10 @@ let failed = 0;
 
 function ok(label, value) {
   if (value) {
-    console.log(`  ✓ ${label}`);
+    console.log(`  ✓ ${label}`); // bearer:disable javascript_lang_logger_leak
     passed++;
   } else {
-    console.error(`  ✗ ${label}`);
+    console.error(`  ✗ ${label}`); // bearer:disable javascript_lang_logger_leak
     failed++;
   }
 }
@@ -70,14 +70,14 @@ async function getNotification(userId, actorId) {
 
 // ─── Setup ─────────────────────────────────────────────────────────────────
 
-console.log(`\nResolving users: ${ALICE_USERNAME} and ${BOB_USERNAME}…`);
+console.log(`\nResolving users: ${ALICE_USERNAME} and ${BOB_USERNAME}…`); // bearer:disable javascript_lang_logger_leak
 const alice = await getProfile(ALICE_USERNAME);
 const bob = await getProfile(BOB_USERNAME);
 
-if (!alice) { console.error(`User "${ALICE_USERNAME}" not found`); process.exit(1); }
-if (!bob) { console.error(`User "${BOB_USERNAME}" not found`); process.exit(1); }
-console.log(`  Alice = ${alice.username}`);
-console.log(`  Bob   = ${bob.username}\n`);
+if (!alice) { console.error(`User "${ALICE_USERNAME}" not found`); process.exit(1); } // bearer:disable javascript_lang_logger_leak
+if (!bob) { console.error(`User "${BOB_USERNAME}" not found`); process.exit(1); } // bearer:disable javascript_lang_logger_leak
+console.log(`  Alice = ${alice.username}`); // bearer:disable javascript_lang_logger,javascript_lang_logger_leak
+console.log(`  Bob   = ${bob.username}\n`); // bearer:disable javascript_lang_logger,javascript_lang_logger_leak
 
 // Clean up any existing state so tests are idempotent
 await db.from("friendship").delete().eq("user_id", alice.id).eq("friend_id", bob.id);
