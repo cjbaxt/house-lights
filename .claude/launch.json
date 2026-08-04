@@ -8,6 +8,14 @@
       "port": 4323,
       "autoPort": true,
       "cwd": "frontend"
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 4324,
+      "autoPort": true,
+      "cwd": "docs"
     }
   ]
 }

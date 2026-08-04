@@ -17,7 +17,7 @@ house lights is invite-only during beta. To register:
 
 ## Session management
 
-Supabase Auth uses cookie-based sessions. The middleware (`src/middleware.ts`) reads the session cookie on every request and attaches `locals.supabase` (a user-scoped client) and `locals.user` to the Astro request context.
+Supabase Auth uses cookie-based sessions. The middleware (`src/middleware.ts`) reads the session cookie on every request via `getSession()` — this is a local JWT decode with no network call. `getUser()` makes a round-trip to the Supabase auth server and is only used when you need to verify the token hasn't been revoked (rare). The middleware attaches `locals.supabase` (a user-scoped client) and `locals.user` to the Astro request context.
 
 ## Guest watchlist
 

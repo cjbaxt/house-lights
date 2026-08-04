@@ -1,4 +1,6 @@
-/* house lights brand colours */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@400;700;900&display=swap");
+
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
 :root {
   --sl-color-accent-low: #fdf1ec;
   --sl-color-accent: #e85d2f;
@@ -13,6 +15,9 @@
   --sl-color-black: #f5f3ef;
   --sl-font: "Inter", system-ui, sans-serif;
   --sl-font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --sl-text-h1: 1.75rem;
+  --sl-text-h2: 1.2rem;
+  --sl-text-h3: 1rem;
 }
 
 :root[data-theme="light"] {
@@ -26,25 +31,197 @@
 
 :root[data-theme="dark"] {
   --sl-color-bg: #1a1a1a;
-  --sl-color-bg-nav: #141412;
-  --sl-color-bg-sidebar: #141412;
+  --sl-color-bg-nav: #111110;
+  --sl-color-bg-sidebar: #111110;
   --sl-color-hairline: #2a2825;
   --sl-color-text: #f0ede8;
   --sl-color-text-accent: #e85d2f;
 }
 
-/* Tighten up headings */
-.sl-markdown-content h1,
-.sl-markdown-content h2,
-.sl-markdown-content h3 {
-  font-weight: 900;
-  letter-spacing: -0.01em;
+/* ── Global ─────────────────────────────────────────────────────────────── */
+body {
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Site title */
+/* ── Top nav ────────────────────────────────────────────────────────────── */
+header.header {
+  border-bottom: 1px solid var(--sl-color-hairline);
+  box-shadow: none;
+}
+
 .site-title {
+  font-family: "Inter", system-ui, sans-serif;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: var(--sl-color-text) !important;
+  gap: 0.6rem;
+}
+
+.site-title * {
+  color: inherit !important;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
+.sidebar-content {
+  border-right: 1px solid var(--sl-color-hairline);
+}
+
+/* Group labels */
+.group-label span {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-4);
+}
+
+/* Nav links — override Starlight's filled active state */
+nav a[aria-current="page"],
+nav a[data-current-page] {
+  background: transparent !important;
+  color: var(--sl-color-accent) !important;
+  font-weight: 700 !important;
+  box-shadow: inset 2px 0 0 var(--sl-color-accent);
+}
+
+nav .sidebar-pane a,
+.sidebar a {
   font-size: 0.8rem;
+  border-radius: 0 !important;
+  transition: color 75ms;
+}
+
+nav .sidebar-pane a:hover,
+.sidebar a:hover {
+  background: transparent !important;
+  color: var(--sl-color-accent) !important;
+}
+
+/* ── Content typography ─────────────────────────────────────────────────── */
+.sl-markdown-content h1 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 900;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.sl-markdown-content h2 {
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sl-color-accent);
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+.sl-markdown-content h3 {
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sl-markdown-content p,
+.sl-markdown-content li {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--sl-color-text);
+}
+
+.sl-markdown-content a {
+  color: var(--sl-color-accent);
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid transparent;
+  transition: border-color 75ms;
+}
+
+.sl-markdown-content a:hover {
+  border-bottom-color: var(--sl-color-accent);
+}
+
+/* ── Code ───────────────────────────────────────────────────────────────── */
+.sl-markdown-content code:not(pre code) {
+  font-family: var(--sl-font-mono);
+  font-size: 0.8em;
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-accent-high);
+  padding: 0.1em 0.35em;
+  border-radius: 0;
+}
+
+:root[data-theme="dark"] .sl-markdown-content code:not(pre code) {
+  background: #2a2825;
+  color: #f0a07a;
+}
+
+.expressive-code pre {
+  border-radius: 0 !important;
+  border: 1px solid var(--sl-color-hairline) !important;
+}
+
+/* ── Asides / callouts ──────────────────────────────────────────────────── */
+.starlight-aside {
+  border-radius: 0;
+  border-left-width: 2px;
+}
+
+/* ── Page title (hero) ──────────────────────────────────────────────────── */
+.page-title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 900;
+}
+
+/* ── Prev/next nav ──────────────────────────────────────────────────────── */
+.pagination-links a {
+  border-radius: 0;
+  border: 1px solid var(--sl-color-hairline);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: border-color 75ms, color 75ms;
+}
+
+.pagination-links a:hover {
+  border-color: var(--sl-color-accent);
+  color: var(--sl-color-accent);
+  background: transparent;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+.sl-markdown-content table {
+  font-size: 0.8rem;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.sl-markdown-content th {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-4);
+  border-bottom: 1px solid var(--sl-color-hairline);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.sl-markdown-content td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--sl-color-hairline);
+  vertical-align: top;
+}
+
+.sl-markdown-content tr:last-child td {
+  border-bottom: none;
 }
