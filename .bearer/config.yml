@@ -1,0 +1,3 @@
+exclude:
+  # Test and utility scripts — not application code
+  - scripts/
