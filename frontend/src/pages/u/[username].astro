@@ -4,8 +4,10 @@ import Nav from "../../components/Nav";
 import BaseHead from "../../components/BaseHead.astro";
 import { getIsAdmin } from "../../lib/admin";
 import { createServiceClient } from "../../lib/supabase/service";
+import { localDateStr } from "../../lib/api";
 
 const { username } = Astro.params;
+const today = localDateStr();
 
 // Fetch profile and admin status in parallel
 const [isAdmin, { data: profile, error }] = await Promise.all([
@@ -45,6 +47,7 @@ const [
     .from("watchlist")
     .select("status, added_at, show:show_id(id, title, date, time, type, url, venue:venue_id(name))")
     .eq("user_id", profile.id)
+    .gte("show.date", today)
     .order("show(date)", { ascending: true }),
 ]);
 
