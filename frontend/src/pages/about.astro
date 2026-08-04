@@ -43,6 +43,8 @@ const grouped = (cities as CityItem[]).map(c => ({
     <Nav current="/about" isAdmin={isAdmin} client:load transition:persist />
     <main class="max-w-2xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
 
+      <h1 class="font-sans font-black text-xl uppercase tracking-tight text-[#1a1a1a] mb-2">About</h1>
+
       <div class="text-sm text-[#555] leading-relaxed space-y-4 mb-8">
         {paragraphs.map((p: string) => {
           if (p.startsWith("- ")) {
