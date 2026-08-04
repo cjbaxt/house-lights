@@ -4,13 +4,8 @@ import starlight from "@astrojs/starlight";
 export default defineConfig({
   integrations: [
     starlight({
-      title: "house lights",
+      title: "HOUSE LIGHTS / DOCS",
       description: "Documentation for house lights — Amsterdam arts event tracker.",
-      logo: {
-        light: "./src/assets/logo-light.svg",
-        dark: "./src/assets/logo-dark.svg",
-        replacesTitle: false,
-      },
       social: [
         { icon: "github", label: "GitHub", href: "https://github.com/cjbaxt/house-lights" },
       ],
