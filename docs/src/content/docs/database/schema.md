@@ -89,6 +89,7 @@ One row per auth user.
 | `avatar_url` | text | Supabase Storage URL |
 | `is_public` | boolean default true | Controls watchlist visibility |
 | `is_admin` | boolean default false | Grants access to /admin |
+| `invite_code_id` | uuid FK → invite_code | Which code was used to register |
 | `created_at` | timestamptz | |
 
 ## `user_preferences`
@@ -146,6 +147,23 @@ One-way follows between users.
 | `created_at` | timestamptz | |
 | PK | (user_id, friend_id) | |
 
+## `notification`
+
+In-app notifications. Currently only `follow` type.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `user_id` | uuid FK → auth.users | Recipient |
+| `actor_id` | uuid FK → auth.users | Who triggered the notification |
+| `type` | text | e.g. `follow` |
+| `read` | boolean default false | |
+| `created_at` | timestamptz | |
+
+Unique constraint on `(user_id, actor_id, type)` — re-following resets `read: false` with a fresh timestamp via upsert.
+
+The table is added to `supabase_realtime` publication so `NotificationBell.tsx` can subscribe to live inserts.
+
 ## `invite_code`
 
 Beta invite codes.
@@ -157,9 +175,9 @@ Beta invite codes.
 | `note` | text | Optional label |
 | `max_uses` | integer default 1 | How many times the code can be used |
 | `use_count` | integer default 0 | How many times it has been used |
-| `used_by` | uuid FK → auth.users | Last user to redeem it |
-| `used_at` | timestamptz | |
 | `created_at` | timestamptz | |
+
+`profile.invite_code_id` records which code each user registered with. The admin panel shows usernames per code grouped by `invite_code_id`.
 
 ## `event_log`
 

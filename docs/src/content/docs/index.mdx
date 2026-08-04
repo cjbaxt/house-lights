@@ -36,7 +36,8 @@ This documentation covers the full technical internals: the scraping pipeline, d
 
 ## The short version
 
-1. Python scrapers run weekly via GitHub Actions and write shows to Supabase
+1. Python scrapers run on a schedule via GitHub Actions and write shows to Supabase
 2. The Astro frontend (SSR on Vercel) queries Supabase directly — no separate API server
 3. Row-level security on Supabase means the frontend can safely use anon/user keys
-4. `dev` → `main` is the branching model; PRs require security scans to pass
+4. Social features (follow, notifications, feed) are built on top of the `friendship` and `notification` tables with Supabase Realtime for live bell updates
+5. `dev` → `main` is the branching model; PRs require Bearer security scans to pass

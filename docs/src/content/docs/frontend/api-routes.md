@@ -18,6 +18,10 @@ API routes live in `frontend/src/pages/api/`. They are Astro endpoint files (`.t
 |-------|--------|-------------|
 | `/api/user/preferences` | POST | Update `share_ticket_status` and other preferences |
 | `/api/users/follow` | POST | Follow or unfollow another user |
+| `/api/users/search` | GET | Search users by username/display name |
+| `/api/notifications` | GET | List unread notifications for the current user |
+| `/api/notifications` | POST | Mark notifications as read |
+| `/api/profile` | POST | Update profile (display name, avatar) |
 
 ## Account
 
@@ -39,6 +43,7 @@ API routes live in `frontend/src/pages/api/`. They are Astro endpoint files (`.t
 |-------|--------|-------------|
 | `/api/watchlist` | POST | Add or update a watchlist entry |
 | `/api/watchlist` | DELETE | Remove a watchlist entry |
+| `/api/watchlist/friend-watches` | GET | Get friend watchlist activity for given show IDs |
 
 ## Calendar
 
