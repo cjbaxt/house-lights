@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import Nav from "../components/Nav";
 import BaseHead from "../components/BaseHead.astro";
+import Footer from "../components/Footer.astro";
 import { getIsAdmin } from "../lib/admin";
 
 const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
@@ -158,6 +159,7 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
       <h2 class="font-bold text-[#1a1a1a] uppercase tracking-widest text-xs mb-3 mt-10">Contact</h2>
       <p class="mb-2">For any privacy-related question or request:</p>
       <p><a href="mailto:support@claireheaded.com" class="underline hover:text-[#1a1a1a]">support@claireheaded.com</a></p>
+      <Footer />
     </main>
   </body>
 </html>
