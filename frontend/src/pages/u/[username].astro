@@ -20,11 +20,6 @@ const [isAdmin, { data: profile, error }] = await Promise.all([
 ]);
 
 if (error || !profile) return Astro.redirect("/404");
-if (!profile.is_public) {
-  if (!Astro.locals.user || Astro.locals.user.id !== profile.id) {
-    return Astro.redirect("/404");
-  }
-}
 
 const currentUserId = Astro.locals.user?.id ?? null;
 const isOwnProfile = currentUserId === profile.id;
@@ -39,10 +34,12 @@ const [
   watchlistResult,
 ] = await Promise.all([
   currentUserId && !isOwnProfile
-    ? Astro.locals.supabase.from("friendship").select("user_id").eq("user_id", currentUserId).eq("friend_id", profile.id).maybeSingle()
+    ? Astro.locals.supabase.from("friendship").select("user_id, status").eq("user_id", currentUserId).eq("friend_id", profile.id).maybeSingle()
     : Promise.resolve({ data: null }),
-  svc.from("friendship").select("friend_id").eq("user_id", profile.id),
-  svc.from("friendship").select("user_id").eq("friend_id", profile.id),
+  // Only show accepted follows in public lists
+  svc.from("friendship").select("friend_id").eq("user_id", profile.id).eq("status", "accepted"),
+  svc.from("friendship").select("user_id").eq("friend_id", profile.id).eq("status", "accepted"),
+  // Always fetch watchlist — canSeeWatchlist below gates what's shown
   Astro.locals.supabase
     .from("watchlist")
     .select("status, added_at, show:show_id(id, title, date, time, type, url, venue:venue_id(name))")
@@ -51,8 +48,15 @@ const [
     .order("show(date)", { ascending: true }),
 ]);
 
-const isFollowing = !!(friendshipCheck as any).data;
-const watchlistData = (watchlistResult as any).data;
+const friendshipStatus = (friendshipCheck as any)?.data?.status ?? null;
+// isFollowing = accepted follow relationship
+const isFollowing = friendshipStatus === "accepted";
+// isPending = follow request sent but not yet accepted
+const isPending = friendshipStatus === "pending";
+
+// Watchlist visible to: self, or accepted follower of public account, or accepted follower of private account
+const canSeeWatchlist = isOwnProfile || isFollowing;
+const watchlistData = canSeeWatchlist ? (watchlistResult as any).data : null;
 
 const followingIds = (followingIdRows ?? []).map((r: any) => r.friend_id);
 const followerIds = (followerIdRows ?? []).map((r: any) => r.user_id);
@@ -116,13 +120,17 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
             id="follow-btn"
             data-user-id={profile.id}
             data-following={isFollowing ? "true" : "false"}
+            data-pending={isPending ? "true" : "false"}
+            data-private={!profile.is_public ? "true" : "false"}
             class={`text-xs uppercase tracking-widest font-bold px-4 py-2 border transition-colors ${
               isFollowing
                 ? "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:bg-[#333]"
+                : isPending
+                ? "border-[#aaa] text-[#aaa] cursor-default"
                 : "border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white"
             }`}
           >
-            {isFollowing ? "Following" : "Follow"}
+            {isFollowing ? "Following" : isPending ? "Requested" : "Follow"}
           </button>
         )}
         {isOwnProfile && (
@@ -151,7 +159,17 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
       <!-- Watchlist tab -->
       <section id="tab-watchlist">
         <h2 class="font-bold text-xs uppercase tracking-widest text-[#1a1a1a] mb-5">Watchlist</h2>
-        {watchlist.length === 0 ? (
+        {!canSeeWatchlist ? (
+          <div class="flex flex-col items-center justify-center py-12 gap-2 text-center">
+            <p class="text-sm text-[#888]">This account is private.</p>
+            {!currentUserId
+              ? <p class="text-xs text-[#aaa]"><a href="/login" class="underline hover:text-[#1a1a1a]">Log in</a> to send a follow request.</p>
+              : isPending
+              ? <p class="text-xs text-[#aaa]">Your follow request is pending approval.</p>
+              : <p class="text-xs text-[#aaa]">Follow this person to see their watchlist.</p>
+            }
+          </div>
+        ) : watchlist.length === 0 ? (
           <p class="text-xs text-[#aaa]">Nothing here yet.</p>
         ) : (
           <ul class="space-y-4">
@@ -273,7 +291,7 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
           // Default active state
           document.getElementById("tab-btn-watchlist")?.classList.add("text-[#e85d2f]");
 
-          // Optimistic follow toggle — update UI immediately, then persist
+          // Follow button — handles following, pending (private), and unfollow states
           const followBtn = document.getElementById("follow-btn") as HTMLButtonElement | null;
           if (followBtn) {
             const newFollowBtn = followBtn.cloneNode(true) as HTMLButtonElement;
@@ -281,35 +299,64 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
             newFollowBtn.addEventListener("click", () => {
               const userId = newFollowBtn.dataset.userId!;
               const following = newFollowBtn.dataset.following === "true";
+              const pending = newFollowBtn.dataset.pending === "true";
+
+              // Pending: clicking again cancels the request (unfollow)
+              if (pending) {
+                newFollowBtn.textContent = "Follow";
+                newFollowBtn.classList.remove("border-[#aaa]", "text-[#aaa]", "cursor-default");
+                newFollowBtn.classList.add("border-[#1a1a1a]", "text-[#1a1a1a]");
+                newFollowBtn.dataset.pending = "false";
+                const body = new FormData();
+                body.set("user_id", userId);
+                body.set("action", "unfollow");
+                fetch("/api/users/follow", { method: "POST", body });
+                return;
+              }
+
               if (following) {
+                // Unfollow
                 newFollowBtn.textContent = "Follow";
                 newFollowBtn.classList.remove("bg-[#1a1a1a]", "text-white");
-                newFollowBtn.classList.add("text-[#1a1a1a]");
+                newFollowBtn.classList.add("border-[#1a1a1a]", "text-[#1a1a1a]");
                 newFollowBtn.dataset.following = "false";
-              } else {
-                newFollowBtn.textContent = "Following";
-                newFollowBtn.classList.add("bg-[#1a1a1a]", "text-white");
-                newFollowBtn.classList.remove("text-[#1a1a1a]");
-                newFollowBtn.dataset.following = "true";
-              }
-              const body = new FormData();
-              body.set("user_id", userId);
-              body.set("action", following ? "unfollow" : "follow");
-              fetch("/api/users/follow", { method: "POST", body }).then(res => {
-                if (!res.ok) {
-                  if (following) {
+                const body = new FormData();
+                body.set("user_id", userId);
+                body.set("action", "unfollow");
+                fetch("/api/users/follow", { method: "POST", body }).then(res => {
+                  if (!res.ok) {
                     newFollowBtn.textContent = "Following";
                     newFollowBtn.classList.add("bg-[#1a1a1a]", "text-white");
-                    newFollowBtn.classList.remove("text-[#1a1a1a]");
                     newFollowBtn.dataset.following = "true";
-                  } else {
-                    newFollowBtn.textContent = "Follow";
-                    newFollowBtn.classList.remove("bg-[#1a1a1a]", "text-white");
-                    newFollowBtn.classList.add("text-[#1a1a1a]");
-                    newFollowBtn.dataset.following = "false";
                   }
+                });
+              } else {
+                // Follow — optimistic, then check if it became pending (private account)
+                const isPrivate = newFollowBtn.dataset.private === "true";
+                if (isPrivate) {
+                  newFollowBtn.textContent = "Requested";
+                  newFollowBtn.classList.remove("border-[#1a1a1a]", "text-[#1a1a1a]");
+                  newFollowBtn.classList.add("border-[#aaa]", "text-[#aaa]", "cursor-default");
+                  newFollowBtn.dataset.pending = "true";
+                } else {
+                  newFollowBtn.textContent = "Following";
+                  newFollowBtn.classList.add("bg-[#1a1a1a]", "text-white");
+                  newFollowBtn.classList.remove("text-[#1a1a1a]");
+                  newFollowBtn.dataset.following = "true";
                 }
-              });
+                const body = new FormData();
+                body.set("user_id", userId);
+                body.set("action", "follow");
+                fetch("/api/users/follow", { method: "POST", body }).then(res => {
+                  if (!res.ok) {
+                    newFollowBtn.textContent = "Follow";
+                    newFollowBtn.classList.remove("bg-[#1a1a1a]", "text-white", "border-[#aaa]", "text-[#aaa]", "cursor-default");
+                    newFollowBtn.classList.add("border-[#1a1a1a]", "text-[#1a1a1a]");
+                    newFollowBtn.dataset.following = "false";
+                    newFollowBtn.dataset.pending = "false";
+                  }
+                });
+              }
             });
           }
         }

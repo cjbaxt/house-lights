@@ -10,7 +10,7 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
 
 const { data: profile } = await Astro.locals.supabase
   .from("profile")
-  .select("username, display_name, avatar_url")
+  .select("username, display_name, avatar_url, is_public")
   .eq("id", Astro.locals.user.id)
   .single();
 
@@ -202,6 +202,22 @@ const error = Astro.url.searchParams.get("error");
             <label class="flex items-center gap-3 cursor-pointer">
               <div class="relative flex-shrink-0">
                 <input
+                  id="toggle-private-account"
+                  type="checkbox"
+                  checked={!profile?.is_public}
+                  class="sr-only peer"
+                />
+                <div class="w-8 h-4 rounded-full transition-colors bg-[#d4c9b8] peer-checked:bg-[#1a1a1a]"></div>
+                <div class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform peer-checked:translate-x-[18px]"></div>
+              </div>
+              <span class="text-xs text-[#555]">Private account</span>
+            </label>
+            <p class="text-[10px] text-[#bbb] mt-1 ml-11">When on, new followers need your approval before they can see your watchlist</p>
+          </div>
+          <div>
+            <label class="flex items-center gap-3 cursor-pointer">
+              <div class="relative flex-shrink-0">
+                <input
                   id="toggle-ticket-status"
                   type="checkbox"
                   checked={shareTicketStatus}
@@ -235,6 +251,18 @@ const error = Astro.url.searchParams.get("error");
           </div>
         </div>
       </section>
+
+      <script>
+        // Private account toggle
+        const privateToggle = document.getElementById("toggle-private-account") as HTMLInputElement | null;
+        privateToggle?.addEventListener("change", async () => {
+          await fetch("/api/profile/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_public: !privateToggle.checked }),
+          });
+        });
+      </script>
 
       <script>
         // Ticket status privacy toggle
