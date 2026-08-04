@@ -4,8 +4,10 @@ import Nav from "../../components/Nav";
 import BaseHead from "../../components/BaseHead.astro";
 import { getIsAdmin } from "../../lib/admin";
 import { createServiceClient } from "../../lib/supabase/service";
+import { localDateStr } from "../../lib/api";
 
 const { username } = Astro.params;
+const today = localDateStr();
 
 // Fetch profile and admin status in parallel
 const [isAdmin, { data: profile, error }] = await Promise.all([
@@ -28,31 +30,44 @@ const currentUserId = Astro.locals.user?.id ?? null;
 const isOwnProfile = currentUserId === profile.id;
 const svc = createServiceClient();
 
-// Run all remaining queries in parallel
+// Run all queries in parallel — friendship FKs point to auth.users so
+// we can't use PostgREST joins; fetch IDs first then profiles by ID
 const [
   friendshipCheck,
-  { data: followingRows },
-  { data: followerRows },
+  { data: followingIdRows },
+  { data: followerIdRows },
   watchlistResult,
 ] = await Promise.all([
   currentUserId && !isOwnProfile
     ? Astro.locals.supabase.from("friendship").select("user_id").eq("user_id", currentUserId).eq("friend_id", profile.id).maybeSingle()
     : Promise.resolve({ data: null }),
-  // Joined query: following list with profile data in one trip
-  svc.from("friendship").select("friend:friend_id(id, username, display_name, avatar_url)").eq("user_id", profile.id),
-  // Joined query: followers list with profile data in one trip
-  svc.from("friendship").select("follower:user_id(id, username, display_name, avatar_url)").eq("friend_id", profile.id),
+  svc.from("friendship").select("friend_id").eq("user_id", profile.id),
+  svc.from("friendship").select("user_id").eq("friend_id", profile.id),
   Astro.locals.supabase
     .from("watchlist")
     .select("status, added_at, show:show_id(id, title, date, time, type, url, venue:venue_id(name))")
     .eq("user_id", profile.id)
+    .gte("show.date", today)
     .order("show(date)", { ascending: true }),
 ]);
 
 const isFollowing = !!(friendshipCheck as any).data;
-const followingProfiles = (followingRows ?? []).map((r: any) => r.friend).filter(Boolean);
-const followerProfiles = (followerRows ?? []).map((r: any) => r.follower).filter(Boolean);
 const watchlistData = (watchlistResult as any).data;
+
+const followingIds = (followingIdRows ?? []).map((r: any) => r.friend_id);
+const followerIds = (followerIdRows ?? []).map((r: any) => r.user_id);
+
+// Fetch profiles for following/follower IDs in parallel
+const [{ data: followingProfileData }, { data: followerProfileData }] = await Promise.all([
+  followingIds.length > 0
+    ? svc.from("profile").select("id, username, display_name, avatar_url").in("id", followingIds)
+    : Promise.resolve({ data: [] }),
+  followerIds.length > 0
+    ? svc.from("profile").select("id, username, display_name, avatar_url").in("id", followerIds)
+    : Promise.resolve({ data: [] }),
+]);
+const followingProfiles = followingProfileData ?? [];
+const followerProfiles = followerProfileData ?? [];
 
 type WatchEntry = { status: string; added_at: string; show: { id: string; title: string; date: string; time: string | null; type: string | null; url: string | null; venue: { name: string } | null } | null };
 
@@ -240,61 +255,66 @@ const initials = (profile.display_name ?? profile.username ?? "?").slice(0, 2).t
       </section>
 
       <script>
-        // Profile sub-tabs
-        const tabs = ["watchlist", "following", "followers"];
-        tabs.forEach((tab) => {
-          document.getElementById(`tab-btn-${tab}`)?.addEventListener("click", () => {
-            tabs.forEach((t) => {
-              document.getElementById(`tab-${t}`)?.classList.toggle("hidden", t !== tab);
-              document.getElementById(`tab-btn-${t}`)?.classList.toggle("text-[#e85d2f]", t === tab);
+        function initProfilePage() {
+          // Profile sub-tabs
+          const tabs = ["watchlist", "following", "followers"];
+          tabs.forEach((tab) => {
+            const btn = document.getElementById(`tab-btn-${tab}`);
+            if (!btn) return;
+            const newBtn = btn.cloneNode(true) as HTMLElement;
+            btn.parentNode?.replaceChild(newBtn, btn);
+            newBtn.addEventListener("click", () => {
+              tabs.forEach((t) => {
+                document.getElementById(`tab-${t}`)?.classList.toggle("hidden", t !== tab);
+                document.getElementById(`tab-btn-${t}`)?.classList.toggle("text-[#e85d2f]", t === tab);
+              });
             });
           });
-        });
-        // Default active state
-        document.getElementById("tab-btn-watchlist")?.classList.add("text-[#e85d2f]");
-      </script>
+          // Default active state
+          document.getElementById("tab-btn-watchlist")?.classList.add("text-[#e85d2f]");
 
-      <script>
-        // Optimistic follow toggle — update UI immediately, then persist
-        const btn = document.getElementById("follow-btn") as HTMLButtonElement | null;
-        if (btn) {
-          btn.addEventListener("click", () => {
-            const userId = btn.dataset.userId!;
-            const following = btn.dataset.following === "true";
-            // Update UI immediately
-            if (following) {
-              btn.textContent = "Follow";
-              btn.classList.remove("bg-[#1a1a1a]", "text-white");
-              btn.classList.add("text-[#1a1a1a]");
-              btn.dataset.following = "false";
-            } else {
-              btn.textContent = "Following";
-              btn.classList.add("bg-[#1a1a1a]", "text-white");
-              btn.classList.remove("text-[#1a1a1a]");
-              btn.dataset.following = "true";
-            }
-            // Persist in background
-            const body = new FormData();
-            body.set("user_id", userId);
-            body.set("action", following ? "unfollow" : "follow");
-            fetch("/api/users/follow", { method: "POST", body }).then(res => {
-              if (!res.ok) {
-                // Revert on failure
-                if (following) {
-                  btn.textContent = "Following";
-                  btn.classList.add("bg-[#1a1a1a]", "text-white");
-                  btn.classList.remove("text-[#1a1a1a]");
-                  btn.dataset.following = "true";
-                } else {
-                  btn.textContent = "Follow";
-                  btn.classList.remove("bg-[#1a1a1a]", "text-white");
-                  btn.classList.add("text-[#1a1a1a]");
-                  btn.dataset.following = "false";
-                }
+          // Optimistic follow toggle — update UI immediately, then persist
+          const followBtn = document.getElementById("follow-btn") as HTMLButtonElement | null;
+          if (followBtn) {
+            const newFollowBtn = followBtn.cloneNode(true) as HTMLButtonElement;
+            followBtn.parentNode?.replaceChild(newFollowBtn, followBtn);
+            newFollowBtn.addEventListener("click", () => {
+              const userId = newFollowBtn.dataset.userId!;
+              const following = newFollowBtn.dataset.following === "true";
+              if (following) {
+                newFollowBtn.textContent = "Follow";
+                newFollowBtn.classList.remove("bg-[#1a1a1a]", "text-white");
+                newFollowBtn.classList.add("text-[#1a1a1a]");
+                newFollowBtn.dataset.following = "false";
+              } else {
+                newFollowBtn.textContent = "Following";
+                newFollowBtn.classList.add("bg-[#1a1a1a]", "text-white");
+                newFollowBtn.classList.remove("text-[#1a1a1a]");
+                newFollowBtn.dataset.following = "true";
               }
+              const body = new FormData();
+              body.set("user_id", userId);
+              body.set("action", following ? "unfollow" : "follow");
+              fetch("/api/users/follow", { method: "POST", body }).then(res => {
+                if (!res.ok) {
+                  if (following) {
+                    newFollowBtn.textContent = "Following";
+                    newFollowBtn.classList.add("bg-[#1a1a1a]", "text-white");
+                    newFollowBtn.classList.remove("text-[#1a1a1a]");
+                    newFollowBtn.dataset.following = "true";
+                  } else {
+                    newFollowBtn.textContent = "Follow";
+                    newFollowBtn.classList.remove("bg-[#1a1a1a]", "text-white");
+                    newFollowBtn.classList.add("text-[#1a1a1a]");
+                    newFollowBtn.dataset.following = "false";
+                  }
+                }
+              });
             });
-          });
+          }
         }
+
+        document.addEventListener("astro:page-load", initProfilePage);
       </script>
     </main>
   </body>

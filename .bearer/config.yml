@@ -1,0 +1,4 @@
+scan:
+  # Test and utility scripts — not application code
+  exclude:
+    - "scripts/"

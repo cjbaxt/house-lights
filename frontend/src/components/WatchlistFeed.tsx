@@ -246,11 +246,12 @@ export default function WatchlistFeed() {
   }
 
   if (!currentUser) {
+    const upcomingGuest = guestWatchlist.filter((e) => e.snapshot.date >= localDateStr());
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
           <div className="text-[11px] uppercase tracking-widest text-neutral-400">
-            {guestWatchlist.length} show{guestWatchlist.length !== 1 ? "s" : ""}
+            {upcomingGuest.length} show{upcomingGuest.length !== 1 ? "s" : ""}
           </div>
           <div className="flex items-center gap-3">
             <a href="/login?mode=signup" className="text-xs uppercase tracking-widest font-bold text-white bg-[#1a1a1a] border border-[#1a1a1a] px-3 py-1.5 hover:bg-[#333] transition-colors">
@@ -261,7 +262,7 @@ export default function WatchlistFeed() {
             </a>
           </div>
         </div>
-        {guestWatchlist.length === 0 ? (
+        {upcomingGuest.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-4 text-center px-4">
             <p className="text-sm text-[#888]">Browse shows and bookmark anything you want to see.</p>
             <p className="text-xs text-[#aaa] leading-relaxed max-w-xs">
@@ -283,8 +284,7 @@ export default function WatchlistFeed() {
                 Log in
               </a>.
             </div>
-            {guestWatchlist
-              .slice()
+            {upcomingGuest
               .sort((a, b) => a.snapshot.date.localeCompare(b.snapshot.date))
               .map((entry) => {
                 const d = new Date(entry.snapshot.date + "T00:00:00");

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { IconBell, IconUserPlus } from "@tabler/icons-react";
+import { createClient } from "../lib/supabase/client";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 function href(path: string) {
@@ -22,6 +23,27 @@ export default function NotificationBell({ current }: { current: string }) {
       .then((r) => r.json())
       .then(setNotifications)
       .catch(() => {});
+
+    // Realtime: prepend new notifications as they arrive
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      const channel = supabase
+        .channel("notifications")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notification", filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            // Fetch full notification with actor profile
+            fetch("/api/notifications")
+              .then((r) => r.json())
+              .then(setNotifications)
+              .catch(() => {});
+          }
+        )
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    });
   }, []);
 
   // Close on outside click
