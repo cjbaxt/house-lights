@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import Nav from "../components/Nav";
 import BaseHead from "../components/BaseHead.astro";
+import Footer from "../components/Footer.astro";
 import { readFileSync } from "fs";
 import { getIsAdmin } from "../lib/admin";
 import { resolve } from "path";
@@ -97,10 +98,7 @@ const grouped = (cities as CityItem[]).map(c => ({
         )}
       </section>
 
-      <section class="text-xs text-[#aaa] border-t border-[#ece7de] pt-8 flex gap-6">
-        <a href="/how-it-works" class="hover:text-[#555] transition-colors">How it works</a>
-        <a href="/privacy" class="hover:text-[#555] transition-colors">Privacy policy</a>
-      </section>
+      <Footer />
 
     </main>
   </body>

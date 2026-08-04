@@ -2,7 +2,7 @@
 import "../styles/global.css";
 import Nav from "../components/Nav";
 import BaseHead from "../components/BaseHead.astro";
-import EditorUnlock from "../components/EditorUnlock";
+import Footer from "../components/Footer.astro";
 import ShowFeed from "../components/ShowFeed";
 import { getIsAdmin } from "../lib/admin";
 
@@ -15,9 +15,9 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
   </head>
   <body class="bg-[#f5f3ef] min-h-screen">
     <Nav current="/" isAdmin={isAdmin} client:load transition:persist />
-    <EditorUnlock client:load transition:persist />
     <main class="max-w-3xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-24 md:pb-8">
       <ShowFeed client:load />
+      <Footer />
     </main>
   </body>
 </html>

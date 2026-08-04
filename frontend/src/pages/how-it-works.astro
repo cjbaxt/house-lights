@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import Nav from "../components/Nav";
 import BaseHead from "../components/BaseHead.astro";
+import Footer from "../components/Footer.astro";
 import { getIsAdmin } from "../lib/admin";
 
 const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
@@ -126,10 +127,7 @@ const isAdmin = await getIsAdmin(Astro.locals.supabase, Astro.locals.user?.id);
         </p>
       </section>
 
-      <section class="text-xs text-[#aaa] border-t border-[#ece7de] pt-8 flex gap-6">
-        <a href="/about" class="hover:text-[#555] transition-colors">About</a>
-        <a href="/privacy" class="hover:text-[#555] transition-colors">Privacy policy</a>
-      </section>
+      <Footer />
 
     </main>
   </body>

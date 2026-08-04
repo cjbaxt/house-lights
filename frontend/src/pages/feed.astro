@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import Nav from "../components/Nav";
 import BaseHead from "../components/BaseHead.astro";
+import Footer from "../components/Footer.astro";
 import { getIsAdmin } from "../lib/admin";
 
 const isLoggedIn = !!Astro.locals.user;
@@ -233,6 +234,7 @@ function timeAgo(dateStr: string): string {
           }
         });
       </script>
+      <Footer />
     </main>
   </body>
 </html>
