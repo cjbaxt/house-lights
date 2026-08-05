@@ -8,7 +8,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
     .from("profile")
     .select("id, username, display_name, avatar_url")
     .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
-    .eq("is_public", true)
     .limit(10);
 
   if (locals.user) query = query.neq("id", locals.user.id);

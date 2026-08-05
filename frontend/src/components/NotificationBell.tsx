@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { IconBell, IconUserPlus } from "@tabler/icons-react";
+import { IconBell, IconUserPlus, IconCheck, IconX } from "@tabler/icons-react";
 import { createClient } from "../lib/supabase/client";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
@@ -10,43 +10,45 @@ function href(path: string) {
 type Actor = { id: string; username: string; avatar_url: string | null };
 type Notification = { id: string; type: string; read: boolean; created_at: string; actor: Actor };
 
+async function fetchNotifications(): Promise<Notification[]> {
+  const res = await fetch("/api/notifications").catch(() => null);
+  if (!res?.ok) return [];
+  return res.json();
+}
+
 export default function NotificationBell({ current }: { current: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [followingBack, setFollowingBack] = useState<Set<string>>(new Set());
+  const [respondingTo, setRespondingTo] = useState<Set<string>>(new Set());
   const ref = useRef<HTMLDivElement>(null);
 
   const unread = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
-    fetch("/api/notifications")
-      .then((r) => r.json())
-      .then(setNotifications)
-      .catch(() => {});
+    fetchNotifications().then(setNotifications);
 
-    // Realtime: prepend new notifications as they arrive
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    // getUser is async — store cleanup so React can call it on unmount
+    const setup = supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
-      const channel = supabase
+      channel = supabase
         .channel("notifications")
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notification", filter: `user_id=eq.${user.id}` },
-          (payload) => {
-            // Fetch full notification with actor profile
-            fetch("/api/notifications")
-              .then((r) => r.json())
-              .then(setNotifications)
-              .catch(() => {});
-          }
+          () => { fetchNotifications().then(setNotifications); }
         )
         .subscribe();
-      return () => { supabase.removeChannel(channel); };
     });
+
+    return () => {
+      setup.then(() => { if (channel) supabase.removeChannel(channel!); });
+    };
   }, []);
 
-  // Close on outside click
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -57,7 +59,6 @@ export default function NotificationBell({ current }: { current: string }) {
 
   function toggleOpen() {
     if (!open && unread > 0) {
-      // Mark all as read
       fetch("/api/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,6 +77,18 @@ export default function NotificationBell({ current }: { current: string }) {
     await fetch("/api/users/follow", { method: "POST", body: form });
   }
 
+  async function respondToRequest(actorId: string, action: "accept" | "reject") {
+    setRespondingTo((prev) => new Set(prev).add(actorId));
+    const form = new FormData();
+    form.set("actor_id", actorId);
+    form.set("action", action);
+    await fetch("/api/users/follow-respond", { method: "POST", body: form });
+    // Remove the follow_request notification from local state
+    setNotifications((prev) => prev.filter(
+      (n) => !(n.actor.id === actorId && n.type === "follow_request")
+    ));
+  }
+
   function timeAgo(iso: string) {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
     if (diff < 60) return "just now";
@@ -86,7 +99,6 @@ export default function NotificationBell({ current }: { current: string }) {
 
   return (
     <div className="relative" ref={ref}>
-      {/* Notification bell */}
       <div className="relative">
         <button
           onClick={toggleOpen}
@@ -103,7 +115,6 @@ export default function NotificationBell({ current }: { current: string }) {
           )}
         </button>
 
-        {/* Dropdown */}
         {open && (
           <div className="absolute right-0 top-8 w-72 bg-[#1a1a1a] border border-[#333] shadow-xl z-50">
             <div className="px-4 py-3 border-b border-[#333]">
@@ -129,10 +140,31 @@ export default function NotificationBell({ current }: { current: string }) {
                         <a href={href(`/u/${n.actor.username}`)} className="font-bold hover:text-[#e85d2f] transition-colors">
                           {n.actor.username}
                         </a>{" "}
-                        started following you
+                        {n.type === "follow_request" ? "wants to follow you" : "started following you"}
                       </p>
                       <p className="text-[10px] text-[#f5f3ef]/30 mt-0.5">{timeAgo(n.created_at)}</p>
                     </div>
+                    {n.type === "follow_request" && !respondingTo.has(n.actor.id) && (
+                      <div className="flex-shrink-0 flex gap-1">
+                        <button
+                          onClick={() => respondToRequest(n.actor.id, "accept")}
+                          className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-1 bg-[#e85d2f] text-white hover:bg-[#c44a20] transition-colors"
+                          title="Accept"
+                        >
+                          <IconCheck size={11} strokeWidth={2.5} />
+                        </button>
+                        <button
+                          onClick={() => respondToRequest(n.actor.id, "reject")}
+                          className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-1 border border-[#f5f3ef]/20 text-[#f5f3ef]/50 hover:border-[#f5f3ef]/50 hover:text-[#f5f3ef] transition-colors"
+                          title="Decline"
+                        >
+                          <IconX size={11} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    )}
+                    {n.type === "follow_request" && respondingTo.has(n.actor.id) && (
+                      <span className="flex-shrink-0 text-[10px] text-[#f5f3ef]/30">done</span>
+                    )}
                     {n.type === "follow" && (
                       <button
                         onClick={() => followBack(n.actor.id)}
@@ -150,7 +182,6 @@ export default function NotificationBell({ current }: { current: string }) {
           </div>
         )}
       </div>
-
     </div>
   );
 }

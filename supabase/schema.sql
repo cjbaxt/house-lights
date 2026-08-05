@@ -89,7 +89,7 @@ create table profile (
   username           text unique not null,
   display_name       text,
   avatar_url         text,
-  is_public          boolean not null default true,
+  is_public          boolean not null default false,
   username_confirmed boolean not null default false,
   created_at         timestamptz not null default now()
 );
@@ -125,6 +125,7 @@ create index watchlist_show_id_idx on watchlist(show_id);
 create table friendship (
   user_id    uuid references auth.users(id) on delete cascade not null,
   friend_id  uuid references auth.users(id) on delete cascade not null,
+  status     text not null default 'accepted' check (status in ('pending', 'accepted')),
   created_at timestamptz not null default now(),
   primary key (user_id, friend_id),
   check (user_id <> friend_id)
@@ -134,7 +135,7 @@ create table notification (
   id         uuid primary key default uuid_generate_v4(),
   user_id    uuid not null references profile(id) on delete cascade,
   actor_id   uuid not null references profile(id) on delete cascade,
-  type       text not null check (type in ('follow')),
+  type       text not null check (type in ('follow', 'follow_request')),
   read       boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -195,15 +196,22 @@ create policy "read friends watchlists" on watchlist
       select 1 from friendship
       where friendship.user_id = auth.uid()
         and friendship.friend_id = watchlist.user_id
+        and friendship.status = 'accepted'
     )
   );
 
 -- friendship
-create policy "own friendships" on friendship
-  for all using (auth.uid() = user_id);
+create policy "Users can view relevant friendships" on friendship
+  for select using (user_id = auth.uid() or friend_id = auth.uid());
 
-create policy "read incoming friendships" on friendship
-  for select using (auth.uid() = friend_id);
+create policy "Users can insert friendships" on friendship
+  for insert with check (user_id = auth.uid());
+
+create policy "Users can delete their own friendships" on friendship
+  for delete using (user_id = auth.uid());
+
+create policy "Users can update incoming friendships" on friendship
+  for update using (friend_id = auth.uid());
 
 -- notification
 create policy "own notifications read" on notification
