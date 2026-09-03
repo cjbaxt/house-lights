@@ -1,39 +1,18 @@
-import logging
 """
-DeLaMar — static HTML, productions as div.tile with links.
-Individual show pages needed for dates — scrape the full agenda page.
+DeLaMar — scrapes the agenda for show titles, then fetches each show page
+for per-date entries using data-date attributes.
 """
-import httpx, re, asyncio
+import logging, asyncio
+import httpx, re
 from bs4 import BeautifulSoup
-from datetime import date
+from datetime import date, time as dtime
 from .base import BaseScraper, ScrapedShow, infer_type
 
 logger = logging.getLogger(__name__)
 
 AGENDA_URL = "https://www.delamar.nl/agenda"
 BASE_URL = "https://www.delamar.nl"
-
-MONTHS_NL = {"januari":1,"februari":2,"maart":3,"april":4,"mei":5,"juni":6,
-              "juli":7,"augustus":8,"september":9,"oktober":10,"november":11,"december":12,
-              "jan":1,"feb":2,"mrt":3,"apr":4,"mei":5,"jun":6,
-              "jul":7,"aug":8,"sep":9,"okt":10,"nov":11,"dec":12}
-DATE_RE = re.compile(r"(\d{1,2})\s+(\w+)\s+(\d{4})", re.I)
 TIME_RE = re.compile(r"(\d{1,2}):(\d{2})")
-
-
-def _parse(text):
-    m = DATE_RE.search(text)
-    if not m: return None, None
-    month = MONTHS_NL.get(m.group(2).lower())
-    if not month: return None, None
-    try:
-        d = date(int(m.group(3)), month, int(m.group(1)))
-        t = TIME_RE.search(text)
-        from datetime import time
-        tm = time(int(t.group(1)), int(t.group(2))) if t else None
-        return d, tm
-    except ValueError:
-        return None, None
 
 
 class DeLaMarScraper(BaseScraper):
@@ -43,69 +22,84 @@ class DeLaMarScraper(BaseScraper):
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             resp = await client.get(AGENDA_URL)
             resp.raise_for_status()
-
             soup = BeautifulSoup(resp.text, "html.parser")
-            items = []
-            seen = set()
 
+            # Collect unique show hrefs from tiles
+            hrefs: dict[str, str] = {}  # href → title
             for tile in soup.select("div.tile"):
-                link_el = tile.select_one("a[href]")
-                if not link_el: continue
-                href = link_el.get("href", "")
-                if href in seen or href in ("/", "/agenda", "/voorstellingen"): continue
-                seen.add(href)
-                url = BASE_URL + href if href.startswith("/") else href
-
-                text = tile.get_text(" ", strip=True)
-                d, tm = _parse(text)
-
+                link = tile.select_one("a[href]")
+                if not link:
+                    continue
+                href = link.get("href", "")
+                if href in ("/", "/agenda", "/voorstellingen") or not href:
+                    continue
                 title_el = tile.select_one("h2, h3, h4, .tile__title, .tile__text")
-                title = title_el.get_text(strip=True) if title_el else text[:60]
-                if not title or len(title) < 2: continue
+                title = title_el.get_text(strip=True) if title_el else ""
+                if not title:
+                    title = tile.get_text(" ", strip=True)[:60]
+                if href not in hrefs and len(title) >= 2:
+                    hrefs[href] = title
 
-                # If no date on tile, use today as placeholder — will be updated when we scrape show page
-                if not d:
-                    d = date.today()
-
-                img_el = tile.select_one("img")
-                image_url = img_el.get("src") if img_el else None
-                if image_url and image_url.startswith("/"):
-                    image_url = BASE_URL + image_url
-                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href, "image_url": image_url})
-
-            # Fetch descriptions from detail pages in parallel
-            async def fetch_desc(url: str) -> tuple[str, str | None]:
+            # Fetch each show page in parallel
+            async def fetch_show(href: str, title: str) -> list[ScrapedShow]:
+                url = BASE_URL + href if href.startswith("/") else href
+                shows = []
                 try:
-                    r = await client.get(url, timeout=15)
-                    if r.status_code == 200:
-                        ds = BeautifulSoup(r.text, "html.parser")
-                        meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
-                        if meta:
-                            desc = meta.get("content", "").strip()
-                            if desc:
-                                return url, desc
-                        el = ds.select_one(".show-description, .production-description, .content, .description, main p")
-                        if el:
-                            text = el.get_text(" ", strip=True)[:1000]
-                            if text:
-                                return url, text
-                except Exception as e:
-                    logger.warning("%s scraping error: %s", __name__, e)
-                return url, None
+                    r = await client.get(url, timeout=20)
+                    if r.status_code != 200:
+                        return shows
+                    ds = BeautifulSoup(r.text, "html.parser")
 
-            unique_urls = list({it["url"] for it in items})
-            desc_results = await asyncio.gather(*[fetch_desc(u) for u in unique_urls])
-            descriptions = dict(desc_results)
+                    # Description
+                    desc = None
+                    meta = ds.select_one('meta[property="og:description"], meta[name="description"]')
+                    if meta:
+                        desc = meta.get("content", "").strip() or None
+                    if not desc:
+                        el = ds.select_one(".show-description, .production-description, .content, main p")
+                        if el:
+                            desc = el.get_text(" ", strip=True)[:1000] or None
+
+                    # Image
+                    img = ds.select_one('meta[property="og:image"]')
+                    image_url = img.get("content") if img else None
+
+                    show_type = infer_type(title, desc or "")
+
+                    # Each date entry has data-date="YYYY-MM-DD"
+                    today = date.today()
+                    for date_div in ds.select(".production__date[data-date]"):
+                        raw_date = date_div.get("data-date", "")
+                        try:
+                            d = date.fromisoformat(raw_date)
+                        except ValueError:
+                            continue
+                        if d < today:
+                            continue
+
+                        # Time is text like "20:00"
+                        text = date_div.get_text(" ", strip=True)
+                        tm_match = TIME_RE.search(text)
+                        tm = dtime(int(tm_match.group(1)), int(tm_match.group(2))) if tm_match else None
+
+                        shows.append(ScrapedShow(
+                            title=title,
+                            date=d,
+                            time=tm,
+                            url=url,
+                            source_id=f"delamar:{href}:{raw_date}",
+                            type=show_type,
+                            ticket_status="available",
+                            description=desc,
+                            image_url=image_url,
+                        ))
+                except Exception as e:
+                    logger.warning("DeLaMar show page error %s: %s", href, e)
+                return shows
+
+            results = await asyncio.gather(*[fetch_show(h, t) for h, t in hrefs.items()])
 
         shows = []
-        for it in items:
-            shows.append(ScrapedShow(
-                title=it["title"], date=it["date"], time=it["time"], url=it["url"],
-                source_id=f"delamar:{it['href']}",
-                type=infer_type(it["title"], descriptions.get(it["url"]) or ""),
-                ticket_status="available",
-                description=descriptions.get(it["url"]),
-                image_url=it.get("image_url"),
-            ))
-
+        for batch in results:
+            shows.extend(batch)
         return shows
