@@ -34,7 +34,8 @@ export const GET: APIRoute = async ({ params }) => {
         .select("status, show:show_id(id, title, date, time, end_time, url, description, venue:venue_id(name))")
         .eq("user_id", userId)
         .gte("show.date", today)
-        .neq("status", "passed");
+        .neq("status", "passed")
+        .neq("status", "tickets_bought");
 
       const shows = (entries ?? []).filter((e: any) => e.show);
 
@@ -54,13 +55,12 @@ export const GET: APIRoute = async ({ params }) => {
         const dtend = s.end_time
           ? icsDate(s.date, s.end_time)
           : icsDate(s.date, s.time ? String(parseInt(s.time) + 2).padStart(2, "0") + s.time.slice(2) : null);
-        const statusEmoji = entry.status === "tickets_bought" ? "🎫 " : "";
         lines.push(
           "BEGIN:VEVENT",
           `UID:${s.id}@houselights`,
           `DTSTART:${dtstart}`,
           `DTEND:${dtend}`,
-          `SUMMARY:${icsEscape(statusEmoji + s.title)}`,
+          `SUMMARY:${icsEscape(s.title)}`,
           ...(s.venue?.name ? [`LOCATION:${icsEscape(s.venue.name)}`] : []),
           ...(s.url ? [`URL:${s.url}`] : []),
           ...(s.description ? [`DESCRIPTION:${icsEscape(s.description.slice(0, 500))}`] : []),
@@ -93,7 +93,8 @@ export const GET: APIRoute = async ({ params }) => {
       .from("watchlist")
       .select("status, notes, show:show_id(id, title, date, time, url)")
       .eq("user_id", profile.id)
-      .neq("status", "passed");
+      .neq("status", "passed")
+      .neq("status", "tickets_bought");
 
     const calName = `${profile.display_name ?? username}'s Watchlist`;
     const lines: string[] = [
