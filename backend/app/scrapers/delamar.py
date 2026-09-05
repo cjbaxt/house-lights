@@ -20,25 +20,37 @@ class DeLaMarScraper(BaseScraper):
 
     async def scrape(self) -> list[ScrapedShow]:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            resp = await client.get(AGENDA_URL)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, "html.parser")
-
-            # Collect unique show hrefs from tiles
+            # Collect show hrefs from agenda, voorstellingen listing, and homepage
+            # (upcoming shows appear on homepage but not on the agenda/voorstellingen pages)
             hrefs: dict[str, str] = {}  # href → title
-            for tile in soup.select("div.tile"):
-                link = tile.select_one("a[href]")
-                if not link:
+            skip_hrefs = {"/", "/agenda", "/voorstellingen", "/voorstellingen/"}
+
+            for listing_url in [AGENDA_URL, BASE_URL + "/voorstellingen", BASE_URL]:
+                resp = await client.get(listing_url)
+                if resp.status_code != 200:
                     continue
-                href = link.get("href", "")
-                if href in ("/", "/agenda", "/voorstellingen") or not href:
-                    continue
-                title_el = tile.select_one("h2, h3, h4, .tile__title, .tile__text")
-                title = title_el.get_text(strip=True) if title_el else ""
-                if not title:
-                    title = tile.get_text(" ", strip=True)[:60]
-                if href not in hrefs and len(title) >= 2:
-                    hrefs[href] = title
+                soup = BeautifulSoup(resp.text, "html.parser")
+
+                # Tile-based listings (agenda + voorstellingen pages)
+                for tile in soup.select("div.tile"):
+                    link = tile.select_one("a[href]")
+                    if not link:
+                        continue
+                    href = link.get("href", "")
+                    if href in skip_hrefs or not href or not href.startswith("/voorstellingen/") or "/genre/" in href:
+                        continue
+                    title_el = tile.select_one("h2, h3, h4, .tile__title, .tile__text")
+                    title = title_el.get_text(strip=True) if title_el else tile.get_text(" ", strip=True)[:60]
+                    if href not in hrefs and len(title) >= 2:
+                        hrefs[href] = title
+
+                # Any /voorstellingen/ link anywhere on the page (catches homepage cards)
+                for a in soup.select("a[href^='/voorstellingen/']"):
+                    href = a.get("href", "")
+                    if href in skip_hrefs or "/genre/" in href or href in hrefs:
+                        continue
+                    # Title comes from the show page itself — use placeholder, overwritten later
+                    hrefs[href] = ""
 
             # Fetch each show page in parallel
             async def fetch_show(href: str, title: str) -> list[ScrapedShow]:
@@ -49,6 +61,16 @@ class DeLaMarScraper(BaseScraper):
                     if r.status_code != 200:
                         return shows
                     ds = BeautifulSoup(r.text, "html.parser")
+
+                    # Always use og:title as the canonical title (tile text can bleed subtitle)
+                    og_title = ds.select_one('meta[property="og:title"]')
+                    if og_title:
+                        title = og_title.get("content", "").strip().split("|")[0].strip()
+                    if not title:
+                        h1 = ds.select_one("h1")
+                        title = h1.get_text(strip=True) if h1 else ""
+                    if not title:
+                        return shows
 
                     # Description
                     desc = None
