@@ -130,6 +130,7 @@ async def run_scraper(scraper_key: str, venue_id=None, company_id=None):
             if existing:
                 existing.title = s.title
                 existing.subtitle = s.subtitle
+                existing.date = s.date
                 existing.url = s.url
                 existing.time = s.time
                 existing.ticket_status = s.ticket_status
