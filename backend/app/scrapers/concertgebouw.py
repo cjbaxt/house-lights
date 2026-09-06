@@ -24,8 +24,10 @@ TIME_RE = re.compile(r"(\d{1,2}):(\d{2})")
 
 
 def _parse(text):
-    m = DATE_RE.search(text)
-    if not m: return None, None
+    # Use the LAST date match — "Te koop vanaf do X" appears before the real concert date
+    matches = list(DATE_RE.finditer(text))
+    if not matches: return None, None
+    m = matches[-1]
     month = MONTHS_NL.get(m.group(2).lower())
     if not month: return None, None
     try:
