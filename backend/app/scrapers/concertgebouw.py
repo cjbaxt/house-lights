@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.concertgebouw.nl"
 AGENDA_URL = f"{BASE_URL}/"
+LUNCH_URL = f"{BASE_URL}/lunchconcerten"
 
 MONTHS_NL = {
     "jan":1,"feb":2,"mrt":3,"apr":4,"mei":5,"jun":6,
@@ -44,37 +45,39 @@ class ConcertgebouwScraper(BaseScraper):
 
     async def scrape(self) -> list[ScrapedShow]:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            resp = await client.get(AGENDA_URL)
-            resp.raise_for_status()
-
-            soup = BeautifulSoup(resp.text, "html.parser")
             items = []
             seen = set()
 
-            for article in soup.select("article"):
-                link_el = article.select_one("a[href*='/concerten/']")
-                if not link_el:
+            for listing_url in [AGENDA_URL, LUNCH_URL]:
+                resp = await client.get(listing_url)
+                if resp.status_code != 200:
                     continue
-                href = link_el.get("href", "")
-                if href in seen:
-                    continue
-                seen.add(href)
-                url = BASE_URL + href if href.startswith("/") else href
+                soup = BeautifulSoup(resp.text, "html.parser")
 
-                text = article.get_text(" ", strip=True)
-                d, tm = _parse(text)
-                if not d or d < date.today():
-                    continue
+                for article in soup.select("article"):
+                    link_el = article.select_one("a[href*='/concerten/']")
+                    if not link_el:
+                        continue
+                    href = link_el.get("href", "")
+                    if href in seen:
+                        continue
+                    seen.add(href)
+                    url = BASE_URL + href if href.startswith("/") else href
 
-                title_el = article.select_one("h2, h3, h4, strong")
-                title = title_el.get_text(strip=True) if title_el else re.sub(DATE_RE, "", text).strip()[:80]
-                if not title:
-                    continue
+                    text = article.get_text(" ", strip=True)
+                    d, tm = _parse(text)
+                    if not d or d < date.today():
+                        continue
 
-                sold_out = "uitverkocht" in text.lower()
-                img_el = article.select_one("img")
-                image_url = img_el.get("src") if img_el else None
-                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href, "sold_out": sold_out, "image_url": image_url})
+                    title_el = article.select_one("h2, h3, h4, strong")
+                    title = title_el.get_text(strip=True) if title_el else re.sub(DATE_RE, "", text).strip()[:80]
+                    if not title:
+                        continue
+
+                    sold_out = "uitverkocht" in text.lower()
+                    img_el = article.select_one("img")
+                    image_url = img_el.get("src") if img_el else None
+                    items.append({"title": title, "date": d, "time": tm, "url": url, "href": href, "sold_out": sold_out, "image_url": image_url})
 
             # Fetch descriptions from detail pages in parallel
             async def fetch_desc(url: str) -> tuple[str, str | None]:
