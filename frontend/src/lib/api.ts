@@ -80,7 +80,10 @@ export const api = {
       .order("time", { ascending: true, nullsFirst: false })
       .range(offset, offset + limit - 1);
     if (error) { console.error(error); return []; }
-    return (data ?? []) as Show[];
+    const nowTime = new Date().toTimeString().slice(0, 5); // "HH:MM"
+    return (data ?? []).filter((s: any) =>
+      s.date !== today || !s.time || s.time.slice(0, 5) >= nowTime
+    ) as Show[];
   },
 
   async getVenues(): Promise<Venue[]> {
@@ -174,7 +177,12 @@ export const api = {
       .gte("show.date", today)
       .order("date", { referencedTable: "show", ascending: true });
     if (error) { console.error(error); return []; }
-    return (data ?? []).filter(r => r.show).map(r => ({
+    const nowTime = new Date().toTimeString().slice(0, 5);
+    return (data ?? []).filter(r => {
+      if (!r.show) return false;
+      const s = r.show as any;
+      return s.date !== today || !s.time || s.time.slice(0, 5) >= nowTime;
+    }).map(r => ({
       watchlist: { id: r.id, show_id: r.show_id, status: r.status as WatchStatus, notes: r.notes ?? undefined },
       show: r.show as unknown as Show,
     }));
