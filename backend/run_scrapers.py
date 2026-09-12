@@ -55,6 +55,7 @@ from app.scrapers.carre import CarreScraper
 from app.scrapers.ziggodome import ZiggoDomeScraper
 from app.scrapers.mezrab import MezrabScraper
 from app.scrapers.garagenoord import GarageNoordScraper
+from app.scrapers.cva import CVAScraper
 
 # Paradiso needs Playwright — imported lazily
 def _paradiso():
@@ -89,6 +90,7 @@ SCRAPERS = {
     "ziggodome": ZiggoDomeScraper,
     "mezrab": MezrabScraper,
     "garagenoord": GarageNoordScraper,
+    "cva": CVAScraper,
     "paradiso": _paradiso,
 }
 
@@ -138,14 +140,14 @@ async def run_scraper(scraper_key: str, venue_id=None, company_id=None):
                 existing.image_url = s.image_url
                 if s.description is not None:
                     existing.description = s.description
-                if s.venue_name and venue_id is not None:
+                if s.venue_name:
                     existing.venue_id = get_or_create_venue(session, s.venue_name)
                 existing.scraped_at = datetime.now()
                 session.add(existing)
                 updated += 1
             else:
                 resolved_venue_id = venue_id
-                if s.venue_name and venue_id is not None:
+                if s.venue_name:
                     resolved_venue_id = get_or_create_venue(session, s.venue_name)
                 city_id = None
                 if resolved_venue_id:
