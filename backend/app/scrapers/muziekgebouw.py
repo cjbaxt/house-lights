@@ -11,6 +11,7 @@ from .base import BaseScraper, ScrapedShow
 logger = logging.getLogger(__name__)
 
 AGENDA_URL = "https://www.muziekgebouw.nl/en/agenda"
+LUNCH_URL = "https://www.muziekgebouw.nl/en/theme/lunchtime-concerts-4wn5"
 BASE_URL = "https://www.muziekgebouw.nl"
 
 MONTHS = {"jan":1,"feb":2,"mar":3,"apr":4,"may":5,"jun":6,
@@ -34,31 +35,36 @@ class MuziekgebouwScraper(BaseScraper):
 
     async def scrape(self) -> list[ScrapedShow]:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            resp = await client.get(AGENDA_URL)
-            resp.raise_for_status()
-
-            soup = BeautifulSoup(resp.text, "html.parser")
             items = []
+            seen = set()
 
-            for card in soup.select("li.eventCard"):
-                link_el = card.select_one("a[href*='/agenda/']")
-                if not link_el: continue
-                href = link_el.get("href", "")
-                url = BASE_URL + href if href.startswith("/") else href
+            for listing_url in [AGENDA_URL, LUNCH_URL]:
+                resp = await client.get(listing_url)
+                if resp.status_code != 200:
+                    continue
+                soup = BeautifulSoup(resp.text, "html.parser")
 
-                text = card.get_text(" ", strip=True)
-                d, tm = _parse(text)
-                if not d or d < date.today(): continue
+                for card in soup.select("li.eventCard"):
+                    link_el = card.select_one("a[href*='/agenda/']")
+                    if not link_el: continue
+                    href = link_el.get("href", "")
+                    if href in seen: continue
+                    seen.add(href)
+                    url = BASE_URL + href if href.startswith("/") else href
 
-                title_el = card.select_one("h2, h3, .title, .listItem__title")
-                title = title_el.get_text(strip=True) if title_el else text.split(d.strftime("%b"))[0].strip()[:80]
-                if not title: continue
+                    text = card.get_text(" ", strip=True)
+                    d, tm = _parse(text)
+                    if not d or d < date.today(): continue
 
-                sold_out = "sold out" in text.lower() or "uitverkocht" in text.lower()
-                img_el = card.select_one("img")
-                image_url = img_el.get("src") if img_el else None
-                items.append({"title": title, "date": d, "time": tm, "url": url, "href": href,
-                               "sold_out": sold_out, "image_url": image_url})
+                    title_el = card.select_one("h2, h3, .title, .listItem__title")
+                    title = title_el.get_text(strip=True) if title_el else text.split(d.strftime("%b"))[0].strip()[:80]
+                    if not title: continue
+
+                    sold_out = "sold out" in text.lower() or "uitverkocht" in text.lower()
+                    img_el = card.select_one("img")
+                    image_url = img_el.get("src") if img_el else None
+                    items.append({"title": title, "date": d, "time": tm, "url": url, "href": href,
+                                  "sold_out": sold_out, "image_url": image_url})
 
             # Fetch descriptions from detail pages in parallel
             async def fetch_desc(url: str) -> tuple[str, str | None]:
