@@ -43,6 +43,7 @@ class MuziekgebouwScraper(BaseScraper):
                 if resp.status_code != 200:
                     continue
                 soup = BeautifulSoup(resp.text, "html.parser")
+                is_lunch = listing_url == LUNCH_URL
 
                 for card in soup.select("li.eventCard"):
                     link_el = card.select_one("a[href*='/agenda/']")
@@ -59,6 +60,8 @@ class MuziekgebouwScraper(BaseScraper):
                     title_el = card.select_one("h2, h3, .title, .listItem__title")
                     title = title_el.get_text(strip=True) if title_el else text.split(d.strftime("%b"))[0].strip()[:80]
                     if not title: continue
+                    if is_lunch and not title.lower().startswith("lunchconcert"):
+                        title = f"Lunchconcert: {title}"
 
                     sold_out = "sold out" in text.lower() or "uitverkocht" in text.lower()
                     img_el = card.select_one("img")

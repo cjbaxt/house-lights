@@ -15,6 +15,7 @@ import re
 
 def _norm_title(title: str) -> str:
     t = title.lower()
+    t = re.sub(r"^lunchconcert[:\s]+", "", t)  # strip series prefix before comparing
     t = re.sub(r"[''`\"]", "", t)
     t = re.sub(r"[^a-z0-9\s]", " ", t)
     return re.sub(r"\s+", " ", t).strip()
