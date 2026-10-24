@@ -1,5 +1,5 @@
 from typing import Optional, List
-from datetime import date, datetime, time as time_type
+from datetime import date, datetime, time as time_type, timezone
 from sqlmodel import Field, SQLModel, Column
 from sqlalchemy import Time
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -74,7 +74,7 @@ class Show(SQLModel, table=True):
     summary: Optional[str] = None
     image_url: Optional[str] = None
     embedding: Optional[List[float]] = Field(default=None, sa_column=Column(Vector(1024), nullable=True), exclude=True)
-    scraped_at: datetime = Field(default_factory=datetime.utcnow)
+    scraped_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     # dedup key — scraper sets this to avoid inserting duplicates
     source_id: Optional[str] = None
 
@@ -87,5 +87,5 @@ class Watchlist(SQLModel, table=True):
     # interested / tickets_bought / waitlisting / maybe / passed
     status: str = "interested"
     notes: Optional[str] = None
-    added_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    added_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
