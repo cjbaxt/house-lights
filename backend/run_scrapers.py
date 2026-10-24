@@ -5,7 +5,7 @@ Run: python run_scrapers.py [--venue melkweg]
 import asyncio
 import argparse
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 from sqlmodel import Session, select
 load_dotenv()
@@ -142,7 +142,7 @@ async def run_scraper(scraper_key: str, venue_id=None, company_id=None):
                     existing.description = s.description
                 if s.venue_name:
                     existing.venue_id = get_or_create_venue(session, s.venue_name)
-                existing.scraped_at = datetime.now()
+                existing.scraped_at = datetime.now(timezone.utc)
                 session.add(existing)
                 updated += 1
             else:

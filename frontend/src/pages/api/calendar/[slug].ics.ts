@@ -3,8 +3,19 @@ import { createHmac } from "crypto";
 import { createServiceClient } from "../../../lib/supabase/service";
 
 function icsDate(dateStr: string, timeStr?: string | null): string {
-  const d = new Date(`${dateStr}${timeStr ? "T" + timeStr : "T00:00:00"}`);
-  return d.toISOString().replace(/[-:]/g, "").split(".")[0] + (timeStr ? "" : "Z");
+  if (!timeStr) return dateStr.replace(/-/g, ""); // all-day: VALUE=DATE format
+  const d = new Date(`${dateStr}T${timeStr}`);
+  return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+}
+
+function icsDateAllDay(dateStr: string): string {
+  return dateStr.replace(/-/g, "");
+}
+
+function addHours(dateStr: string, timeStr: string, hours: number): string {
+  const d = new Date(`${dateStr}T${timeStr}`);
+  d.setUTCHours(d.getUTCHours() + hours);
+  return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 }
 
 function icsEscape(str: string): string {
@@ -47,19 +58,22 @@ export const GET: APIRoute = async ({ params }) => {
         "X-WR-CALDESC:Your house lights watchlist",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
+        "REFRESH-INTERVAL;VALUE=DURATION:PT12H",
+        "X-PUBLISHED-TTL:PT12H",
       ];
 
       for (const entry of shows) {
         const s = entry.show as any;
-        const dtstart = icsDate(s.date, s.time);
+        const hasTime = !!s.time;
+        const dtstart = hasTime ? icsDate(s.date, s.time) : icsDateAllDay(s.date);
         const dtend = s.end_time
           ? icsDate(s.date, s.end_time)
-          : icsDate(s.date, s.time ? String(parseInt(s.time) + 2).padStart(2, "0") + s.time.slice(2) : null);
+          : hasTime ? addHours(s.date, s.time, 2) : icsDateAllDay(s.date);
         lines.push(
           "BEGIN:VEVENT",
           `UID:${s.id}@houselights`,
-          `DTSTART:${dtstart}`,
-          `DTEND:${dtend}`,
+          hasTime ? `DTSTART:${dtstart}` : `DTSTART;VALUE=DATE:${dtstart}`,
+          hasTime ? `DTEND:${dtend}` : `DTEND;VALUE=DATE:${dtend}`,
           `SUMMARY:${icsEscape(s.title)}`,
           ...(s.venue?.name ? [`LOCATION:${icsEscape(s.venue.name)}`] : []),
           ...(s.url ? [`URL:${s.url}`] : []),
@@ -74,7 +88,9 @@ export const GET: APIRoute = async ({ params }) => {
         headers: {
           "Content-Type": "text/calendar; charset=utf-8",
           "Content-Disposition": 'attachment; filename="house-lights.ics"',
-          "Cache-Control": "no-cache",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+          "X-Published-TTL": "PT12H",
         },
       });
     }
