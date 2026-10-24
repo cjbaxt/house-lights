@@ -1,8 +1,7 @@
 """
-Royal Concertgebouw — Playwright scroll scraper.
-The /concerten-en-tickets page lazy-loads up to 568+ events via infinite scroll.
-Static httpx only gets the first ~15; we use Playwright to scroll until done.
-Lunchconcerten (/lunchconcerten) is a separate static page scraped with httpx.
+Royal Concertgebouw — paginated httpx scraper.
+The /concerten-en-tickets page uses SSR pagination (?page=N), ~15 concerts per page, up to 34 pages.
+Lunchconcerten (/lunchconcerten) is a separate static page.
 Date format in article text: "ma 29 jun 2026"
 """
 import logging
@@ -11,7 +10,6 @@ import asyncio
 import httpx
 from bs4 import BeautifulSoup
 from datetime import date, time
-from playwright.async_api import async_playwright
 from .base import BaseScraper, ScrapedShow
 
 logger = logging.getLogger(__name__)
@@ -26,6 +24,7 @@ MONTHS_NL = {"jan":1,"feb":2,"mrt":3,"apr":4,"mei":5,"jun":6,
 DATE_RE = re.compile(r"\w{2}\s+(\d{1,2})\s+(\w{3})\s+(\d{4})", re.I)
 TIME_RE = re.compile(r"(\d{1,2}):(\d{2})")
 PRICE_RE = re.compile(r"v\.a\.\s*€\s*([\d,]+)")
+PAGE_COUNT_RE = re.compile(r'c-pagination-page-number[^>]*>(\d+)<')
 
 
 def _parse(text):
@@ -46,7 +45,7 @@ def _parse(text):
 
 
 def _extract_from_soup(soup, seen):
-    """Extract show dicts from a BeautifulSoup page (article + link fallback)."""
+    """Extract show dicts from a BeautifulSoup page."""
     items = []
     today = date.today()
 
@@ -75,6 +74,7 @@ def _extract_from_soup(soup, seen):
         items.append({"title": title, "date": d, "time": tm, "url": url, "href": href,
                       "sold_out": sold_out, "price": price, "image_url": image_url})
 
+    # Fallback: plain links not wrapped in article
     for link in soup.select("a[href*='/concerten/']"):
         href = link.get("href", "")
         if href in seen or not href or href.rstrip("/") in ("/concerten", "/concerten-en-tickets"):
@@ -110,50 +110,42 @@ class ConcertgebouwFullScraper(BaseScraper):
         seen = set()
         items = []
 
-        # Main agenda — Playwright infinite scroll
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=True)
-            page = await browser.new_page(user_agent=HEADERS["User-Agent"])
-            await page.goto(AGENDA_URL, wait_until="networkidle", timeout=60000)
-
-            # Dismiss Cookiebot banner — it blocks infinite scroll from firing
-            try:
-                btn = page.locator("button.CybotCookiebotDialogBodyButton", has_text="Use necessary cookies only")
-                await btn.click(timeout=5000)
-                await asyncio.sleep(1)
-            except Exception:
-                pass
-
-            prev_count = 0
-            stall = 0
-            while stall < 3:
-                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                await asyncio.sleep(3)
-                html = await page.content()
-                soup = BeautifulSoup(html, "html.parser")
-                links = soup.select("a[href*='/concerten/']")
-                cur_count = len(links)
-                if cur_count == prev_count:
-                    stall += 1
-                else:
-                    stall = 0
-                prev_count = cur_count
-                logger.info("concertgebouw: %d links so far (stall=%d)", cur_count, stall)
-
-            html = await page.content()
-            await browser.close()
-
-        soup = BeautifulSoup(html, "html.parser")
-        items.extend(_extract_from_soup(soup, seen))
-        logger.info("concertgebouw: extracted %d shows from main agenda", len(items))
-
-        # Lunchconcerten — static httpx (small page, no infinite scroll)
         async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers=HEADERS) as client:
+            # Page 1 — also tells us total page count from pagination component
+            resp = await client.get(AGENDA_URL)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+            items.extend(_extract_from_soup(soup, seen))
+
+            # Find highest page number from pagination
+            page_numbers = [int(m) for m in PAGE_COUNT_RE.findall(resp.text) if m.isdigit()]
+            total_pages = max(page_numbers) if page_numbers else 1
+            logger.info("concertgebouw: %d pages detected", total_pages)
+
+            # Fetch remaining pages concurrently (in batches to avoid hammering the server)
+            async def fetch_page(page_num: int):
+                try:
+                    r = await client.get(f"{AGENDA_URL}?page={page_num}", timeout=30)
+                    if r.status_code == 200:
+                        return BeautifulSoup(r.text, "html.parser")
+                except Exception as e:
+                    logger.warning("concertgebouw page %d error: %s", page_num, e)
+                return None
+
+            for batch_start in range(2, total_pages + 1, 5):
+                batch = range(batch_start, min(batch_start + 5, total_pages + 1))
+                soups = await asyncio.gather(*[fetch_page(p) for p in batch])
+                for s in soups:
+                    if s:
+                        items.extend(_extract_from_soup(s, seen))
+
+            logger.info("concertgebouw: extracted %d shows from main agenda", len(items))
+
+            # Lunchconcerten — separate static page
             try:
                 resp = await client.get(LUNCH_URL)
                 if resp.status_code == 200:
-                    soup = BeautifulSoup(resp.text, "html.parser")
-                    lunch_items = _extract_from_soup(soup, seen)
+                    lunch_items = _extract_from_soup(BeautifulSoup(resp.text, "html.parser"), seen)
                     items.extend(lunch_items)
                     logger.info("concertgebouw: extracted %d lunchconcerts", len(lunch_items))
             except Exception as e:
