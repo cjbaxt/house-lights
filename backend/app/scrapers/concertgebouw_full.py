@@ -116,11 +116,19 @@ class ConcertgebouwFullScraper(BaseScraper):
             page = await browser.new_page(user_agent=HEADERS["User-Agent"])
             await page.goto(AGENDA_URL, wait_until="networkidle", timeout=60000)
 
+            # Dismiss Cookiebot banner — it blocks infinite scroll from firing
+            try:
+                btn = page.locator("button.CybotCookiebotDialogBodyButton", has_text="Use necessary cookies only")
+                await btn.click(timeout=5000)
+                await asyncio.sleep(1)
+            except Exception:
+                pass
+
             prev_count = 0
             stall = 0
             while stall < 3:
                 await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
                 html = await page.content()
                 soup = BeautifulSoup(html, "html.parser")
                 links = soup.select("a[href*='/concerten/']")
