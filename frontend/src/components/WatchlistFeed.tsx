@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { localDateStr, formatDateChip } from "../lib/api";
 import type React from "react";
-import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconCopy, IconCheck } from "@tabler/icons-react";
+import { IconCalendarDown, IconBookmarkFilled, IconTicket, IconList, IconCalendar, IconCheck } from "@tabler/icons-react";
 import { createClient } from "../lib/supabase/client";
 import { api } from "../lib/api";
 import type { WatchlistEntry, Venue, Show, WatchStatus } from "../lib/api";
@@ -182,69 +182,25 @@ function GroupedCard({
 }
 
 function CalendarSubscribeMenu({ token }: { token: string }) {
-  const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const httpsUrl = `${window.location.origin}/api/calendar/${token}.ics`;
-  const webcalUrl = httpsUrl.replace(/^https?/, "webcal");
-  const googleUrl = `https://www.google.com/calendar/render?cid=${encodeURIComponent(httpsUrl)}`;
-
-  useEffect(() => {
-    function close(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, []);
+  const url = `${window.location.origin}/api/calendar/${token}.ics`;
 
   function copyLink() {
-    navigator.clipboard.writeText(httpsUrl).then(() => {
+    navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
-      setTimeout(() => { setCopied(false); setOpen(false); }, 1500);
+      setTimeout(() => setCopied(false), 2000);
     });
   }
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
-        title="Subscribe to calendar"
-      >
-        <IconCalendarDown size={13} />
-        Subscribe
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-[#ece7de] shadow-md min-w-[210px] py-1">
-          <a
-            href={googleUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 text-xs text-[#1a1a1a] hover:bg-[#f5f2ed] transition-colors"
-            onClick={() => setOpen(false)}
-          >
-            <IconCalendarDown size={13} />
-            Add to Google Calendar
-          </a>
-          <a
-            href={webcalUrl}
-            className="flex items-center gap-2 px-3 py-2 text-xs text-[#1a1a1a] hover:bg-[#f5f2ed] transition-colors"
-            onClick={() => setOpen(false)}
-          >
-            <IconCalendar size={13} />
-            Open in calendar app
-          </a>
-          <button
-            onClick={copyLink}
-            className="flex items-center gap-2 px-3 py-2 text-xs text-[#1a1a1a] hover:bg-[#f5f2ed] transition-colors w-full text-left"
-          >
-            {copied ? <IconCheck size={13} className="text-green-600" /> : <IconCopy size={13} />}
-            {copied ? "Copied!" : "Copy calendar link"}
-          </button>
-        </div>
-      )}
-    </div>
+    <button
+      onClick={copyLink}
+      className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors"
+      title={url}
+    >
+      {copied ? <IconCheck size={13} className="text-green-600" /> : <IconCalendarDown size={13} />}
+      {copied ? "Copied!" : "Copy calendar link"}
+    </button>
   );
 }
 
