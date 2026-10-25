@@ -2,25 +2,90 @@ import type { APIRoute } from "astro";
 import { createHmac } from "crypto";
 import { createServiceClient } from "../../../lib/supabase/service";
 
-function icsDate(dateStr: string, timeStr?: string | null): string {
-  if (!timeStr) return dateStr.replace(/-/g, ""); // all-day: VALUE=DATE format
-  const d = new Date(`${dateStr}T${timeStr}`);
-  return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+const TZ = "Europe/Amsterdam";
+
+// Convert Amsterdam local date+time to UTC ICS stamp, handling DST correctly.
+function localToUtcZ(dateStr: string, timeStr: string): string {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const [h, m] = timeStr.split(":").map(Number);
+  const assumed = new Date(Date.UTC(y, mo - 1, d, h, m, 0));
+  const localStr = assumed.toLocaleString("sv", { timeZone: TZ });
+  const localDate = new Date(localStr.replace(" ", "T") + "Z");
+  const offsetMs = localDate.getTime() - assumed.getTime();
+  const utc = new Date(assumed.getTime() - offsetMs);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${utc.getUTCFullYear()}${pad(utc.getUTCMonth() + 1)}${pad(utc.getUTCDate())}T${pad(utc.getUTCHours())}${pad(utc.getUTCMinutes())}00Z`;
 }
 
-function icsDateAllDay(dateStr: string): string {
-  return dateStr.replace(/-/g, "");
+function localPlusHoursUtcZ(dateStr: string, timeStr: string, hours: number): string {
+  const startMs = new Date(
+    localToUtcZ(dateStr, timeStr).replace(
+      /(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/,
+      "$1-$2-$3T$4:$5:$6Z"
+    )
+  ).getTime();
+  const utc = new Date(startMs + hours * 3_600_000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${utc.getUTCFullYear()}${pad(utc.getUTCMonth() + 1)}${pad(utc.getUTCDate())}T${pad(utc.getUTCHours())}${pad(utc.getUTCMinutes())}00Z`;
 }
 
-function addHours(dateStr: string, timeStr: string, hours: number): string {
-  const d = new Date(`${dateStr}T${timeStr}`);
-  d.setUTCHours(d.getUTCHours() + hours);
-  return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+function nextDay(dateStr: string): string {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d + 1));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
 }
 
 function icsEscape(str: string): string {
   return str.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 }
+
+function buildEvent(show: any, extra: { status?: string; notes?: string } = {}): string[] {
+  const now = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15) + "Z";
+  const hasTime = !!show.time;
+  const timeStr = show.time?.slice(0, 5) ?? "20:00";
+
+  let dtstart: string, dtend: string;
+  if (hasTime) {
+    dtstart = localToUtcZ(show.date, timeStr);
+    if (show.end_time) {
+      const endStr = show.end_time.slice(0, 5);
+      const [sh, sm] = timeStr.split(":").map(Number);
+      const [eh, em] = endStr.split(":").map(Number);
+      const endDate = (eh * 60 + em < sh * 60 + sm) ? nextDay(show.date) : show.date;
+      dtend = localToUtcZ(endDate, endStr);
+    } else {
+      dtend = localPlusHoursUtcZ(show.date, timeStr, 2);
+    }
+  } else {
+    dtstart = show.date.replace(/-/g, "");
+    dtend = nextDay(show.date).replace(/-/g, "");
+  }
+
+  const descParts: string[] = [];
+  if (extra.status) descParts.push(`Status: ${extra.status.replace(/_/g, " ")}`);
+  if (show.url) descParts.push(show.url);
+  if (extra.notes) descParts.push(extra.notes);
+  if (show.description) descParts.push(show.description.slice(0, 300));
+
+  return [
+    "BEGIN:VEVENT",
+    `UID:${show.id}@houselights`,
+    `DTSTAMP:${now}`,
+    ...(hasTime ? [`DTSTART:${dtstart}`, `DTEND:${dtend}`]
+                : [`DTSTART;VALUE=DATE:${dtstart}`, `DTEND;VALUE=DATE:${dtend}`]),
+    `SUMMARY:${icsEscape(show.title)}`,
+    ...(show.venue?.name ? [`LOCATION:${icsEscape(show.venue.name)}`] : []),
+    ...(show.url ? [`URL:${show.url}`] : []),
+    ...(descParts.length ? [`DESCRIPTION:${icsEscape(descParts.join("\\n"))}`] : []),
+    "END:VEVENT",
+  ];
+}
+
+const CACHE_HEADERS = {
+  "Cache-Control": "private, no-store",
+  "Content-Type": "text/calendar; charset=utf-8",
+};
 
 export const GET: APIRoute = async ({ params }) => {
   try {
@@ -31,7 +96,6 @@ export const GET: APIRoute = async ({ params }) => {
     const tokenMatch = slug.match(/^([0-9a-f-]{36})-([0-9a-f]{64})$/);
 
     if (tokenMatch) {
-      // Private calendar — verify HMAC signature
       const secret = import.meta.env.CALENDAR_SECRET ?? import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
       if (!secret) return new Response("Server misconfiguration", { status: 500 });
 
@@ -42,55 +106,31 @@ export const GET: APIRoute = async ({ params }) => {
       const today = new Date().toISOString().split("T")[0];
       const { data: entries } = await supabase
         .from("watchlist")
-        .select("status, show:show_id(id, title, date, time, end_time, url, description, venue:venue_id(name))")
+        .select("status, notes, show:show_id(id, title, date, time, end_time, url, description, venue:venue_id(name))")
         .eq("user_id", userId)
         .gte("show.date", today)
         .neq("status", "passed")
         .neq("status", "tickets_bought");
 
       const shows = (entries ?? []).filter((e: any) => e.show);
-
       const lines: string[] = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
         "PRODID:-//house lights//EN",
         "X-WR-CALNAME:house lights watchlist",
-        "X-WR-CALDESC:Your house lights watchlist",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        "REFRESH-INTERVAL;VALUE=DURATION:PT12H",
-        "X-PUBLISHED-TTL:PT12H",
       ];
 
       for (const entry of shows) {
-        const s = entry.show as any;
-        const hasTime = !!s.time;
-        const dtstart = hasTime ? icsDate(s.date, s.time) : icsDateAllDay(s.date);
-        const dtend = s.end_time
-          ? icsDate(s.date, s.end_time)
-          : hasTime ? addHours(s.date, s.time, 2) : icsDateAllDay(s.date);
-        lines.push(
-          "BEGIN:VEVENT",
-          `UID:${s.id}@houselights`,
-          hasTime ? `DTSTART:${dtstart}` : `DTSTART;VALUE=DATE:${dtstart}`,
-          hasTime ? `DTEND:${dtend}` : `DTEND;VALUE=DATE:${dtend}`,
-          `SUMMARY:${icsEscape(s.title)}`,
-          ...(s.venue?.name ? [`LOCATION:${icsEscape(s.venue.name)}`] : []),
-          ...(s.url ? [`URL:${s.url}`] : []),
-          ...(s.description ? [`DESCRIPTION:${icsEscape(s.description.slice(0, 500))}`] : []),
-          "END:VEVENT",
-        );
+        lines.push(...buildEvent(entry.show, { status: entry.status, notes: entry.notes }));
       }
-
       lines.push("END:VCALENDAR");
 
       return new Response(lines.join("\r\n"), {
         headers: {
-          "Content-Type": "text/calendar; charset=utf-8",
+          ...CACHE_HEADERS,
           "Content-Disposition": 'attachment; filename="house-lights.ics"',
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-          "X-Published-TTL": "PT12H",
         },
       });
     }
@@ -107,7 +147,7 @@ export const GET: APIRoute = async ({ params }) => {
 
     const { data: entries } = await supabase
       .from("watchlist")
-      .select("status, notes, show:show_id(id, title, date, time, url)")
+      .select("status, notes, show:show_id(id, title, date, time, end_time, url, description, venue:venue_id(name))")
       .eq("user_id", profile.id)
       .neq("status", "passed")
       .neq("status", "tickets_bought");
@@ -116,40 +156,22 @@ export const GET: APIRoute = async ({ params }) => {
     const lines: string[] = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//house-lights//EN",
+      "PRODID:-//house lights//EN",
       `X-WR-CALNAME:${calName}`,
-      "X-WR-CALDESC:Arts events watchlist from houselights.claireheaded.com",
-      "REFRESH-INTERVAL;VALUE=DURATION:P1D",
-      "X-PUBLISHED-TTL:P1D",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
     ];
 
     for (const entry of (entries ?? [])) {
-      const show = entry.show as any;
+      const show = (entry as any).show;
       if (!show) continue;
-      lines.push("BEGIN:VEVENT");
-      lines.push(`UID:${show.id}@house-lights`);
-      lines.push(`SUMMARY:${icsEscape(show.title)}`);
-      if (show.time) {
-        const [y, m, d] = show.date.split("-");
-        const [h, min] = show.time.split(":");
-        lines.push(`DTSTART:${y}${m}${d}T${h}${min}00Z`);
-      } else {
-        lines.push(`DTSTART;VALUE=DATE:${show.date.replace(/-/g, "")}`);
-      }
-      const descParts: string[] = [];
-      if (entry.status) descParts.push(`Status: ${entry.status.replace(/_/g, " ")}`);
-      if (show.url) descParts.push(show.url);
-      if (entry.notes) descParts.push(entry.notes);
-      if (descParts.length) lines.push(`DESCRIPTION:${icsEscape(descParts.join("\\n"))}`);
-      if (show.url) lines.push(`URL:${show.url}`);
-      lines.push("END:VEVENT");
+      lines.push(...buildEvent(show, { status: (entry as any).status, notes: (entry as any).notes }));
     }
-
     lines.push("END:VCALENDAR");
 
     return new Response(lines.join("\r\n"), {
       headers: {
-        "Content-Type": "text/calendar; charset=utf-8",
+        ...CACHE_HEADERS,
         "Content-Disposition": `attachment; filename="${username}-watchlist.ics"`,
       },
     });
